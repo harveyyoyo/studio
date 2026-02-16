@@ -3,7 +3,6 @@ import { useEffect, useState, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  ShieldCheck,
   LogOut,
   UserCheck,
   Tag,
@@ -15,6 +14,7 @@ import {
   FileSpreadsheet,
   Printer,
   CloudCog,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,43 +37,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-function AuthModal({ onAuth }: { onAuth: () => void }) {
-  const [pin, setPin] = useState('');
-  const { toast } = useToast();
-
-  const checkPin = () => {
-    if (pin === '1234') {
-      onAuth();
-    } else {
-      toast({ variant: 'destructive', title: 'Access Denied' });
-      setPin('');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-center">Admin Access</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            type="password"
-            placeholder="Enter PIN"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && checkPin()}
-            className="text-center text-lg tracking-widest"
-          />
-          <Button onClick={checkPin} className="w-full">
-            Unlock
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const {
     isAdmin,
@@ -88,7 +51,6 @@ export default function AdminDashboard() {
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
-  const [isAuthenticating, setIsAuthenticating] = useState(true);
 
   // Managers State
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -102,25 +64,16 @@ export default function AdminDashboard() {
   const [printValue, setPrintValue] = useState('10');
 
   useEffect(() => {
+    enterAdmin();
+  }, [enterAdmin]);
+
+  useEffect(() => {
     if (isInitialized && !schoolId) {
       router.replace('/setup');
-    } else if (isInitialized && !isAdmin) {
-      setIsAuthenticating(true);
-    } else if (isAdmin) {
-      setIsAuthenticating(false);
     }
   }, [isAdmin, schoolId, isInitialized, router]);
 
-  if (!isInitialized || !schoolId) return <p>Loading...</p>;
-  if (isAuthenticating)
-    return (
-      <AuthModal
-        onAuth={() => {
-          enterAdmin();
-          setIsAuthenticating(false);
-        }}
-      />
-    );
+  if (!isInitialized || !schoolId || !isAdmin) return <p>Loading...</p>;
 
   const handleAddTeacher = () => {
     if (!newTeacherName) return;
@@ -189,7 +142,7 @@ export default function AdminDashboard() {
       <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-            <ShieldCheck className="text-yellow-400" /> Admin Portal
+            <Settings /> Admin Portal
           </h2>
           <p className="text-slate-400 text-sm">System Configuration</p>
         </div>

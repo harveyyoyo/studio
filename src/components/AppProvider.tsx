@@ -42,8 +42,8 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [schoolId, _setSchoolId] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<Student | null>(null);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentTeacherId, setCurrentTeacherId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
 
@@ -75,7 +75,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (updatedDb: Database) => {
       if (schoolDocRef) {
         const dbWithTimestamp = { ...updatedDb, updatedAt: Date.now() };
-        // Persist the changes to Firestore, let the useDoc hook handle the update
         setDoc(schoolDocRef, dbWithTimestamp, { merge: true });
       }
     },
@@ -106,8 +105,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const changeSchoolId = useCallback(() => {
     if (window.confirm('Are you sure? This will log you out.')) {
       _setSchoolId(null);
-      setCurrentUser(null);
-      setCurrentTeacher(null);
+      setCurrentUserId(null);
+      setCurrentTeacherId(null);
       setIsAdmin(false);
       localStorage.removeItem('schoolId');
       router.push('/setup');
@@ -135,7 +134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loginStudent = useCallback(
     (student: Student) => {
-      setCurrentUser(student);
+      setCurrentUserId(student.id);
       router.push('/student/kiosk');
     },
     [router]
@@ -143,20 +142,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const loginTeacher = useCallback(
     (teacher: Teacher) => {
-      setCurrentTeacher(teacher);
+      setCurrentTeacherId(teacher.id);
       router.push('/teacher/dashboard');
     },
     [router]
   );
 
   const enterAdmin = useCallback(() => {
+    // This function now only marks the user as admin for the current session.
+    // The component at /admin is responsible for calling this.
     setIsAdmin(true);
-    router.push('/admin');
-  }, [router]);
+  }, []);
 
   const logout = useCallback(() => {
-    setCurrentUser(null);
-    setCurrentTeacher(null);
+    setCurrentUserId(null);
+    setCurrentTeacherId(null);
     setIsAdmin(false);
     router.push('/');
   }, [router]);
@@ -168,8 +168,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [db]
   );
 
-  const value = useMemo(
-    () => ({
+  const value = useMemo(() => {
+    const currentUser = currentUserId
+      ? db?.students.find((s) => s.id === currentUserId) || null
+      : null;
+    const currentTeacher = currentTeacherId
+      ? db?.teachers.find((t) => t.id === currentTeacherId) || null
+      : null;
+
+    return {
       isInitialized:
         isInitialized &&
         (status === 'success' || (status === 'error' && !!schoolId)),
@@ -187,25 +194,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveDb,
       getTeacherName,
       setCouponsToPrint,
-    }),
-    [
-      isInitialized,
-      status,
-      schoolId,
-      db,
-      currentUser,
-      currentTeacher,
-      isAdmin,
-      setSchoolId,
-      changeSchoolId,
-      loginStudent,
-      loginTeacher,
-      enterAdmin,
-      logout,
-      saveDb,
-      getTeacherName,
-    ]
-  );
+    };
+  }, [
+    isInitialized,
+    status,
+    schoolId,
+    db,
+    currentUserId,
+    currentTeacherId,
+    isAdmin,
+    setSchoolId,
+    changeSchoolId,
+    loginStudent,
+    loginTeacher,
+    enterAdmin,
+    logout,
+    saveDb,
+    getTeacherName,
+  ]);
 
   return (
     <AppContext.Provider value={value}>
