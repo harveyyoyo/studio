@@ -19,9 +19,6 @@ import { useFirestore } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import {
   doc,
-  setDoc,
-  updateDoc,
-  arrayUnion,
   runTransaction,
 } from 'firebase/firestore';
 
@@ -73,9 +70,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const { data: dbFromHook, status } = useDoc<Database>(schoolDocRef);
 
-  // Memoize the db object to prevent unnecessary re-renders
-  const db = useMemo(() => dbFromHook || INITIAL_DATA, [dbFromHook]);
-  
+  const db = useMemo(() => {
+    if (status === 'loading') return INITIAL_DATA; // Show initial data while loading to prevent layout shifts
+    if (!dbFromHook) {
+         return { ...INITIAL_DATA, students: [], teachers:[], categories:[], coupons: [] };
+    }
+    // Ensure all fields are present, falling back to empty arrays
+    return {
+        students: dbFromHook.students || [],
+        teachers: dbFromHook.teachers || [],
+        categories: dbFromHook.categories || [],
+        coupons: dbFromHook.coupons || [],
+        updatedAt: dbFromHook.updatedAt || 0,
+    };
+}, [dbFromHook, status]);
+
   const currentUser = useMemo(() => {
     return currentUserId ? db.students.find(s => s.id === currentUserId) ?? null : null;
   }, [currentUserId, db.students]);
@@ -85,151 +94,167 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentTeacherId, db.teachers]);
 
 
-  useEffect(() => {
-    if (status === 'success' && !dbFromHook && schoolDocRef) {
-      console.log(`No data for school "${schoolId}". Creating new record.`);
-      const initialDb = { ...INITIAL_DATA, updatedAt: Date.now() };
-      setDoc(schoolDocRef, initialDb).then(() => {
-        toast({ title: 'New school database created!' });
-      });
-    }
-  }, [status, dbFromHook, schoolDocRef, toast, schoolId]);
-
-
-  const addStudent = useCallback(
-    async (newStudent: Student) => {
-      if (!schoolDocRef) return;
-      try {
-        await setDoc(schoolDocRef, {
-          students: arrayUnion(newStudent),
-          updatedAt: Date.now(),
-        }, { merge: true });
-      } catch (e) {
-        console.error("Failed to add student: ", e);
-        toast({ variant: 'destructive', title: 'Error Saving Student', description: (e as Error).message });
-      }
-    },
-    [schoolDocRef, toast]
-  );
-
-  const updateStudent = useCallback(
-    async (updatedStudent: Student) => {
-      if (!schoolDocRef || !firestore) return;
-      try {
-        await runTransaction(firestore, async (transaction) => {
-          const schoolSnap = await transaction.get(schoolDocRef);
-          if (!schoolSnap.exists()) throw 'Document does not exist!';
-          
-          const oldData = schoolSnap.data();
-          const newStudents = oldData.students.map((s) =>
-            s.id === updatedStudent.id ? updatedStudent : s
-          );
-          transaction.update(schoolDocRef, { students: newStudents, updatedAt: Date.now() });
-        });
-      } catch (e) {
-        console.error('Transaction failed: ', e);
-        toast({ variant: 'destructive', title: 'Update failed', description: (e as Error).message });
-      }
-    },
-    [schoolDocRef, firestore, toast]
-  );
-
-  const deleteStudent = useCallback(
-    async (studentId: string) => {
-      if (!schoolDocRef || !firestore) return;
-      try {
-        await runTransaction(firestore, async (transaction) => {
-          const schoolSnap = await transaction.get(schoolDocRef);
-          if (!schoolSnap.exists()) throw 'Document does not exist!';
-          
-          const oldData = schoolSnap.data();
-          const newStudents = oldData.students.filter((s) => s.id !== studentId);
-          transaction.update(schoolDocRef, { students: newStudents, updatedAt: Date.now() });
-        });
-      } catch (e) {
-        console.error('Transaction failed: ', e);
-        toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
-      }
-    },
-    [schoolDocRef, firestore, toast]
-  );
-
-  const addTeacher = useCallback(async (teacher: Teacher) => {
-    if (!schoolDocRef) return;
-     try {
-        await setDoc(schoolDocRef, {
-          teachers: arrayUnion(teacher),
-          updatedAt: Date.now(),
-        }, { merge: true });
-      } catch (e) {
-        console.error("Failed to add teacher: ", e);
-        toast({ variant: 'destructive', title: 'Error Saving Teacher', description: (e as Error).message });
-      }
-  }, [schoolDocRef, toast]);
-
-  const deleteTeacher = useCallback(async (teacherId: string) => {
-    if (!schoolDocRef || !firestore) return;
-     try {
-        await runTransaction(firestore, async (transaction) => {
-          const schoolSnap = await transaction.get(schoolDocRef);
-          if (!schoolSnap.exists()) throw 'Document does not exist!';
-          const data = schoolSnap.data();
-          const newTeachers = data.teachers.filter(t => t.id !== teacherId);
-          const newStudents = data.students.map(s => {
-              if(s.teacherId === teacherId) {
-                  return { ...s, teacherId: '' };
-              }
-              return s;
-          });
-          transaction.update(schoolDocRef, { teachers: newTeachers, students: newStudents, updatedAt: Date.now() });
-        });
-      } catch (e) {
-        console.error("Failed to delete teacher: ", e);
-        toast({ variant: 'destructive', title: 'Error Deleting Teacher', description: (e as Error).message });
-      }
-  }, [schoolDocRef, firestore, toast]);
-
-  const addCategory = useCallback(async (category: string) => {
-    if (!schoolDocRef) return;
-    try {
-        await setDoc(schoolDocRef, {
-          categories: arrayUnion(category),
-          updatedAt: Date.now(),
-        }, { merge: true });
-      } catch (e) {
-        console.error("Failed to add category: ", e);
-        toast({ variant: 'destructive', title: 'Error Saving Category', description: (e as Error).message });
-      }
-  }, [schoolDocRef, toast]);
-  
-  const deleteCategory = useCallback(async (categoryName: string) => {
+ const addStudent = useCallback(async (newStudent: Student) => {
     if (!schoolDocRef || !firestore) return;
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const schoolSnap = await transaction.get(schoolDocRef);
-        if (!schoolSnap.exists()) throw 'Document does not exist!';
-        const data = schoolSnap.data();
-        const newCategories = data.categories.filter(c => c !== categoryName);
-        transaction.update(schoolDocRef, { categories: newCategories, updatedAt: Date.now() });
-      });
-    } catch(e) {
-      console.error("Failed to delete category: ", e);
-      toast({ variant: 'destructive', title: 'Error Deleting Category', description: (e as Error).message });
-    }
-  }, [schoolDocRef, firestore, toast]);
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            const data = schoolSnap.exists() ? schoolSnap.data() as Database : INITIAL_DATA;
+            
+            const studentExists = data.students.find(s => s.id === newStudent.id);
+            if(studentExists) return; // Avoid duplicates
 
-  const addCoupons = useCallback(async (coupons: Coupon[]) => {
-    if(!schoolDocRef) return;
-    try {
-        await setDoc(schoolDocRef, {
-          coupons: arrayUnion(...coupons),
-          updatedAt: Date.now(),
-        }, { merge: true });
+            const newStudents = [...data.students, newStudent];
+            const newData = { ...data, students: newStudents, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
     } catch (e) {
-        console.error("Failed to add coupons: ", e);
-        toast({ variant: 'destructive', title: 'Error Saving Coupons', description: (e as Error).message });
+        console.error('Failed to add student:', e);
+        toast({ variant: 'destructive', title: 'Error saving student', description: (e as Error).message });
     }
-  }, [schoolDocRef, toast]);
+}, [schoolDocRef, firestore, toast]);
+
+const updateStudent = useCallback(async (updatedStudent: Student) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) throw new Error("School data not found.");
+
+            const data = schoolSnap.data() as Database;
+            const newStudents = data.students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
+            const newData = { ...data, students: newStudents, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to update student:', e);
+        toast({ variant: 'destructive', title: 'Error updating student', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const deleteStudent = useCallback(async (studentId: string) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) return;
+
+            const data = schoolSnap.data() as Database;
+            const newStudents = data.students.filter(s => s.id !== studentId);
+            const newData = { ...data, students: newStudents, updatedAt: Date.now() };
+            
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to delete student:', e);
+        toast({ variant: 'destructive', title: 'Error deleting student', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const addTeacher = useCallback(async (newTeacher: Teacher) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            const data = schoolSnap.exists() ? schoolSnap.data() as Database : INITIAL_DATA;
+            
+            const teacherExists = data.teachers.find(t => t.id === newTeacher.id);
+            if(teacherExists) return;
+
+            const newTeachers = [...data.teachers, newTeacher];
+            const newData = { ...data, teachers: newTeachers, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to add teacher:', e);
+        toast({ variant: 'destructive', title: 'Error saving teacher', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const deleteTeacher = useCallback(async (teacherId: string) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) return;
+
+            const data = schoolSnap.data() as Database;
+            const newTeachers = data.teachers.filter(t => t.id !== teacherId);
+            const newStudents = data.students.map(s => s.teacherId === teacherId ? { ...s, teacherId: '' } : s);
+            const newData = { ...data, teachers: newTeachers, students: newStudents, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to delete teacher:', e);
+        toast({ variant: 'destructive', title: 'Error deleting teacher', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const addCategory = useCallback(async (newCategory: string) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            const data = schoolSnap.exists() ? schoolSnap.data() as Database : INITIAL_DATA;
+            
+            if(data.categories.includes(newCategory)) return;
+
+            const newCategories = [...data.categories, newCategory];
+            const newData = { ...data, categories: newCategories, updatedAt: Date.now() };
+            
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to add category:', e);
+        toast({ variant: 'destructive', title: 'Error saving category', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const deleteCategory = useCallback(async (categoryName: string) => {
+    if (!schoolDocRef || !firestore) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) return;
+
+            const data = schoolSnap.data() as Database;
+            const newCategories = data.categories.filter(c => c !== categoryName);
+            const newData = { ...data, categories: newCategories, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to delete category:', e);
+        toast({ variant: 'destructive', title: 'Error deleting category', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
+
+const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
+    if (!schoolDocRef || !firestore || newCoupons.length === 0) return;
+    try {
+        await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            const data = schoolSnap.exists() ? schoolSnap.data() as Database : INITIAL_DATA;
+
+            const existingCodes = new Set(data.coupons.map(c => c.code));
+            const uniqueNewCoupons = newCoupons.filter(c => !existingCodes.has(c.code));
+
+            if(uniqueNewCoupons.length === 0) return;
+
+            const updatedCoupons = [...data.coupons, ...uniqueNewCoupons];
+            const newData = { ...data, coupons: updatedCoupons, updatedAt: Date.now() };
+
+            transaction.set(schoolDocRef, newData);
+        });
+    } catch (e) {
+        console.error('Failed to add coupons:', e);
+        toast({ variant: 'destructive', title: 'Error saving coupons', description: (e as Error).message });
+    }
+}, [schoolDocRef, firestore, toast]);
 
   const redeemCoupon = useCallback(async (code: string) => {
       if (!schoolDocRef || !firestore || !currentUser) {
@@ -240,49 +265,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           let foundCouponValue = 0;
           await runTransaction(firestore, async (transaction) => {
               const schoolSnap = await transaction.get(schoolDocRef);
-              if (!schoolSnap.exists()) throw 'School document does not exist!';
+              if (!schoolSnap.exists()) throw new Error('School document does not exist!');
               
-              const data = schoolSnap.data();
+              const data = schoolSnap.data() as Database;
               const couponIndex = data.coupons.findIndex(c => c.code === code);
 
-              if (couponIndex === -1) {
-                  throw new Error('Invalid Coupon Code');
-              }
-              
+              if (couponIndex === -1) throw new Error('Invalid Coupon Code');
               const coupon = data.coupons[couponIndex];
-              if (coupon.used) {
-                  throw new Error('Coupon already used!');
-              }
+              if (coupon.used) throw new Error('Coupon already used!');
               
               const studentIndex = data.students.findIndex(s => s.id === currentUser.id);
-              if (studentIndex === -1) {
-                  throw new Error('Current user not found!');
-              }
+              if (studentIndex === -1) throw new Error('Current user not found!');
 
               const updatedCoupons = [...data.coupons];
               updatedCoupons[couponIndex] = { ...coupon, used: true, usedAt: Date.now(), usedBy: currentUser.id };
               
               const student = data.students[studentIndex];
-              const newHistoryItem: HistoryItem = {
-                  desc: `Redeemed coupon (+${coupon.value})`,
-                  amount: coupon.value,
-                  date: Date.now(),
-              };
-              const updatedStudent = {
-                  ...student,
-                  points: student.points + coupon.value,
-                  history: [newHistoryItem, ...student.history]
-              }
+              const newHistoryItem: HistoryItem = { desc: `Redeemed coupon (+${coupon.value})`, amount: coupon.value, date: Date.now() };
+              const updatedStudent = { ...student, points: student.points + coupon.value, history: [newHistoryItem, ...student.history] };
+              
               const updatedStudents = [...data.students];
               updatedStudents[studentIndex] = updatedStudent;
               
               foundCouponValue = coupon.value;
 
-              transaction.update(schoolDocRef, { 
-                  coupons: updatedCoupons, 
-                  students: updatedStudents,
-                  updatedAt: Date.now(),
-              });
+              transaction.set(schoolDocRef, { ...data, coupons: updatedCoupons, students: updatedStudents, updatedAt: Date.now() });
           });
           return { success: true, message: `+${foundCouponValue} Points Added!` };
 
@@ -303,31 +310,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await runTransaction(firestore, async (transaction) => {
         const schoolSnap = await transaction.get(schoolDocRef);
-        if (!schoolSnap.exists()) throw 'School document does not exist!';
+        if (!schoolSnap.exists()) throw new Error('School document does not exist!');
 
-        const data = schoolSnap.data();
+        const data = schoolSnap.data() as Database;
         const studentIndex = data.students.findIndex(s => s.id === currentUser.id);
         if (studentIndex === -1) throw new Error('Current user not found!');
 
         const student = data.students[studentIndex];
         if (student.points < cost) throw new Error('Not enough points!');
         
-        const newHistoryItem: HistoryItem = {
-          desc: `Bought ${name}`,
-          amount: -cost,
-          date: Date.now(),
-        };
-
-        const updatedStudent = {
-            ...student,
-            points: student.points - cost,
-            history: [newHistoryItem, ...student.history]
-        };
-
+        const newHistoryItem: HistoryItem = { desc: `Bought ${name}`, amount: -cost, date: Date.now() };
+        const updatedStudent = { ...student, points: student.points - cost, history: [newHistoryItem, ...student.history] };
+        
         const updatedStudents = [...data.students];
         updatedStudents[studentIndex] = updatedStudent;
 
-        transaction.update(schoolDocRef, { students: updatedStudents, updatedAt: Date.now() });
+        transaction.set(schoolDocRef, { ...data, students: updatedStudents, updatedAt: Date.now() });
       });
       return { success: true, message: `${name} redeemed!` };
     } catch (e: any) {
@@ -484,3 +482,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    
