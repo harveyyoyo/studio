@@ -26,7 +26,7 @@ export function Coupon({ coupon, isNew = false }: { coupon: Coupon, isNew?: bool
         </div>
       </div>
       <div className="flex flex-col items-center">
-        <div className="font-barcode text-4xl leading-none pt-1">
+        <div className="font-barcode text-5xl leading-none pt-1">
           {coupon.code}
         </div>
         <div className="font-code text-xs font-bold tracking-wider">
