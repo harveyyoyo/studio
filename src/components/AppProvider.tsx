@@ -71,53 +71,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [firestore, schoolId]
   );
 
-  const { data: db, status } = useDoc<Database>(schoolDocRef);
+  const { data: dbFromHook, status } = useDoc<Database>(schoolDocRef);
+
+  // Memoize the db object to prevent unnecessary re-renders
+  const db = useMemo(() => dbFromHook || INITIAL_DATA, [dbFromHook]);
+  
+  const currentUser = useMemo(() => {
+    return currentUserId ? db.students.find(s => s.id === currentUserId) ?? null : null;
+  }, [currentUserId, db.students]);
+  
+  const currentTeacher = useMemo(() => {
+     return currentTeacherId ? db.teachers.find(t => t.id === currentTeacherId) ?? null : null;
+  }, [currentTeacherId, db.teachers]);
+
 
   useEffect(() => {
-    if (status === 'success' && !db && schoolDocRef) {
+    if (status === 'success' && !dbFromHook && schoolDocRef) {
       console.log(`No data for school "${schoolId}". Creating new record.`);
       const initialDb = { ...INITIAL_DATA, updatedAt: Date.now() };
       setDoc(schoolDocRef, initialDb).then(() => {
         toast({ title: 'New school database created!' });
       });
     }
-  }, [status, db, schoolDocRef, toast, schoolId]);
+  }, [status, dbFromHook, schoolDocRef, toast, schoolId]);
 
 
   const addStudent = useCallback(
     async (newStudent: Student) => {
-      if (schoolDocRef) {
-        await updateDoc(schoolDocRef, {
+      if (!schoolDocRef) return;
+      try {
+        await setDoc(schoolDocRef, {
           students: arrayUnion(newStudent),
-        });
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {
+        console.error("Failed to add student: ", e);
+        toast({ variant: 'destructive', title: 'Error Saving Student', description: (e as Error).message });
       }
     },
-    [schoolDocRef]
+    [schoolDocRef, toast]
   );
 
   const updateStudent = useCallback(
     async (updatedStudent: Student) => {
-      if (schoolDocRef) {
-        try {
-          await runTransaction(firestore, async (transaction) => {
-            const schoolSnap = await transaction.get(schoolDocRef);
-            if (!schoolSnap.exists()) {
-              throw 'Document does not exist!';
-            }
-            const oldData = schoolSnap.data();
-            const newStudents = oldData.students.map((s) =>
-              s.id === updatedStudent.id ? updatedStudent : s
-            );
-            transaction.update(schoolDocRef, { students: newStudents });
-          });
-        } catch (e) {
-          console.error('Transaction failed: ', e);
-          toast({
-            variant: 'destructive',
-            title: 'Update failed',
-            description: (e as Error).message,
-          });
-        }
+      if (!schoolDocRef || !firestore) return;
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          const schoolSnap = await transaction.get(schoolDocRef);
+          if (!schoolSnap.exists()) throw 'Document does not exist!';
+          
+          const oldData = schoolSnap.data();
+          const newStudents = oldData.students.map((s) =>
+            s.id === updatedStudent.id ? updatedStudent : s
+          );
+          transaction.update(schoolDocRef, { students: newStudents, updatedAt: Date.now() });
+        });
+      } catch (e) {
+        console.error('Transaction failed: ', e);
+        toast({ variant: 'destructive', title: 'Update failed', description: (e as Error).message });
       }
     },
     [schoolDocRef, firestore, toast]
@@ -125,77 +136,100 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteStudent = useCallback(
     async (studentId: string) => {
-      if (schoolDocRef) {
-        try {
-          await runTransaction(firestore, async (transaction) => {
-            const schoolSnap = await transaction.get(schoolDocRef);
-            if (!schoolSnap.exists()) {
-              throw 'Document does not exist!';
-            }
-            const oldData = schoolSnap.data();
-            const newStudents = oldData.students.filter(
-              (s) => s.id !== studentId
-            );
-            transaction.update(schoolDocRef, { students: newStudents });
-          });
-        } catch (e) {
-          console.error('Transaction failed: ', e);
-          toast({
-            variant: 'destructive',
-            title: 'Delete failed',
-            description: (e as Error).message,
-          });
-        }
+      if (!schoolDocRef || !firestore) return;
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          const schoolSnap = await transaction.get(schoolDocRef);
+          if (!schoolSnap.exists()) throw 'Document does not exist!';
+          
+          const oldData = schoolSnap.data();
+          const newStudents = oldData.students.filter((s) => s.id !== studentId);
+          transaction.update(schoolDocRef, { students: newStudents, updatedAt: Date.now() });
+        });
+      } catch (e) {
+        console.error('Transaction failed: ', e);
+        toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
       }
     },
     [schoolDocRef, firestore, toast]
   );
 
   const addTeacher = useCallback(async (teacher: Teacher) => {
-    if (schoolDocRef) {
-      await updateDoc(schoolDocRef, { teachers: arrayUnion(teacher) });
-    }
-  }, [schoolDocRef]);
+    if (!schoolDocRef) return;
+     try {
+        await setDoc(schoolDocRef, {
+          teachers: arrayUnion(teacher),
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {
+        console.error("Failed to add teacher: ", e);
+        toast({ variant: 'destructive', title: 'Error Saving Teacher', description: (e as Error).message });
+      }
+  }, [schoolDocRef, toast]);
 
   const deleteTeacher = useCallback(async (teacherId: string) => {
-    if (schoolDocRef && firestore) {
-      await runTransaction(firestore, async (transaction) => {
-        const schoolSnap = await transaction.get(schoolDocRef);
-        if (!schoolSnap.exists()) throw 'Document does not exist!';
-        const data = schoolSnap.data();
-        const newTeachers = data.teachers.filter(t => t.id !== teacherId);
-        transaction.update(schoolDocRef, { teachers: newTeachers });
-      });
-    }
-  }, [schoolDocRef, firestore]);
+    if (!schoolDocRef || !firestore) return;
+     try {
+        await runTransaction(firestore, async (transaction) => {
+          const schoolSnap = await transaction.get(schoolDocRef);
+          if (!schoolSnap.exists()) throw 'Document does not exist!';
+          const data = schoolSnap.data();
+          const newTeachers = data.teachers.filter(t => t.id !== teacherId);
+          const newStudents = data.students.map(s => {
+              if(s.teacherId === teacherId) {
+                  return { ...s, teacherId: '' };
+              }
+              return s;
+          });
+          transaction.update(schoolDocRef, { teachers: newTeachers, students: newStudents, updatedAt: Date.now() });
+        });
+      } catch (e) {
+        console.error("Failed to delete teacher: ", e);
+        toast({ variant: 'destructive', title: 'Error Deleting Teacher', description: (e as Error).message });
+      }
+  }, [schoolDocRef, firestore, toast]);
 
   const addCategory = useCallback(async (category: string) => {
-    if (schoolDocRef) {
-      await updateDoc(schoolDocRef, { categories: arrayUnion(category) });
-    }
-  }, [schoolDocRef]);
+    if (!schoolDocRef) return;
+    try {
+        await setDoc(schoolDocRef, {
+          categories: arrayUnion(category),
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {
+        console.error("Failed to add category: ", e);
+        toast({ variant: 'destructive', title: 'Error Saving Category', description: (e as Error).message });
+      }
+  }, [schoolDocRef, toast]);
   
   const deleteCategory = useCallback(async (categoryName: string) => {
-    if (schoolDocRef && firestore) {
+    if (!schoolDocRef || !firestore) return;
+    try {
       await runTransaction(firestore, async (transaction) => {
         const schoolSnap = await transaction.get(schoolDocRef);
         if (!schoolSnap.exists()) throw 'Document does not exist!';
         const data = schoolSnap.data();
         const newCategories = data.categories.filter(c => c !== categoryName);
-        transaction.update(schoolDocRef, { categories: newCategories });
+        transaction.update(schoolDocRef, { categories: newCategories, updatedAt: Date.now() });
       });
+    } catch(e) {
+      console.error("Failed to delete category: ", e);
+      toast({ variant: 'destructive', title: 'Error Deleting Category', description: (e as Error).message });
     }
-  }, [schoolDocRef, firestore]);
+  }, [schoolDocRef, firestore, toast]);
 
   const addCoupons = useCallback(async (coupons: Coupon[]) => {
-    if(schoolDocRef) {
-        await updateDoc(schoolDocRef, { coupons: arrayUnion(...coupons) });
+    if(!schoolDocRef) return;
+    try {
+        await setDoc(schoolDocRef, {
+          coupons: arrayUnion(...coupons),
+          updatedAt: Date.now(),
+        }, { merge: true });
+    } catch (e) {
+        console.error("Failed to add coupons: ", e);
+        toast({ variant: 'destructive', title: 'Error Saving Coupons', description: (e as Error).message });
     }
-  }, [schoolDocRef]);
-
-  const currentUser = useMemo(() => currentUserId
-      ? db?.students.find((s) => s.id === currentUserId) || null
-      : null, [db, currentUserId]);
+  }, [schoolDocRef, toast]);
 
   const redeemCoupon = useCallback(async (code: string) => {
       if (!schoolDocRef || !firestore || !currentUser) {
@@ -225,14 +259,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   throw new Error('Current user not found!');
               }
 
-              // Modify coupon
               const updatedCoupons = [...data.coupons];
-              updatedCoupons[couponIndex] = { ...coupon, used: true };
+              updatedCoupons[couponIndex] = { ...coupon, used: true, usedAt: Date.now(), usedBy: currentUser.id };
               
-              // Modify student
               const student = data.students[studentIndex];
               const newHistoryItem: HistoryItem = {
-                  desc: `Redeemed (+${coupon.value})`,
+                  desc: `Redeemed coupon (+${coupon.value})`,
                   amount: coupon.value,
                   date: Date.now(),
               };
@@ -248,7 +280,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
               transaction.update(schoolDocRef, { 
                   coupons: updatedCoupons, 
-                  students: updatedStudents 
+                  students: updatedStudents,
+                  updatedAt: Date.now(),
               });
           });
           return { success: true, message: `+${foundCouponValue} Points Added!` };
@@ -274,14 +307,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const data = schoolSnap.data();
         const studentIndex = data.students.findIndex(s => s.id === currentUser.id);
-        if (studentIndex === -1) {
-            throw new Error('Current user not found!');
-        }
+        if (studentIndex === -1) throw new Error('Current user not found!');
 
         const student = data.students[studentIndex];
-        if (student.points < cost) { // Double check inside transaction
-            throw new Error('Not enough points!');
-        }
+        if (student.points < cost) throw new Error('Not enough points!');
         
         const newHistoryItem: HistoryItem = {
           desc: `Bought ${name}`,
@@ -298,7 +327,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const updatedStudents = [...data.students];
         updatedStudents[studentIndex] = updatedStudent;
 
-        transaction.update(schoolDocRef, { students: updatedStudents });
+        transaction.update(schoolDocRef, { students: updatedStudents, updatedAt: Date.now() });
       });
       return { success: true, message: `${name} redeemed!` };
     } catch (e: any) {
@@ -309,10 +338,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setSchoolId = useCallback(
     (id: string) => {
-      const sanitizedId = id
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, '');
+      const sanitizedId = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (sanitizedId.length < 3) {
         toast({
           variant: 'destructive',
@@ -323,6 +349,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       _setSchoolId(sanitizedId);
       localStorage.setItem('schoolId', sanitizedId);
+      // Clear session-specific data when switching schools
+      sessionStorage.removeItem('currentUserId');
+      sessionStorage.removeItem('currentTeacherId');
+      sessionStorage.removeItem('isAdmin');
+      setCurrentUserId(null);
+      setCurrentTeacherId(null);
+      setIsAdmin(false);
       router.push('/');
     },
     [router, toast]
@@ -335,6 +368,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentTeacherId(null);
       setIsAdmin(false);
       localStorage.removeItem('schoolId');
+      sessionStorage.clear();
       router.push('/setup');
     }
   }, [router]);
@@ -343,16 +377,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const savedSchoolId = localStorage.getItem('schoolId');
     if (savedSchoolId) {
       _setSchoolId(savedSchoolId);
+      const savedUserId = sessionStorage.getItem('currentUserId');
+      if (savedUserId) setCurrentUserId(savedUserId);
+      const savedTeacherId = sessionStorage.getItem('currentTeacherId');
+      if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
+      const savedIsAdmin = sessionStorage.getItem('isAdmin');
+      if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
     }
-    const savedUserId = sessionStorage.getItem('currentUserId');
-    if (savedUserId) setCurrentUserId(savedUserId);
-
-    const savedTeacherId = sessionStorage.getItem('currentTeacherId');
-    if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
-
-    const savedIsAdmin = sessionStorage.getItem('isAdmin');
-    if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
-
     setIsInitialized(true);
   }, []);
 
@@ -386,8 +417,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const enterAdmin = useCallback(() => {
     setIsAdmin(true);
     sessionStorage.setItem('isAdmin', 'true');
-    router.push('/admin');
-  }, [router]);
+  }, []);
 
   const logout = useCallback(() => {
     setCurrentUserId(null);
@@ -401,22 +431,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const getTeacherName = useCallback(
     (id: string) => {
-      return db?.teachers.find((t) => t.id === id)?.name || 'Unassigned';
+      return db.teachers.find((t) => t.id === id)?.name || 'Unassigned';
     },
-    [db]
+    [db.teachers]
   );
 
-  const value = useMemo(() => {
-    const currentTeacher = currentTeacherId
-      ? db?.teachers.find((t) => t.id === currentTeacherId) || null
-      : null;
-
-    return {
-      isInitialized:
-        isInitialized &&
-        (status === 'success' || (status === 'error' && !!schoolId)),
+  const value = useMemo(() => ({
+      isInitialized: isInitialized && (status !== 'loading' || !!dbFromHook),
       schoolId,
-      db: db || INITIAL_DATA,
+      db,
       currentUser,
       currentTeacher,
       isAdmin,
@@ -438,32 +461,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCoupons,
       redeemCoupon,
       buyReward,
-    };
-  }, [
-    isInitialized,
-    status,
-    schoolId,
-    db,
-    currentUser,
-    currentTeacherId,
-    isAdmin,
-    setSchoolId,
-    changeSchoolId,
-    loginStudent,
-    loginTeacher,
-    enterAdmin,
-    logout,
-    getTeacherName,
-    addStudent,
-    updateStudent,
-    deleteStudent,
-    addTeacher,
-    deleteTeacher,
-    addCategory,
-    deleteCategory,
-    addCoupons,
-    redeemCoupon,
-    buyReward,
+    }), [
+    isInitialized, status, dbFromHook, schoolId, db, currentUser,
+    currentTeacher, isAdmin, setSchoolId, changeSchoolId, loginStudent,
+    loginTeacher, enterAdmin, logout, getTeacherName, addStudent, updateStudent,
+    deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
+    addCoupons, redeemCoupon, buyReward
   ]);
 
   return (

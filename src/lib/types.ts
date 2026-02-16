@@ -27,6 +27,8 @@ export interface Coupon {
   used: boolean;
   createdAt: number;
   description?: string;
+  usedAt?: number;
+  usedBy?: string;
 }
 
 export interface Database {
