@@ -23,7 +23,7 @@ import {
   doc,
   setDoc,
   onSnapshot,
-  enableIndexedDbPersistence,
+  enableMultiTabIndexedDbPersistence,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
@@ -94,13 +94,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (firestore) {
-      enableIndexedDbPersistence(firestore).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          // Can happen with multiple tabs open.
-        } else if (err.code === 'unimplemented') {
-          // Persistence not supported.
-        }
-      });
+      // Using the Multi-Tab version prevents the "failed-precondition" error
+      enableMultiTabIndexedDbPersistence(firestore)
+        .then(() => console.log('✨ Offline Cache Active'))
+        .catch((err) => {
+          console.error('Firestore persistence failed:', err.code);
+        });
     }
   }, [firestore]);
 
@@ -152,11 +151,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const savedSchoolId = localStorage.getItem('schoolId');
     if (savedSchoolId) {
       _setSchoolId(savedSchoolId);
-      const savedUserId = sessionStorage.getItem('currentUserId');
+      const savedUserId = localStorage.getItem('currentUserId');
       if (savedUserId) setCurrentUserId(savedUserId);
-      const savedTeacherId = sessionStorage.getItem('currentTeacherId');
+      const savedTeacherId = localStorage.getItem('currentTeacherId');
       if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
-      const savedIsAdmin = sessionStorage.getItem('isAdmin');
+      const savedIsAdmin = localStorage.getItem('isAdmin');
       if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
     } else {
       setIsInitialized(true); 
@@ -190,6 +189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     );
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolDocRef]);
 
 
@@ -215,7 +215,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const changeSchoolId = useCallback(() => {
     if (window.confirm('Are you sure? This will log you out.')) {
       localStorage.removeItem('schoolId');
-      sessionStorage.clear();
+      localStorage.removeItem('currentUserId');
+      localStorage.removeItem('currentTeacherId');
+      localStorage.removeItem('isAdmin');
       window.location.href = '/setup';
     }
   }, []);
@@ -237,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginStudent = useCallback(
     (student: Student) => {
       setCurrentUserId(student.id);
-      sessionStorage.setItem('currentUserId', student.id);
+      localStorage.setItem('currentUserId', student.id);
       router.push('/student/kiosk');
     },
     [router]
@@ -246,7 +248,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginTeacher = useCallback(
     (teacher: Teacher) => {
       setCurrentTeacherId(teacher.id);
-      sessionStorage.setItem('currentTeacherId', teacher.id);
+      localStorage.setItem('currentTeacherId', teacher.id);
       router.push('/teacher/dashboard');
     },
     [router]
@@ -254,11 +256,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const enterAdmin = useCallback(() => {
     setIsAdmin(true);
-    sessionStorage.setItem('isAdmin', 'true');
+    localStorage.setItem('isAdmin', 'true');
   }, []);
 
   const logout = useCallback(() => {
-    sessionStorage.clear();
+    localStorage.removeItem('currentUserId');
+    localStorage.removeItem('currentTeacherId');
+    localStorage.removeItem('isAdmin');
     window.location.href = '/';
   }, []);
 
