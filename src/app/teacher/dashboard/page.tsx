@@ -162,7 +162,7 @@ function CouponGenerator() {
                             </div>
                         </div>
                         <div className='print-coupon-barcode'>
-                            <div className='barcode-font'>{c.code}</div>
+                            <div className='barcode-font'>*{c.code}*</div>
                             <div className='code-text'>{c.code}</div>
                         </div>
                     </div>
