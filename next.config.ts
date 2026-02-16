@@ -1,14 +1,6 @@
 import type { NextConfig } from 'next';
 import withPWA from '@ducanh2912/next-pwa';
 
-const pwaConfig = withPWA({
-  dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
-  disable: false,
-});
-
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
@@ -41,4 +33,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default pwaConfig(nextConfig);
+export default withPWA({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  disable: false,
+})(nextConfig);
