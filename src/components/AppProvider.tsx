@@ -58,31 +58,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   // useDoc hook for real-time data synchronization
-  const { data: db, setData: setDb, status } = useDoc<Database>(schoolDocRef);
+  const { data: db, status } = useDoc<Database>(schoolDocRef);
 
   // Effect to initialize a new school document in Firestore if it doesn't exist
   useEffect(() => {
-    if (status === 'success' && db === undefined && schoolDocRef) {
+    if (status === 'success' && !db && schoolDocRef) {
       console.log(`No data for school "${schoolId}". Creating new record.`);
       const initialDb = { ...INITIAL_DATA, updatedAt: Date.now() };
       setDoc(schoolDocRef, initialDb).then(() => {
-        setDb(initialDb); // Optimistically set local data
         toast({ title: 'New school database created!' });
       });
     }
-  }, [status, db, schoolDocRef, setDb, toast, schoolId]);
+  }, [status, db, schoolDocRef, toast, schoolId]);
 
   const saveDb = useCallback(
     (updatedDb: Database) => {
       if (schoolDocRef) {
         const dbWithTimestamp = { ...updatedDb, updatedAt: Date.now() };
-        // Optimistically update the local state for a snappy UI
-        setDb(dbWithTimestamp);
-        // Persist the changes to Firestore, no need to await
+        // Persist the changes to Firestore, let the useDoc hook handle the update
         setDoc(schoolDocRef, dbWithTimestamp, { merge: true });
       }
     },
-    [schoolDocRef, setDb]
+    [schoolDocRef]
   );
 
   const setSchoolId = (id: string) => {

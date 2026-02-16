@@ -42,5 +42,5 @@ export function useDoc<T>(ref: DocumentReference<T> | null) {
         return () => unsubscribe();
     }, [ref]);
 
-    return { data, setData, error, status };
+    return { data, error, status };
 }
