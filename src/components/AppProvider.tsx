@@ -48,6 +48,7 @@ interface AppContextType {
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (couponCode: string) => Promise<{success: boolean, message: string}>;
   buyReward: (itemName: string, cost: number) => Promise<{success: boolean, message: string}>;
+  setData: (data: Database) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -248,12 +249,11 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
             const existingCodes = new Set(currentData.coupons.map(c => c.code));
             const uniqueNewCoupons = newCoupons.filter(c => !existingCodes.has(c.code));
 
-            if(uniqueNewCoupons.length === 0) {
-                 toast({ title: 'Generated coupons already exist, retrying...' });
-                 // This case is rare but could happen with random code collisions.
-                 // A more robust solution would re-generate codes here.
-                return;
+            if(uniqueNewCoupons.length < newCoupons.length) {
+                 toast({ title: 'Some generated coupon codes already existed and were skipped.' });
             };
+            
+            if(uniqueNewCoupons.length === 0) return;
 
             const updatedCoupons = [...currentData.coupons, ...uniqueNewCoupons];
             const newData = { ...currentData, coupons: updatedCoupons, updatedAt: Date.now() };
@@ -344,6 +344,20 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     }
   }, [schoolDocRef, firestore, currentUser]);
 
+    const setData = useCallback(async (data: Database) => {
+        if (!schoolDocRef) return;
+        try {
+            // Ensure updatedAt is set, for consistency
+            const dataToSet = { ...data, updatedAt: Date.now() };
+            await setDoc(schoolDocRef, dataToSet);
+        } catch (e) {
+            console.error("Failed to set data:", e);
+            toast({ variant: "destructive", title: "Error Saving Data", description: (e as Error).message });
+            throw e; // Re-throw so caller knows it failed
+        }
+    }, [schoolDocRef, toast]);
+
+
   const setSchoolId = useCallback(
     (id: string) => {
       const sanitizedId = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -399,16 +413,13 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     const handlePrint = async () => {
       if (couponsToPrint.length > 0) {
         try {
-          // Wait for all fonts to be loaded and ready.
           await document.fonts.ready;
-          // Add a small extra delay to allow for rendering after font application.
           setTimeout(() => {
             window.print();
             setCouponsToPrint([]);
-          }, 1000);
+          }, 1000); 
         } catch (error) {
           console.error('Error waiting for fonts to load, falling back:', error);
-          // Fallback to a simple timeout if the fonts API fails.
           setTimeout(() => {
             window.print();
             setCouponsToPrint([]);
@@ -484,12 +495,13 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
       addCoupons,
       redeemCoupon,
       buyReward,
+      setData
     }), [
     isInitialized, status, db, schoolId, currentUser,
     currentTeacher, isAdmin, setSchoolId, changeSchoolId, loginStudent,
     loginTeacher, enterAdmin, logout, getTeacherName, addStudent, updateStudent,
     deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
-    addCoupons, redeemCoupon, buyReward
+    addCoupons, redeemCoupon, buyReward, setData
   ]);
 
   return (

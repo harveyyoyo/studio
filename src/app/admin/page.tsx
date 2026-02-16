@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, ChangeEvent } from 'react';
+import { useEffect, useState, ChangeEvent, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
@@ -13,22 +13,15 @@ import {
   Download,
   FileSpreadsheet,
   Printer,
-  CloudCog,
   Settings,
   Edit,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Student } from '@/lib/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -37,6 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { StudentModal } from '@/components/StudentModal';
+import { INITIAL_DATA } from '@/lib/data';
+
 
 export default function AdminDashboard() {
   const {
@@ -54,9 +50,11 @@ export default function AdminDashboard() {
     addCategory,
     deleteCategory,
     addCoupons,
+    setData,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -76,6 +74,14 @@ export default function AdminDashboard() {
       }
     }
   }, [isInitialized, schoolId, enterAdmin, router]);
+  
+  useEffect(() => {
+      // Set default category when db loads
+      if (db.categories.length > 0) {
+          setPrintCategory(db.categories[0]);
+      }
+  }, [db.categories]);
+
 
   if (!isInitialized || !schoolId || !isAdmin) return <p>Loading...</p>;
 
@@ -121,11 +127,16 @@ export default function AdminDashboard() {
   }
   
   const handlePrintSheet = async () => {
+    const value = parseInt(printValue);
+    if (!value || value <= 0) {
+        toast({variant: 'destructive', title: "Invalid Value", description: "Coupon value must be a positive number."});
+        return;
+    }
     const coupons = Array.from({ length: 24 }, () => {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         return {
             code,
-            value: parseInt(printValue),
+            value: value,
             category: printCategory,
             teacher: printTeacher,
             used: false,
@@ -136,6 +147,54 @@ export default function AdminDashboard() {
     setCouponsToPrint(coupons);
     toast({title: "Generating print sheet..."});
   }
+  
+  const handleBackup = () => {
+      const dataStr = JSON.stringify(db, null, 2);
+      const dataBlob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reward-arcade-backup-${schoolId}-${Date.now()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: "Backup downloading..." });
+  }
+  
+  const handleRestore = () => {
+      if (window.confirm("Are you sure? This will permanently overwrite all current data for this school with the data from the backup file.")) {
+          fileInputRef.current?.click();
+      }
+  }
+
+  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+          const text = await file.text();
+          const data = JSON.parse(text) as Student;
+          if (data.students && data.teachers && data.categories && data.coupons) {
+              await setData(data);
+              toast({ title: "Data restored successfully!" });
+          } else {
+              throw new Error("Invalid data file format. Missing required fields.");
+          }
+      } catch (err) {
+          toast({ variant: 'destructive', title: "Failed to restore data.", description: (err as Error).message });
+      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+  
+  const handleFactoryReset = async () => {
+    if (window.confirm("ARE YOU ABSOLUTELY SURE? This will permanently delete all current school data and replace it with the initial default data.")) {
+      if (window.confirm("Second confirmation: This action cannot be undone. Proceed?")) {
+        await setData(INITIAL_DATA);
+        toast({ title: "System has been reset." });
+      }
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -221,13 +280,13 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-             <Button variant="outline" className="w-full justify-center gap-2"><CloudCog /> Cloud Sync</Button>
              <div className="flex gap-2">
-                 <Button variant="outline" className="w-full justify-center gap-2"><Download /> Backup</Button>
-                 <Button variant="outline" className="w-full justify-center gap-2"><Upload /> Restore</Button>
+                 <Button onClick={handleBackup} variant="outline" className="w-full justify-center gap-2"><Download /> Backup</Button>
+                 <Button onClick={handleRestore} variant="outline" className="w-full justify-center gap-2"><Upload /> Restore</Button>
+                 <input type="file" ref={fileInputRef} onChange={onFileChange} className="hidden" accept="application/json" />
              </div>
               <Button variant="outline" className="w-full justify-center gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"><FileSpreadsheet /> Import CSV</Button>
-               <Button variant="destructive" className="w-full font-bold mt-4" >Factory Reset</Button>
+               <Button onClick={handleFactoryReset} variant="destructive" className="w-full font-bold mt-4" ><AlertTriangle className="w-4 h-4 mr-2" />Factory Reset</Button>
           </CardContent>
         </Card>
       </div>
@@ -258,15 +317,7 @@ export default function AdminDashboard() {
             </div>
              <div>
                 <Label>Value</Label>
-                <Select value={printValue} onValueChange={setPrintValue}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                         <SelectItem value="10">10</SelectItem>
-                         <SelectItem value="50">50</SelectItem>
-                         <SelectItem value="100">100</SelectItem>
-                         <SelectItem value="500">500</SelectItem>
-                    </SelectContent>
-                </Select>
+                <Input type="number" placeholder="e.g. 25" value={printValue} onChange={e => setPrintValue(e.target.value)} />
             </div>
             <Button onClick={handlePrintSheet} className="w-full font-bold gap-2"><Printer /> Print Sheet (24)</Button>
         </CardContent>
@@ -279,7 +330,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
                 <ul className="space-y-2">
-                  {db.students.map(s => (
+                  {db.students.sort((a, b) => a.name.localeCompare(b.name)).map(s => (
                     <li key={s.id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
                       <div>
                         <p className="font-bold">{s.name} <span className="text-emerald-600 font-normal text-xs">({s.points} pts)</span></p>
@@ -298,95 +349,4 @@ export default function AdminDashboard() {
       <StudentModal isOpen={isStudentModalOpen} setIsOpen={setIsStudentModalOpen} student={editingStudent} />
     </div>
   );
-}
-
-
-function StudentModal({ isOpen, setIsOpen, student }: {isOpen: boolean, setIsOpen: (val: boolean) => void, student: Student | null}) {
-    const { db, addStudent, updateStudent } = useAppContext();
-    const [name, setName] = useState('');
-    const [password, setPassword] = useState('');
-    const [points, setPoints] = useState('0');
-    const [nfcId, setNfcId] = useState('');
-    const [teacherId, setTeacherId] = useState('');
-    const { toast } = useToast();
-
-    useEffect(() => {
-        if (student) {
-            setName(student.name);
-            setPassword(student.password);
-            setPoints(student.points.toString());
-            setNfcId(student.nfcId);
-            setTeacherId(student.teacherId);
-        } else {
-            setName('');
-            setPassword('1234');
-            setPoints('0');
-            setNfcId('');
-            setTeacherId(db.teachers[0]?.id || '');
-        }
-    }, [student, isOpen, db.teachers]);
-
-    const handleSave = async () => {
-        if (!name || !nfcId) {
-            toast({ variant: 'destructive', title: 'Name and NFC ID are required.' });
-            return;
-        }
-
-        if (student) {
-            const updatedStudent: Student = { ...student, name, password, nfcId, points: parseInt(points) || 0, teacherId };
-            await updateStudent(updatedStudent);
-            toast({ title: 'Student updated!' });
-        } else {
-            const newStudent: Student = {
-                id: 's' + Date.now(),
-                name, password, nfcId,
-                points: parseInt(points) || 0,
-                teacherId, history: [],
-            };
-            await addStudent(newStudent);
-            toast({ title: 'Student added!' });
-        }
-        setIsOpen(false);
-    };
-    
-    return (
-         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>{student ? 'Edit Student' : 'New Student'}</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-1">
-                        <Label htmlFor="name">Name</Label>
-                        <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" value={password} onChange={e => setPassword(e.target.value)} />
-                    </div>
-                     <div className="space-y-1">
-                        <Label htmlFor="nfcId">NFC ID</Label>
-                        <Input id="nfcId" value={nfcId} onChange={e => setNfcId(e.target.value)} placeholder="Tap card now..." />
-                    </div>
-                     <div className="space-y-1">
-                        <Label htmlFor="points">Points</Label>
-                        <Input id="points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="teacher">Assign to Teacher</Label>
-                        <Select value={teacherId} onValueChange={setTeacherId}>
-                            <SelectTrigger id="teacher"><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                {db.teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
-                    <Button type="submit" onClick={handleSave}>Save</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
 }
