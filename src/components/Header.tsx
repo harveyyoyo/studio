@@ -36,9 +36,11 @@ export default function Header() {
 
       {isInitialized && schoolId && (
         <div className="flex gap-2 items-center relative z-20">
-          {/* <Button variant="ghost" size="icon" className="text-muted-foreground" title="Developer Mode">
-            <TerminalSquare className="w-5 h-5" />
-          </Button> */}
+          <Button asChild variant="ghost" size="icon" className="text-muted-foreground" title="Developer Mode">
+            <Link href="/admin">
+              <TerminalSquare className="w-5 h-5" />
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
