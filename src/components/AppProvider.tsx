@@ -405,14 +405,14 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
           setTimeout(() => {
             window.print();
             setCouponsToPrint([]);
-          }, 500);
+          }, 1000);
         } catch (error) {
           console.error('Error waiting for fonts to load, falling back:', error);
           // Fallback to a simple timeout if the fonts API fails.
           setTimeout(() => {
             window.print();
             setCouponsToPrint([]);
-          }, 2000);
+          }, 2500);
         }
       }
     };

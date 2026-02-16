@@ -97,7 +97,7 @@ body {
         print-color-adjust: exact;
     }
     
-    #screen-view, .no-print { 
+    #screen-view, .no-print, [data-radix-toast-viewport] { 
         display: none !important; 
     }
     
