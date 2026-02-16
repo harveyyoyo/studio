@@ -87,7 +87,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
         await runTransaction(firestore, async (transaction) => {
             const schoolSnap = await transaction.get(schoolDocRef);
-            let currentData = schoolSnap.exists() ? schoolSnap.data() : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
+            let currentData = schoolSnap.exists() ? schoolSnap.data() as Database : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
             
             const studentExists = currentData.students.find(s => s.id === newStudent.id || s.nfcId === newStudent.nfcId);
             if(studentExists) {
@@ -151,7 +151,7 @@ const addTeacher = useCallback(async (newTeacher: Teacher) => {
     try {
         await runTransaction(firestore, async (transaction) => {
             const schoolSnap = await transaction.get(schoolDocRef);
-            let currentData = schoolSnap.exists() ? schoolSnap.data() : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
+            let currentData = schoolSnap.exists() ? schoolSnap.data() as Database : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
             
             const teacherExists = currentData.teachers.find(t => t.name.toLowerCase() === newTeacher.name.toLowerCase());
             if(teacherExists) {
@@ -199,7 +199,7 @@ const addCategory = useCallback(async (newCategory: string) => {
     try {
         await runTransaction(firestore, async (transaction) => {
             const schoolSnap = await transaction.get(schoolDocRef);
-            let currentData = schoolSnap.exists() ? schoolSnap.data() : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
+            let currentData = schoolSnap.exists() ? schoolSnap.data() as Database : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
             
             if(currentData.categories.map(c => c.toLowerCase()).includes(newCategory.toLowerCase())) {
                 toast({ variant: 'destructive', title: 'Category already exists.'});
@@ -243,7 +243,7 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     try {
         await runTransaction(firestore, async (transaction) => {
             const schoolSnap = await transaction.get(schoolDocRef);
-            let currentData = schoolSnap.exists() ? schoolSnap.data() : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
+            let currentData = schoolSnap.exists() ? schoolSnap.data() as Database : { students: [], teachers: [], categories: [], coupons: [], updatedAt: 0 };
 
             const existingCodes = new Set(currentData.coupons.map(c => c.code));
             const uniqueNewCoupons = newCoupons.filter(c => !existingCodes.has(c.code));
@@ -400,7 +400,7 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
       setTimeout(() => {
         window.print();
         setCouponsToPrint([]);
-      }, 500);
+      }, 1000);
     }
   }, [couponsToPrint]);
 
