@@ -111,32 +111,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTeacherId, db.teachers]);
 
+  // Set online status
   useEffect(() => {
+    // Assume online by default, then check
     setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
-    if (typeof window !== 'undefined') {
-      const handleOnline = () => {
-        setIsOnline(true);
-        setSyncStatus('syncing');
-      };
-      const handleOffline = () => {
-        setIsOnline(false);
-        setSyncStatus('offline');
-      };
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
-    }
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const updateDb = useCallback(
-    async (newDbState: Database, localOnly = false) => {
+    async (newDbState: Database) => {
       const dbWithTimestamp = { ...newDbState, updatedAt: Date.now() };
 
+      // Update local state and localStorage
       setDb(dbWithTimestamp);
-
       if (schoolId) {
         localStorage.setItem(
           `schoolArcadeDB_${schoolId}`,
@@ -144,7 +138,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      if (isOnline && schoolDocRef && !localOnly) {
+      // Push to firestore if online
+      if (isOnline && schoolDocRef) {
         setSyncStatus('syncing');
         try {
           await setDoc(schoolDocRef, dbWithTimestamp);
@@ -158,72 +153,87 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             description: 'Could not save changes to the cloud.',
           });
         }
+      } else if (!isOnline) {
+        setSyncStatus('offline');
       }
     },
     [schoolId, isOnline, schoolDocRef, toast]
   );
 
+  // Effect to initialize state from localStorage on first load
   useEffect(() => {
-    if (!schoolId || !firestore) {
-      if (schoolId) setIsInitialized(true);
-      return;
-    }
-    const localDbKey = `schoolArcadeDB_${schoolId}`;
-    let localDb: Database | null = null;
-    try {
-      const localDataString = localStorage.getItem(localDbKey);
-      if (localDataString) {
-        localDb = JSON.parse(localDataString);
-        setDb(localDb!);
-      } else {
+    const savedSchoolId = localStorage.getItem('schoolId');
+    if (savedSchoolId) {
+      const localDbKey = `schoolArcadeDB_${savedSchoolId}`;
+      try {
+        const localDataString = localStorage.getItem(localDbKey);
+        setDb(localDataString ? JSON.parse(localDataString) : INITIAL_DATA);
+      } catch {
         setDb(INITIAL_DATA);
-        localStorage.setItem(localDbKey, JSON.stringify(INITIAL_DATA));
       }
-    } catch {
-      // Corrupted data, use initial
-      setDb(INITIAL_DATA);
+
+      const savedUserId = sessionStorage.getItem('currentUserId');
+      if (savedUserId) setCurrentUserId(savedUserId);
+      const savedTeacherId = sessionStorage.getItem('currentTeacherId');
+      if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
+      const savedIsAdmin = sessionStorage.getItem('isAdmin');
+      if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
+
+      _setSchoolId(savedSchoolId);
+    }
+    // Mark as initialized after attempting to load from local storage.
+    setIsInitialized(true);
+  }, []);
+
+  // Effect to sync with Firebase when coming online or schoolId changes
+  useEffect(() => {
+    if (!isInitialized || !schoolId || !firestore) return;
+
+    if (!isOnline) {
+      setSyncStatus('offline');
+      return;
     }
 
     const syncWithFirebase = async () => {
-      if (!isOnline || !schoolDocRef) {
-        if (!isOnline) setSyncStatus('offline');
-        setIsInitialized(true);
-        return;
-      }
+      if (!schoolDocRef) return;
       setSyncStatus('syncing');
       try {
         const remoteSnap = await getDoc(schoolDocRef);
         const remoteDb = remoteSnap.exists()
           ? (remoteSnap.data() as Database)
           : null;
-        const currentLocalDb: Database =
-          JSON.parse(localStorage.getItem(localDbKey) || 'null') || db;
 
-        if (
-          currentLocalDb &&
-          (!remoteDb || currentLocalDb.updatedAt > remoteDb.updatedAt)
-        ) {
-          await setDoc(schoolDocRef, currentLocalDb);
-          setDb(currentLocalDb);
-        } else if (remoteDb) {
-          setDb(remoteDb);
-          localStorage.setItem(localDbKey, JSON.stringify(remoteDb));
-        } else {
-          // No remote, no local, push initial
-          await setDoc(schoolDocRef, INITIAL_DATA);
-          setDb(INITIAL_DATA);
-          localStorage.setItem(localDbKey, JSON.stringify(INITIAL_DATA));
-        }
+        // Use a function to get the latest state of db to avoid stale closures
+        setDb((currentLocalDb) => {
+          if (!remoteDb) {
+            // No remote data, push local data up.
+            setDoc(schoolDocRef, currentLocalDb);
+            return currentLocalDb;
+          } else if (currentLocalDb.updatedAt > remoteDb.updatedAt) {
+            // Local is newer, push to remote
+            setDoc(schoolDocRef, currentLocalDb);
+            return currentLocalDb;
+          } else if (remoteDb.updatedAt > currentLocalDb.updatedAt) {
+            // Remote is newer, update local state and localStorage
+            localStorage.setItem(
+              `schoolArcadeDB_${schoolId}`,
+              JSON.stringify(remoteDb)
+            );
+            return remoteDb;
+          }
+          // They are in sync
+          return currentLocalDb;
+        });
+
         setSyncStatus('synced');
       } catch (error) {
         console.error('Firebase sync error:', error);
         setSyncStatus('error');
       }
-      setIsInitialized(true);
     };
 
     syncWithFirebase();
-  }, [schoolId, isOnline, firestore]);
+  }, [schoolId, isOnline, firestore, isInitialized, schoolDocRef]); // `schoolDocRef` is derived but needed
 
   const setSchoolId = useCallback(
     (id: string) => {
@@ -237,49 +247,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (sanitizedId !== schoolId) {
-        setIsInitialized(false);
-        setDb(EMPTY_DB);
-        _setSchoolId(sanitizedId);
         localStorage.setItem('schoolId', sanitizedId);
         sessionStorage.clear();
-        setCurrentUserId(null);
-        setCurrentTeacherId(null);
-        setIsAdmin(false);
-        router.push('/');
+        // A full reload is the most reliable way to reset all state
+        window.location.href = '/';
       }
     },
-    [router, toast, schoolId]
+    [schoolId, toast]
   );
 
   const changeSchoolId = useCallback(() => {
     if (window.confirm('Are you sure? This will log you out.')) {
-      setIsInitialized(false);
-      _setSchoolId(null);
-      setDb(EMPTY_DB);
-      setCurrentUserId(null);
-      setCurrentTeacherId(null);
-      setIsAdmin(false);
       localStorage.removeItem('schoolId');
       sessionStorage.clear();
-      router.push('/setup');
-    }
-  }, [router]);
-
-  useEffect(() => {
-    const savedSchoolId = localStorage.getItem('schoolId');
-    if (savedSchoolId) {
-      _setSchoolId(savedSchoolId);
-      const savedUserId = sessionStorage.getItem('currentUserId');
-      if (savedUserId) setCurrentUserId(savedUserId);
-      const savedTeacherId = sessionStorage.getItem('currentTeacherId');
-      if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
-      const savedIsAdmin = sessionStorage.getItem('isAdmin');
-      if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
-    } else {
-      setIsInitialized(true);
+      window.location.href = '/setup';
     }
   }, []);
 
+  useEffect(() => {
+    const handlePrint = () => {
+      if (couponsToPrint.length > 0) {
+        document.fonts.ready.then(() => {
+          setTimeout(() => {
+            window.print();
+            setCouponsToPrint([]);
+          }, 2500);
+        });
+      }
+    };
+    handlePrint();
+  }, [couponsToPrint]);
+
+  const loginStudent = useCallback(
+    (student: Student) => {
+      setCurrentUserId(student.id);
+      sessionStorage.setItem('currentUserId', student.id);
+      router.push('/student/kiosk');
+    },
+    [router]
+  );
+
+  const loginTeacher = useCallback(
+    (teacher: Teacher) => {
+      setCurrentTeacherId(teacher.id);
+      sessionStorage.setItem('currentTeacherId', teacher.id);
+      router.push('/teacher/dashboard');
+    },
+    [router]
+  );
+
+  const enterAdmin = useCallback(() => {
+    setIsAdmin(true);
+    sessionStorage.setItem('isAdmin', 'true');
+  }, []);
+
+  const logout = useCallback(() => {
+    sessionStorage.clear();
+    window.location.href = '/';
+  }, []);
+
+  const getTeacherName = useCallback(
+    (id: string) => {
+      return db?.teachers?.find((t) => t.id === id)?.name || 'Unassigned';
+    },
+    [db?.teachers]
+  );
+
+  // Data mutation methods
   const addStudent = useCallback(
     async (studentData: Omit<Student, 'id' | 'history'>) => {
       if (
@@ -384,14 +418,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const uniqueNewCoupons = newCoupons.filter(
         (c) => !existingCodes.has(c.code)
       );
-
       if (uniqueNewCoupons.length < newCoupons.length) {
         toast({
           title: 'Some generated coupon codes already existed and were skipped.',
         });
       }
       if (uniqueNewCoupons.length === 0) return;
-
       await updateDb({ ...db, coupons: [...db.coupons, ...uniqueNewCoupons] });
     },
     [db, updateDb, toast]
@@ -400,7 +432,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const redeemCoupon = useCallback(
     async (code: string) => {
       if (!currentUser) return { success: false, message: 'Not authenticated' };
-
       const couponIndex = db.coupons.findIndex((c) => c.code === code);
       if (couponIndex === -1)
         return { success: false, message: 'Invalid Coupon Code' };
@@ -408,7 +439,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (coupon.used)
         return { success: false, message: 'Coupon already used!' };
 
-      const studentIndex = db.students.findIndex((s) => s.id === currentUser.id);
+      const studentIndex = db.students.findIndex(
+        (s) => s.id === currentUser.id
+      );
       if (studentIndex === -1)
         return { success: false, message: 'Current user not found!' };
 
@@ -451,14 +484,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (currentUser.points < cost)
         return { success: false, message: 'Not enough points!' };
 
-      const studentIndex = db.students.findIndex((s) => s.id === currentUser.id);
+      const studentIndex = db.students.findIndex(
+        (s) => s.id === currentUser.id
+      );
       if (studentIndex === -1)
         return { success: false, message: 'Current user not found!' };
 
       const student = db.students[studentIndex];
-      if (student.points < cost)
-        return { success: false, message: 'Not enough points!' };
-
       const newHistoryItem: HistoryItem = {
         desc: `Bought ${name}`,
         amount: -cost,
@@ -484,69 +516,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await updateDb(data);
     },
     [updateDb]
-  );
-
-  useEffect(() => {
-    const handlePrint = () => {
-      if (couponsToPrint.length > 0) {
-        try {
-          // Wait for fonts to be ready
-          document.fonts.ready.then(() => {
-            setTimeout(() => {
-              window.print();
-              setCouponsToPrint([]);
-            }, 2500); // Increased delay for rendering
-          });
-        } catch (error) {
-          console.error('Font loading error, printing anyway.', error);
-          setTimeout(() => {
-            window.print();
-            setCouponsToPrint([]);
-          }, 2500);
-        }
-      }
-    };
-    handlePrint();
-  }, [couponsToPrint]);
-
-  const loginStudent = useCallback(
-    (student: Student) => {
-      setCurrentUserId(student.id);
-      sessionStorage.setItem('currentUserId', student.id);
-      router.push('/student/kiosk');
-    },
-    [router]
-  );
-
-  const loginTeacher = useCallback(
-    (teacher: Teacher) => {
-      setCurrentTeacherId(teacher.id);
-      sessionStorage.setItem('currentTeacherId', teacher.id);
-      router.push('/teacher/dashboard');
-    },
-    [router]
-  );
-
-  const enterAdmin = useCallback(() => {
-    setIsAdmin(true);
-    sessionStorage.setItem('isAdmin', 'true');
-  }, []);
-
-  const logout = useCallback(() => {
-    setCurrentUserId(null);
-    sessionStorage.removeItem('currentUserId');
-    setCurrentTeacherId(null);
-    sessionStorage.removeItem('currentTeacherId');
-    setIsAdmin(false);
-    sessionStorage.removeItem('isAdmin');
-    router.push('/');
-  }, [router]);
-
-  const getTeacherName = useCallback(
-    (id: string) => {
-      return db?.teachers?.find((t) => t.id === id)?.name || 'Unassigned';
-    },
-    [db?.teachers]
   );
 
   const value = useMemo(
