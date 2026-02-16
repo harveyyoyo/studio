@@ -97,17 +97,15 @@ body {
         print-color-adjust: exact;
     }
     
-    /* Hide the main app UI completely */
     #screen-view, .no-print { 
         display: none !important; 
     }
     
-    /* Show the print container */
     #print-container {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(8, 1fr);
-        gap: 0; /* No gap, borders will separate */
+        gap: 0;
         width: 7.5in; 
         height: 10in; 
         box-sizing: border-box;
@@ -119,24 +117,23 @@ body {
     
     .print-coupon {
         border: 1px dotted #999;
-        padding: 0.1in;
+        padding: 0.05in;
         text-align: center;
         height: 1.25in;
         width: 2.5in;
         page-break-inside: avoid;
         box-sizing: border-box;
         font-family: 'PT Sans', sans-serif;
-        position: relative;
         background: #fff;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: space-around;
     }
     
     .print-coupon-header {
-        font-size: 7pt;
+        font-size: 6pt;
         font-weight: bold;
         color: #333;
         width: 100%;
@@ -148,15 +145,15 @@ body {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.15in;
+        gap: 0.1in;
         border-top: 1px solid #eee;
         border-bottom: 1px solid #eee;
-        padding: 0.05in 0;
-        margin: 0.05in 0;
+        padding: 0.04in 0;
+        margin: 0.04in 0;
     }
 
     .print-coupon-value {
-        font-size: 32pt;
+        font-size: 26pt;
         font-weight: 900;
         line-height: 1;
         font-family: 'Playfair Display', serif;
@@ -167,7 +164,7 @@ body {
     }
 
     .print-coupon-value span {
-        font-size: 8pt;
+        font-size: 7pt;
         font-weight: bold;
         font-family: 'PT Sans', sans-serif;
         text-transform: uppercase;
@@ -179,17 +176,17 @@ body {
     .print-coupon-details {
         text-align: left;
         flex-grow: 1;
+        font-size: 7pt;
     }
     
     .print-coupon-category {
-        font-size: 8pt;
         font-weight: bold;
         font-style: italic;
         color: #444;
     }
 
     .print-coupon-teacher {
-        font-size: 7pt;
+        font-size: 6pt;
         color: #666;
     }
 
@@ -202,15 +199,16 @@ body {
 
     .print-coupon-barcode .barcode-font {
         font-family: 'Libre Barcode 39 Text', cursive;
-        font-size: 30pt;
+        font-size: 28pt;
         line-height: 0.8;
         color: #000;
-        margin-top: 2px;
+        margin: 0;
+        padding: 0;
     }
 
     .print-coupon-barcode .code-text {
         font-family: 'Source Code Pro', monospace;
-        font-size: 7pt;
+        font-size: 6pt;
         letter-spacing: 1px;
         color: #000;
         margin-top: -2px;

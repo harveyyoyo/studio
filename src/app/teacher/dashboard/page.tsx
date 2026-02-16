@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Coupon as CouponDisplay } from '@/components/Coupon';
 
 function CouponGenerator() {
   const { currentTeacher, db, addCoupons, setCouponsToPrint } = useAppContext();
@@ -151,20 +152,8 @@ function CouponGenerator() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentlyGenerated.map(c => (
-                    <div key={c.code} className="bg-white/50 p-2 border border-dashed rounded-lg flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
-                        <div className="absolute top-1 right-1 bg-primary/80 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">NEW</div>
-                        <div className='print-coupon-header font-bold text-slate-500'>Arcade Rewards</div>
-                        <div className='print-coupon-main w-full'>
-                            <div className='print-coupon-value'>{c.value}<span>Points</span></div>
-                            <div className='print-coupon-details'>
-                                <div className='print-coupon-category'>{c.category}</div>
-                                <div className='print-coupon-teacher'>Issued by: {c.teacher}</div>
-                            </div>
-                        </div>
-                        <div className='print-coupon-barcode'>
-                            <div className='barcode-font'>*{c.code}*</div>
-                            <div className='code-text'>{c.code}</div>
-                        </div>
+                    <div key={c.code}>
+                       <CouponDisplay coupon={c} isNew={true} />
                     </div>
                 ))}
             </CardContent>
