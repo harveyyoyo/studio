@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PlusCircle,
@@ -9,8 +9,6 @@ import {
   User,
   LogOut,
   Printer,
-  Sparkles,
-  Loader,
   Trash2,
   Edit,
 } from 'lucide-react';
@@ -27,10 +25,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import type { Coupon, Student } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { generateCouponDescriptionAction } from '@/lib/actions';
 import {
   Dialog,
   DialogContent,
@@ -42,35 +38,10 @@ import {
 function CouponGenerator() {
   const { currentTeacher, db, saveDb, setCouponsToPrint } = useAppContext();
   const [category, setCategory] = useState(db.categories[0] || '');
-  const [customCategory, setCustomCategory] = useState('');
   const [value, setValue] = useState('10');
   const [qty, setQty] = useState(1);
   const [recentlyGenerated, setRecentlyGenerated] = useState<Coupon[]>([]);
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
-
-  const handleGenerateAI = () => {
-    if (!customCategory) {
-      toast({
-        variant: 'destructive',
-        title: 'Please enter a reason for the reward.',
-      });
-      return;
-    }
-    startTransition(async () => {
-      const result = await generateCouponDescriptionAction(customCategory);
-      if (result.success && typeof result.data === 'string') {
-        if (!db.categories.includes(result.data)) {
-          const newDb = { ...db, categories: [...db.categories, result.data] };
-          saveDb(newDb);
-        }
-        setCategory(result.data);
-        toast({ title: 'AI Description Generated!' });
-      } else {
-        toast({ variant: 'destructive', title: result.message });
-      }
-    });
-  };
 
   const generateCoupons = (printSheet = false) => {
     if (!currentTeacher) return;
@@ -109,32 +80,6 @@ function CouponGenerator() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label className="text-xs font-bold text-slate-500 uppercase">
-              Custom Reason
-            </Label>
-            <div className="flex gap-2 items-center">
-              <Textarea
-                placeholder="e.g., helped a classmate"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                rows={2}
-              />
-              <Button
-                size="icon"
-                onClick={handleGenerateAI}
-                disabled={isPending}
-                title="Generate with AI"
-              >
-                {isPending ? (
-                  <Loader className="animate-spin" />
-                ) : (
-                  <Sparkles />
-                )}
-              </Button>
-            </div>
-          </div>
-
           <div>
             <Label className="text-xs font-bold text-slate-500 uppercase">
               Reason/Category
