@@ -1,11 +1,78 @@
 'use client';
-import { Trophy, WifiOff, TerminalSquare, Zap } from 'lucide-react';
+import { Trophy, TerminalSquare, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAppContext } from './AppProvider';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+
+function SchoolSwitcher({ setOpen }: { setOpen: (open: boolean) => void }) {
+  const { schoolId: currentSchoolId, setSchoolId } = useAppContext();
+  const [schoolIds, setSchoolIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids: string[] = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('schoolArcadeDB_')) {
+          ids.push(key.replace('schoolArcadeDB_', ''));
+        }
+      }
+    }
+
+    if (currentSchoolId && !ids.includes(currentSchoolId)) {
+      ids.push(currentSchoolId);
+    }
+    setSchoolIds(ids.sort());
+  }, [currentSchoolId]);
+
+  const handleSwitch = (id: string) => {
+    if (id !== currentSchoolId) {
+      setSchoolId(id);
+    }
+    setOpen(false);
+  };
+
+  return (
+    <div className="pt-2">
+      <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+        {schoolIds.length > 0 ? (
+          schoolIds.map((id) => (
+            <Button
+              key={id}
+              onClick={() => handleSwitch(id)}
+              variant={id === currentSchoolId ? 'secondary' : 'outline'}
+              className="w-full justify-start"
+            >
+              {id}{' '}
+              {id === currentSchoolId && (
+                <span className="text-muted-foreground ml-2 text-xs">
+                  (current)
+                </span>
+              )}
+            </Button>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground italic p-2 text-center">
+            No school data found.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Header() {
   const { schoolId, isInitialized } = useAppContext();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
     <header className="no-print w-full max-w-6xl bg-card rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center border-b-4 border-primary shadow-lg relative overflow-hidden">
@@ -36,11 +103,28 @@ export default function Header() {
 
       {isInitialized && schoolId && (
         <div className="flex gap-2 items-center relative z-20">
-          <Button asChild variant="ghost" size="icon" className="text-muted-foreground" title="Developer Mode">
-            <Link href="/admin">
-              <TerminalSquare className="w-5 h-5" />
-            </Link>
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground"
+                title="Developer Mode"
+              >
+                <TerminalSquare className="w-5 h-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Developer Mode</DialogTitle>
+                <DialogDescription>
+                  Switch between school databases found on this device.
+                </DialogDescription>
+              </DialogHeader>
+              <SchoolSwitcher setOpen={setIsDialogOpen} />
+            </DialogContent>
+          </Dialog>
+
           <Button
             variant="outline"
             size="sm"
