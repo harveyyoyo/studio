@@ -151,13 +151,20 @@ function CouponGenerator() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentlyGenerated.map(c => (
-                    <div key={c.code} className="bg-white p-3 border-2 border-slate-800 rounded-lg flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 left-0 bg-slate-800 text-white text-[10px] px-2 py-0.5 font-bold">NEW</div>
-                        <div className="font-headline text-3xl font-bold text-emerald-600 mt-2">{c.value}</div>
-                        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">Points</p>
-                        <p className="text-xs text-center font-bold text-indigo-500 mb-1 h-8">{c.category}</p>
-                        <div className="font-barcode text-4xl mb-1">{c.code}</div>
-                        <div className="font-code text-[10px] text-slate-500 tracking-widest bg-slate-100 px-2 rounded mt-1">{c.code}</div>
+                    <div key={c.code} className="bg-white/50 p-2 border border-dashed rounded-lg flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
+                        <div className="absolute top-1 right-1 bg-primary/80 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">NEW</div>
+                        <div className='print-coupon-header font-bold text-slate-500'>Arcade Rewards</div>
+                        <div className='print-coupon-main w-full'>
+                            <div className='print-coupon-value'>{c.value}<span>Points</span></div>
+                            <div className='print-coupon-details'>
+                                <div className='print-coupon-category'>{c.category}</div>
+                                <div className='print-coupon-teacher'>Issued by: {c.teacher}</div>
+                            </div>
+                        </div>
+                        <div className='print-coupon-barcode'>
+                            <div className='barcode-font'>{c.code}</div>
+                            <div className='code-text'>{c.code}</div>
+                        </div>
                     </div>
                 ))}
             </CardContent>
@@ -169,7 +176,7 @@ function CouponGenerator() {
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const { currentTeacher, logout, db, deleteStudent } = useAppContext();
+  const { currentTeacher, logout, db, deleteStudent, isInitialized } = useAppContext();
   const { toast } = useToast();
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -180,12 +187,12 @@ export default function TeacherDashboard() {
   }, [currentTeacher, db.students]);
 
   useEffect(() => {
-    if (!currentTeacher) {
+    if (isInitialized && !currentTeacher) {
       router.replace('/teacher/login');
     }
-  }, [currentTeacher, router]);
+  }, [isInitialized, currentTeacher, router]);
 
-  if (!currentTeacher) {
+  if (!isInitialized || !currentTeacher) {
     return <div>Loading...</div>;
   }
   
