@@ -29,8 +29,8 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
                 </div>
             </div>
             <div className="print-coupon-barcode">
-                <div className="barcode-font">*{c.code}*</div>
-                <div className="code-text">{c.code}</div>
+                <div className="barcode-font">{c.code}</div>
+                <div className="code-text">{c.code.split('').join(' ')}</div>
             </div>
         </div>
       ))}

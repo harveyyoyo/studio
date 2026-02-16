@@ -122,8 +122,7 @@ export default function AdminDashboard() {
   
   const handlePrintSheet = async () => {
     const coupons = Array.from({ length: 24 }, () => {
-        const randomPart = Math.floor(100000 + Math.random() * 900000);
-        const code = `PTS-${printValue}-${randomPart}`;
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
         return {
             code,
             value: parseInt(printValue),

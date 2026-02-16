@@ -50,8 +50,7 @@ function CouponGenerator() {
     const generated: Coupon[] = [];
 
     for (let i = 0; i < numToGenerate; i++) {
-      const randomPart = Math.floor(100000 + Math.random() * 900000);
-      const code = `PTS-${value}-${randomPart}`;
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
       const newCoupon = {
         code,
         value: parseInt(value),
