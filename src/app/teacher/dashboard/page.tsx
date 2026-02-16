@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   PlusCircle,
@@ -169,18 +169,21 @@ function CouponGenerator() {
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const { currentTeacher, logout, db, saveDb, getTeacherName } = useAppContext();
-  const [students, setStudents] = useState<Student[]>([]);
+  const { currentTeacher, logout, db, saveDb } = useAppContext();
+  const { toast } = useToast();
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+
+  const students = useMemo(() => {
+    if (!currentTeacher) return [];
+    return db.students.filter(s => s.teacherId === currentTeacher.id);
+  }, [currentTeacher, db.students]);
 
   useEffect(() => {
     if (!currentTeacher) {
       router.replace('/teacher/login');
-    } else {
-      setStudents(db.students.filter(s => s.teacherId === currentTeacher.id));
     }
-  }, [currentTeacher, router, db.students]);
+  }, [currentTeacher, router]);
 
   if (!currentTeacher) {
     return <div>Loading...</div>;
