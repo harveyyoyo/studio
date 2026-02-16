@@ -1,9 +1,10 @@
 {
   "name": "Arcade Rewards Hub",
-  "short_name": "Arcade Rewards",
+  "short_name": "RewardsHub",
+  "description": "A school points and rewards system that works offline.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F0F2F7",
   "theme_color": "#7986CB",
-  "description": "A school points and rewards system."
+  "icons": []
 }
