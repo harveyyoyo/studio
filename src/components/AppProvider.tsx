@@ -19,7 +19,12 @@ import type {
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  enableIndexedDbPersistence,
+} from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -81,12 +86,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
 
-  const [isOnline, setIsOnline] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('offline');
 
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  useEffect(() => {
+    if (firestore) {
+      enableIndexedDbPersistence(firestore).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          // Can happen with multiple tabs open.
+        } else if (err.code === 'unimplemented') {
+          // Persistence not supported.
+        }
+      });
+    }
+  }, [firestore]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -111,129 +127,66 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentTeacherId, db.teachers]);
 
-  // Set online status
-  useEffect(() => {
-    // Assume online by default, then check
-    setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   const updateDb = useCallback(
     async (newDbState: Database) => {
+      if (!schoolDocRef) return;
       const dbWithTimestamp = { ...newDbState, updatedAt: Date.now() };
 
-      // Update local state and localStorage
-      setDb(dbWithTimestamp);
-      if (schoolId) {
-        localStorage.setItem(
-          `schoolArcadeDB_${schoolId}`,
-          JSON.stringify(dbWithTimestamp)
-        );
-      }
-
-      // Push to firestore if online
-      if (isOnline && schoolDocRef) {
-        setSyncStatus('syncing');
-        try {
-          await setDoc(schoolDocRef, dbWithTimestamp);
-          setSyncStatus('synced');
-        } catch (e) {
-          console.error('Firebase write error:', e);
-          setSyncStatus('error');
-          toast({
-            variant: 'destructive',
-            title: 'Sync Error',
-            description: 'Could not save changes to the cloud.',
-          });
-        }
-      } else if (!isOnline) {
-        setSyncStatus('offline');
+      setSyncStatus('syncing');
+      try {
+        await setDoc(schoolDocRef, dbWithTimestamp);
+      } catch (e) {
+        setSyncStatus('error');
+        toast({
+          variant: 'destructive',
+          title: 'Sync Error',
+          description: 'Could not save changes to the cloud.',
+        });
       }
     },
-    [schoolId, isOnline, schoolDocRef, toast]
+    [schoolDocRef, toast]
   );
 
-  // Effect to initialize state from localStorage on first load
   useEffect(() => {
     const savedSchoolId = localStorage.getItem('schoolId');
     if (savedSchoolId) {
-      const localDbKey = `schoolArcadeDB_${savedSchoolId}`;
-      try {
-        const localDataString = localStorage.getItem(localDbKey);
-        setDb(localDataString ? JSON.parse(localDataString) : INITIAL_DATA);
-      } catch {
-        setDb(INITIAL_DATA);
-      }
-
+      _setSchoolId(savedSchoolId);
       const savedUserId = sessionStorage.getItem('currentUserId');
       if (savedUserId) setCurrentUserId(savedUserId);
       const savedTeacherId = sessionStorage.getItem('currentTeacherId');
       if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
       const savedIsAdmin = sessionStorage.getItem('isAdmin');
       if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
-
-      _setSchoolId(savedSchoolId);
+    } else {
+      setIsInitialized(true); 
     }
-    // Mark as initialized after attempting to load from local storage.
-    setIsInitialized(true);
   }, []);
-
-  // Effect to sync with Firebase when coming online or schoolId changes
+  
   useEffect(() => {
-    if (!isInitialized || !schoolId || !firestore) return;
-
-    if (!isOnline) {
-      setSyncStatus('offline');
+    if (!schoolDocRef) {
+      setIsInitialized(true);
       return;
     }
-
-    const syncWithFirebase = async () => {
-      if (!schoolDocRef) return;
-      setSyncStatus('syncing');
-      try {
-        const remoteSnap = await getDoc(schoolDocRef);
-        const remoteDb = remoteSnap.exists()
-          ? (remoteSnap.data() as Database)
-          : null;
-
-        // Use a function to get the latest state of db to avoid stale closures
-        setDb((currentLocalDb) => {
-          if (!remoteDb) {
-            // No remote data, push local data up.
-            setDoc(schoolDocRef, currentLocalDb);
-            return currentLocalDb;
-          } else if (currentLocalDb.updatedAt > remoteDb.updatedAt) {
-            // Local is newer, push to remote
-            setDoc(schoolDocRef, currentLocalDb);
-            return currentLocalDb;
-          } else if (remoteDb.updatedAt > currentLocalDb.updatedAt) {
-            // Remote is newer, update local state and localStorage
-            localStorage.setItem(
-              `schoolArcadeDB_${schoolId}`,
-              JSON.stringify(remoteDb)
-            );
-            return remoteDb;
-          }
-          // They are in sync
-          return currentLocalDb;
-        });
-
-        setSyncStatus('synced');
-      } catch (error) {
-        console.error('Firebase sync error:', error);
+    const unsubscribe = onSnapshot(schoolDocRef,
+      (snapshot) => {
+        setSyncStatus(snapshot.metadata.fromCache ? 'offline' : 'synced');
+        if (snapshot.exists()) {
+          setDb(snapshot.data() as Database);
+        } else {
+          setDoc(schoolDocRef, INITIAL_DATA);
+          setDb(INITIAL_DATA);
+        }
+        setIsInitialized(true);
+      },
+      (error) => {
         setSyncStatus('error');
+        setIsInitialized(true);
       }
-    };
+    );
+    return () => unsubscribe();
+  }, [schoolDocRef]);
 
-    syncWithFirebase();
-  }, [schoolId, isOnline, firestore, isInitialized, schoolDocRef]); // `schoolDocRef` is derived but needed
 
   const setSchoolId = useCallback(
     (id: string) => {
@@ -247,13 +200,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (sanitizedId !== schoolId) {
-        localStorage.setItem('schoolId', sanitizedId);
         sessionStorage.clear();
-        // A full reload is the most reliable way to reset all state
-        window.location.href = '/';
+        setCurrentUserId(null);
+        setCurrentTeacherId(null);
+        setIsAdmin(false);
+
+        localStorage.setItem('schoolId', sanitizedId);
+        _setSchoolId(sanitizedId);
+        router.push('/');
       }
     },
-    [schoolId, toast]
+    [schoolId, toast, router]
   );
 
   const changeSchoolId = useCallback(() => {
@@ -313,7 +270,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [db?.teachers]
   );
 
-  // Data mutation methods
   const addStudent = useCallback(
     async (studentData: Omit<Student, 'id' | 'history'>) => {
       if (

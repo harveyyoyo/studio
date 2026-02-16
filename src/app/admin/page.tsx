@@ -15,7 +15,6 @@ import {
   Printer,
   Settings,
   Edit,
-  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +30,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
-import { INITIAL_DATA } from '@/lib/data';
 
 
 export default function AdminDashboard() {
@@ -186,15 +184,6 @@ export default function AdminDashboard() {
       if (fileInputRef.current) fileInputRef.current.value = "";
   }
   
-  const handleFactoryReset = async () => {
-    if (window.confirm("ARE YOU ABSOLUTELY SURE? This will permanently delete all current school data and replace it with the initial default data.")) {
-      if (window.confirm("Second confirmation: This action cannot be undone. Proceed?")) {
-        await setData(INITIAL_DATA);
-        toast({ title: "System has been reset." });
-      }
-    }
-  }
-
 
   return (
     <div className="space-y-6">
@@ -286,7 +275,6 @@ export default function AdminDashboard() {
                  <input type="file" ref={fileInputRef} onChange={onFileChange} className="hidden" accept="application/json" />
              </div>
               <Button variant="outline" className="w-full justify-center gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"><FileSpreadsheet /> Import CSV</Button>
-               <Button onClick={handleFactoryReset} variant="destructive" className="w-full font-bold mt-4" ><AlertTriangle className="w-4 h-4 mr-2" />Factory Reset</Button>
           </CardContent>
         </Card>
       </div>
