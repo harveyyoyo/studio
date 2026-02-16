@@ -15,6 +15,7 @@ import {
   Printer,
   CloudCog,
   Settings,
+  Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,30 +49,29 @@ export default function AdminDashboard() {
     isInitialized,
     getTeacherName,
     setCouponsToPrint,
+    deleteStudent,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
 
-  // Managers State
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
-  // Printer State
   const [printTeacher, setPrintTeacher] = useState('Admin');
   const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
   const [printValue, setPrintValue] = useState('10');
 
   useEffect(() => {
-    enterAdmin();
-  }, [enterAdmin]);
-
-  useEffect(() => {
-    if (isInitialized && !schoolId) {
-      router.replace('/setup');
+    if (isInitialized) {
+      if (!schoolId) {
+        router.replace('/setup');
+      } else {
+        enterAdmin();
+      }
     }
-  }, [isAdmin, schoolId, isInitialized, router]);
+  }, [isInitialized, schoolId, enterAdmin, router]);
 
   if (!isInitialized || !schoolId || !isAdmin) return <p>Loading...</p>;
 
@@ -111,10 +111,9 @@ export default function AdminDashboard() {
     setIsStudentModalOpen(true);
   };
   
-  const handleDeleteStudent = (id: string) => {
+  const handleDeleteStudent = async (id: string) => {
     if(window.confirm("Delete this student permanently?")){
-      const newStudents = db.students.filter(s => s.id !== id);
-      saveDb({...db, students: newStudents});
+      await deleteStudent(id);
       toast({title: "Student Deleted"});
     }
   }
@@ -152,7 +151,6 @@ export default function AdminDashboard() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Teacher Manager */}
         <Card className="border-t-4 border-indigo-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -184,7 +182,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Category Manager */}
         <Card className="border-t-4 border-pink-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -216,7 +213,6 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Data Manager */}
         <Card className="border-t-4 border-yellow-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -235,7 +231,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
       
-      {/* Master Coupon Printer */}
       <Card className="border-t-4 border-indigo-500">
         <CardHeader>
             <CardTitle className="flex items-center gap-2"><Printer className="text-indigo-500" /> Master Coupon Printer</CardTitle>
@@ -276,7 +271,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* All Students List */}
       <Card>
           <CardHeader className="flex flex-row justify-between items-center">
               <CardTitle>All Students (Global List)</CardTitle>
@@ -291,7 +285,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-muted-foreground">Teacher: {getTeacherName(s.teacherId)} | NFC: {s.nfcId}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}><Plus className="w-4 h-4 text-blue-500" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDeleteStudent(s.id)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
                       </div>
                     </li>
@@ -307,7 +301,7 @@ export default function AdminDashboard() {
 
 
 function StudentModal({ isOpen, setIsOpen, student }: {isOpen: boolean, setIsOpen: (val: boolean) => void, student: Student | null}) {
-    const { db, saveDb } = useAppContext();
+    const { db, addStudent, updateStudent } = useAppContext();
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [points, setPoints] = useState('0');
@@ -331,17 +325,15 @@ function StudentModal({ isOpen, setIsOpen, student }: {isOpen: boolean, setIsOpe
         }
     }, [student, isOpen, db.teachers]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name || !nfcId) {
             toast({ variant: 'destructive', title: 'Name and NFC ID are required.' });
             return;
         }
 
         if (student) {
-            const updatedStudents = db.students.map(s =>
-                s.id === student.id ? { ...s, name, password, nfcId, points: parseInt(points) || 0, teacherId } : s
-            );
-            saveDb({ ...db, students: updatedStudents });
+            const updatedStudent: Student = { ...student, name, password, nfcId, points: parseInt(points) || 0, teacherId };
+            await updateStudent(updatedStudent);
             toast({ title: 'Student updated!' });
         } else {
             const newStudent: Student = {
@@ -350,7 +342,7 @@ function StudentModal({ isOpen, setIsOpen, student }: {isOpen: boolean, setIsOpe
                 points: parseInt(points) || 0,
                 teacherId, history: [],
             };
-            saveDb({ ...db, students: [...db.students, newStudent] });
+            await addStudent(newStudent);
             toast({ title: 'Student added!' });
         }
         setIsOpen(false);

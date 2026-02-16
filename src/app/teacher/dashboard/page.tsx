@@ -169,7 +169,7 @@ function CouponGenerator() {
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const { currentTeacher, logout, db, saveDb } = useAppContext();
+  const { currentTeacher, logout, db, deleteStudent } = useAppContext();
   const { toast } = useToast();
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -194,10 +194,9 @@ export default function TeacherDashboard() {
     setStudentModalOpen(true);
   }
 
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = async (studentId: string) => {
     if(window.confirm("Are you sure you want to delete this student?")){
-      const newStudents = db.students.filter(s => s.id !== studentId);
-      saveDb({...db, students: newStudents});
+      await deleteStudent(studentId);
       toast({title: "Student Deleted"});
     }
   }
@@ -275,7 +274,7 @@ interface StudentModalProps {
 }
 
 function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
-    const { db, saveDb, currentTeacher } = useAppContext();
+    const { addStudent, updateStudent, currentTeacher } = useAppContext();
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [points, setPoints] = useState('0');
@@ -296,17 +295,15 @@ function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
         }
     }, [student, isOpen]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name || !nfcId || !currentTeacher) {
             toast({ variant: 'destructive', title: 'Name and NFC ID are required.' });
             return;
         }
 
         if (student) { // Editing
-            const updatedStudents = db.students.map(s =>
-                s.id === student.id ? { ...s, name, password, nfcId, points: parseInt(points) || 0 } : s
-            );
-            saveDb({ ...db, students: updatedStudents });
+            const updatedStudent: Student = { ...student, name, password, nfcId, points: parseInt(points) || 0 };
+            await updateStudent(updatedStudent);
             toast({ title: 'Student updated!' });
         } else { // Adding
             const newStudent: Student = {
@@ -318,7 +315,7 @@ function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
                 teacherId: currentTeacher.id,
                 history: [],
             };
-            saveDb({ ...db, students: [...db.students, newStudent] });
+            await addStudent(newStudent);
             toast({ title: 'Student added!' });
         }
         setIsOpen(false);

@@ -17,7 +17,13 @@ import { PrintSheet } from '@/components/PrintSheet';
 // Firebase Imports
 import { useFirestore } from '@/firebase';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, setDoc } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  arrayUnion,
+  runTransaction,
+} from 'firebase/firestore';
 
 interface AppContextType {
   isInitialized: boolean;
@@ -35,6 +41,9 @@ interface AppContextType {
   saveDb: (updatedDb: Database) => void;
   getTeacherName: (id: string) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
+  addStudent: (student: Student) => Promise<void>;
+  updateStudent: (student: Student) => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -51,16 +60,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
-  // Memoize the document reference to prevent re-renders
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
     [firestore, schoolId]
   );
 
-  // useDoc hook for real-time data synchronization
   const { data: db, status } = useDoc<Database>(schoolDocRef);
 
-  // Effect to initialize a new school document in Firestore if it doesn't exist
   useEffect(() => {
     if (status === 'success' && !db && schoolDocRef) {
       console.log(`No data for school "${schoolId}". Creating new record.`);
@@ -71,6 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status, db, schoolDocRef, toast, schoolId]);
 
+  // Generic save, use with caution for arrays to avoid race conditions
   const saveDb = useCallback(
     (updatedDb: Database) => {
       if (schoolDocRef) {
@@ -79,6 +86,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [schoolDocRef]
+  );
+
+  const addStudent = useCallback(
+    async (newStudent: Student) => {
+      if (schoolDocRef) {
+        await updateDoc(schoolDocRef, {
+          students: arrayUnion(newStudent),
+        });
+      }
+    },
+    [schoolDocRef]
+  );
+
+  const updateStudent = useCallback(
+    async (updatedStudent: Student) => {
+      if (schoolDocRef) {
+        try {
+          await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) {
+              throw 'Document does not exist!';
+            }
+            const oldData = schoolSnap.data();
+            const newStudents = oldData.students.map((s) =>
+              s.id === updatedStudent.id ? updatedStudent : s
+            );
+            transaction.update(schoolDocRef, { students: newStudents });
+          });
+        } catch (e) {
+          console.error('Transaction failed: ', e);
+          toast({
+            variant: 'destructive',
+            title: 'Update failed',
+            description: (e as Error).message,
+          });
+        }
+      }
+    },
+    [schoolDocRef, firestore, toast]
+  );
+
+  const deleteStudent = useCallback(
+    async (studentId: string) => {
+      if (schoolDocRef) {
+        try {
+          await runTransaction(firestore, async (transaction) => {
+            const schoolSnap = await transaction.get(schoolDocRef);
+            if (!schoolSnap.exists()) {
+              throw 'Document does not exist!';
+            }
+            const oldData = schoolSnap.data();
+            const newStudents = oldData.students.filter(
+              (s) => s.id !== studentId
+            );
+            transaction.update(schoolDocRef, { students: newStudents });
+          });
+        } catch (e) {
+          console.error('Transaction failed: ', e);
+          toast({
+            variant: 'destructive',
+            title: 'Delete failed',
+            description: (e as Error).message,
+          });
+        }
+      }
+    },
+    [schoolDocRef, firestore, toast]
   );
 
   const setSchoolId = useCallback(
@@ -113,16 +187,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  // Load schoolId from localStorage on initial app load
   useEffect(() => {
     const savedSchoolId = localStorage.getItem('schoolId');
     if (savedSchoolId) {
       _setSchoolId(savedSchoolId);
     }
+    const savedUserId = sessionStorage.getItem('currentUserId');
+    if (savedUserId) setCurrentUserId(savedUserId);
+
+    const savedTeacherId = sessionStorage.getItem('currentTeacherId');
+    if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
+
+    const savedIsAdmin = sessionStorage.getItem('isAdmin');
+    if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
+
     setIsInitialized(true);
   }, []);
 
-  // Handle printing logic
   useEffect(() => {
     if (couponsToPrint.length > 0) {
       setTimeout(() => {
@@ -135,6 +216,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginStudent = useCallback(
     (student: Student) => {
       setCurrentUserId(student.id);
+      sessionStorage.setItem('currentUserId', student.id);
       router.push('/student/kiosk');
     },
     [router]
@@ -143,21 +225,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loginTeacher = useCallback(
     (teacher: Teacher) => {
       setCurrentTeacherId(teacher.id);
+      sessionStorage.setItem('currentTeacherId', teacher.id);
       router.push('/teacher/dashboard');
     },
     [router]
   );
 
   const enterAdmin = useCallback(() => {
-    // This function now only marks the user as admin for the current session.
-    // The component at /admin is responsible for calling this.
     setIsAdmin(true);
+    sessionStorage.setItem('isAdmin', 'true');
   }, []);
 
   const logout = useCallback(() => {
     setCurrentUserId(null);
+    sessionStorage.removeItem('currentUserId');
     setCurrentTeacherId(null);
+    sessionStorage.removeItem('currentTeacherId');
     setIsAdmin(false);
+    sessionStorage.removeItem('isAdmin');
     router.push('/');
   }, [router]);
 
@@ -181,7 +266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isInitialized &&
         (status === 'success' || (status === 'error' && !!schoolId)),
       schoolId,
-      db: db || INITIAL_DATA, // Use live data or fallback to initial data structure
+      db: db || INITIAL_DATA,
       currentUser,
       currentTeacher,
       isAdmin,
@@ -194,6 +279,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveDb,
       getTeacherName,
       setCouponsToPrint,
+      addStudent,
+      updateStudent,
+      deleteStudent,
     };
   }, [
     isInitialized,
@@ -211,6 +299,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     logout,
     saveDb,
     getTeacherName,
+    addStudent,
+    updateStudent,
+    deleteStudent,
   ]);
 
   return (
