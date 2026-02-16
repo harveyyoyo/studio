@@ -42,7 +42,7 @@ export default function SchoolSetupPage() {
                 className="w-full p-3 font-code lowercase"
                 placeholder="e.g. lincoln_high_2024"
                 value={schoolIdInput}
-                onChange={(e) => setSchoolIdInput(e.target.value)}
+                onChange={(e) => setSchoolIdInput(e.target.value.trim())}
                 onKeyPress={(e) => e.key === 'Enter' && handleConnect()}
               />
               <p className="text-xs text-muted-foreground mt-1">

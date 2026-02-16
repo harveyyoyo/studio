@@ -165,14 +165,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   useEffect(() => {
     if (!schoolDocRef) {
-      setIsInitialized(true);
       return;
     }
     const unsubscribe = onSnapshot(schoolDocRef,
       (snapshot) => {
         setSyncStatus(snapshot.metadata.fromCache ? 'offline' : 'synced');
         if (snapshot.exists()) {
-          setDb(snapshot.data() as Database);
+          const remoteData = snapshot.data();
+          // Basic conflict resolution: last write wins.
+          // A more robust solution might use versioning or field-level merging.
+          if (remoteData.updatedAt > db.updatedAt) {
+            setDb(remoteData as Database);
+          }
         } else {
           setDoc(schoolDocRef, INITIAL_DATA);
           setDb(INITIAL_DATA);
@@ -180,8 +184,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsInitialized(true);
       },
       (error) => {
+        console.error("Firestore snapshot error:", error);
         setSyncStatus('error');
-        setIsInitialized(true);
+        setIsInitialized(true); // Still initialize to show UI, which can display an error state.
       }
     );
     return () => unsubscribe();
@@ -200,17 +205,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (sanitizedId !== schoolId) {
-        sessionStorage.clear();
-        setCurrentUserId(null);
-        setCurrentTeacherId(null);
-        setIsAdmin(false);
-
         localStorage.setItem('schoolId', sanitizedId);
-        _setSchoolId(sanitizedId);
-        router.push('/');
+        window.location.assign('/'); // Full reload to ensure clean state
       }
     },
-    [schoolId, toast, router]
+    [schoolId, toast]
   );
 
   const changeSchoolId = useCallback(() => {
