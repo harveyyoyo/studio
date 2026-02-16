@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -20,7 +19,7 @@ import type {
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
-import { doc, runTransaction, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -303,7 +302,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         history: [],
       };
       await updateDb({ ...db, students: [...db.students, newStudent] });
-      toast({ title: 'Student added!' });
     },
     [db, updateDb, toast]
   );
@@ -497,7 +495,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => {
               window.print();
               setCouponsToPrint([]);
-            }, 1000); // Increased delay for rendering
+            }, 2500); // Increased delay for rendering
           });
         } catch (error) {
           console.error('Font loading error, printing anyway.', error);
