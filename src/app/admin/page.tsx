@@ -44,12 +44,16 @@ export default function AdminDashboard() {
     enterAdmin,
     logout,
     db,
-    saveDb,
     schoolId,
     isInitialized,
     getTeacherName,
     setCouponsToPrint,
     deleteStudent,
+    addTeacher,
+    deleteTeacher,
+    addCategory,
+    deleteCategory,
+    addCoupons,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -75,33 +79,31 @@ export default function AdminDashboard() {
 
   if (!isInitialized || !schoolId || !isAdmin) return <p>Loading...</p>;
 
-  const handleAddTeacher = () => {
+  const handleAddTeacher = async () => {
     if (!newTeacherName) return;
     const newTeacher: Teacher = { id: 't' + Date.now(), name: newTeacherName };
-    saveDb({ ...db, teachers: [...db.teachers, newTeacher] });
+    await addTeacher(newTeacher);
     setNewTeacherName('');
     toast({ title: 'Teacher Added' });
   };
   
-  const handleDeleteTeacher = (id: string) => {
+  const handleDeleteTeacher = async (id: string) => {
     if(window.confirm("Delete this teacher? Students will become unassigned.")){
-      const newTeachers = db.teachers.filter(t => t.id !== id);
-      saveDb({...db, teachers: newTeachers});
+      await deleteTeacher(id);
       toast({title: "Teacher Deleted"});
     }
   }
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCategoryName) return;
-    saveDb({ ...db, categories: [...db.categories, newCategoryName] });
+    await addCategory(newCategoryName);
     setNewCategoryName('');
     toast({ title: 'Category Added' });
   };
 
-  const handleDeleteCategory = (name: string) => {
+  const handleDeleteCategory = async (name: string) => {
     if(window.confirm("Delete this category?")){
-      const newCategories = db.categories.filter(c => c !== name);
-      saveDb({...db, categories: newCategories});
+      await deleteCategory(name);
       toast({title: "Category Deleted"});
     }
   }
@@ -118,7 +120,7 @@ export default function AdminDashboard() {
     }
   }
   
-  const handlePrintSheet = () => {
+  const handlePrintSheet = async () => {
     const coupons = Array.from({ length: 24 }, () => {
         const randomPart = Math.floor(100000 + Math.random() * 900000);
         const code = `PTS-${printValue}-${randomPart}`;
@@ -131,7 +133,7 @@ export default function AdminDashboard() {
             createdAt: Date.now()
         };
     });
-    saveDb({...db, coupons: [...db.coupons, ...coupons]});
+    await addCoupons(coupons);
     setCouponsToPrint(coupons);
     toast({title: "Generating print sheet..."});
   }

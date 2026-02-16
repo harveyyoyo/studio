@@ -29,7 +29,7 @@ const rewards = [
 
 export default function StudentKioskPage() {
   const router = useRouter();
-  const { currentUser, logout, saveDb, db } = useAppContext();
+  const { currentUser, logout, redeemCoupon, buyReward } = useAppContext();
   const [scanMessage, setScanMessage] = useState<{
     text: string;
     type: 'success' | 'error' | 'info';
@@ -77,62 +77,27 @@ export default function StudentKioskPage() {
     return <div>Loading...</div>;
   }
 
-  const processCode = (code: string) => {
+  const processCode = async (code: string) => {
     if (!code) return;
-    const couponIndex = db.coupons.findIndex((c) => c.code === code);
-    if (couponIndex > -1) {
-      const coupon = db.coupons[couponIndex];
-      if (coupon.used) {
-        setScanMessage({ text: 'Coupon already used!', type: 'error' });
-      } else {
-        const updatedCoupons = [...db.coupons];
-        updatedCoupons[couponIndex] = { ...coupon, used: true };
-        const newHistoryItem: HistoryItem = {
-          desc: `Redeemed (+${coupon.value})`,
-          amount: coupon.value,
-          date: Date.now(),
-        };
-        const updatedStudents = db.students.map((s) =>
-          s.id === currentUser.id
-            ? {
-                ...s,
-                points: s.points + coupon.value,
-                history: [newHistoryItem, ...s.history],
-              }
-            : s
-        );
-        saveDb({ ...db, coupons: updatedCoupons, students: updatedStudents });
-        setScanMessage({ text: `+${coupon.value} Points Added!`, type: 'success' });
-      }
+    const result = await redeemCoupon(code);
+    if (result.success) {
+        setScanMessage({ text: result.message, type: 'success' });
     } else {
-      setScanMessage({ text: 'Invalid Coupon Code', type: 'info' });
+        const isUsed = result.message.includes('used');
+        setScanMessage({ text: result.message, type: isUsed ? 'error' : 'info' });
     }
     setBarcode('');
     setTimeout(() => setScanMessage(null), 3000);
   };
 
-  const handleBuyItem = (name: string, cost: number) => {
-    if (currentUser.points >= cost) {
-      if (window.confirm(`Redeem ${name} for ${cost} points?`)) {
-        const newHistoryItem: HistoryItem = {
-          desc: `Bought ${name}`,
-          amount: -cost,
-          date: Date.now(),
-        };
-        const updatedStudents = db.students.map((s) =>
-          s.id === currentUser.id
-            ? {
-                ...s,
-                points: s.points - cost,
-                history: [newHistoryItem, ...s.history],
-              }
-            : s
-        );
-        saveDb({ ...db, students: updatedStudents });
-        toast({ title: `${name} redeemed!` });
-      }
-    } else {
-      toast({ variant: 'destructive', title: 'Not enough points!' });
+  const handleBuyItem = async (name: string, cost: number) => {
+    if (window.confirm(`Redeem ${name} for ${cost} points?`)) {
+       const result = await buyReward(name, cost);
+       if (result.success) {
+           toast({ title: result.message });
+       } else {
+           toast({ variant: 'destructive', title: result.message });
+       }
     }
   };
 

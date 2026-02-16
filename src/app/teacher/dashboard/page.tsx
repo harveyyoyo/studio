@@ -36,14 +36,14 @@ import {
 } from '@/components/ui/dialog';
 
 function CouponGenerator() {
-  const { currentTeacher, db, saveDb, setCouponsToPrint } = useAppContext();
+  const { currentTeacher, db, addCoupons, setCouponsToPrint } = useAppContext();
   const [category, setCategory] = useState(db.categories[0] || '');
   const [value, setValue] = useState('10');
   const [qty, setQty] = useState(1);
   const [recentlyGenerated, setRecentlyGenerated] = useState<Coupon[]>([]);
   const { toast } = useToast();
 
-  const generateCoupons = (printSheet = false) => {
+  const generateCoupons = async (printSheet = false) => {
     if (!currentTeacher) return;
     const numToGenerate = printSheet ? 24 : qty;
     const generated: Coupon[] = [];
@@ -61,7 +61,7 @@ function CouponGenerator() {
       };
       generated.push(newCoupon);
     }
-    saveDb({ ...db, coupons: [...db.coupons, ...generated] });
+    await addCoupons(generated);
     setRecentlyGenerated(generated);
     toast({ title: `${numToGenerate} coupons generated!` });
 
