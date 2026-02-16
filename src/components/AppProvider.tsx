@@ -396,12 +396,27 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
   }, []);
 
   useEffect(() => {
-    if (couponsToPrint.length > 0) {
-      setTimeout(() => {
-        window.print();
-        setCouponsToPrint([]);
-      }, 1000);
-    }
+    const handlePrint = async () => {
+      if (couponsToPrint.length > 0) {
+        try {
+          // Wait for all fonts to be loaded and ready.
+          await document.fonts.ready;
+          // Add a small extra delay to allow for rendering after font application.
+          setTimeout(() => {
+            window.print();
+            setCouponsToPrint([]);
+          }, 500);
+        } catch (error) {
+          console.error('Error waiting for fonts to load, falling back:', error);
+          // Fallback to a simple timeout if the fonts API fails.
+          setTimeout(() => {
+            window.print();
+            setCouponsToPrint([]);
+          }, 2000);
+        }
+      }
+    };
+    handlePrint();
   }, [couponsToPrint]);
 
   const loginStudent = useCallback(
