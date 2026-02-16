@@ -6,12 +6,18 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Database, Student, Teacher, Coupon } from '@/lib/types';
 import { INITIAL_DATA } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
+
+// Firebase Imports
+import { useFirestore } from '@/firebase';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface AppContextType {
   isInitialized: boolean;
@@ -36,7 +42,6 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [schoolId, _setSchoolId] = useState<string | null>(null);
-  const [db, setDb] = useState<Database>(INITIAL_DATA);
   const [currentUser, setCurrentUser] = useState<Student | null>(null);
   const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -44,30 +49,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  // Memoize the document reference to prevent re-renders
+  const schoolDocRef = useMemo(
+    () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
+    [firestore, schoolId]
+  );
+
+  // useDoc hook for real-time data synchronization
+  const { data: db, setData: setDb, status } = useDoc<Database>(schoolDocRef);
+
+  // Effect to initialize a new school document in Firestore if it doesn't exist
+  useEffect(() => {
+    if (status === 'success' && db === undefined && schoolDocRef) {
+      console.log(`No data for school "${schoolId}". Creating new record.`);
+      const initialDb = { ...INITIAL_DATA, updatedAt: Date.now() };
+      setDoc(schoolDocRef, initialDb).then(() => {
+        setDb(initialDb); // Optimistically set local data
+        toast({ title: 'New school database created!' });
+      });
+    }
+  }, [status, db, schoolDocRef, setDb, toast, schoolId]);
 
   const saveDb = useCallback(
     (updatedDb: Database) => {
-      const dbWithTimestamp = { ...updatedDb, updatedAt: Date.now() };
-      setDb(dbWithTimestamp);
-      if (schoolId) {
-        localStorage.setItem(
-          `schoolArcadeDB_${schoolId}`,
-          JSON.stringify(dbWithTimestamp)
-        );
+      if (schoolDocRef) {
+        const dbWithTimestamp = { ...updatedDb, updatedAt: Date.now() };
+        // Optimistically update the local state for a snappy UI
+        setDb(dbWithTimestamp);
+        // Persist the changes to Firestore, no need to await
+        setDoc(schoolDocRef, dbWithTimestamp, { merge: true });
       }
-      // Firebase sync logic would go here
     },
-    [schoolId]
+    [schoolDocRef, setDb]
   );
-
-  const loadLocalData = useCallback((id: string) => {
-    const stored = localStorage.getItem(`schoolArcadeDB_${id}`);
-    if (stored) {
-      setDb(JSON.parse(stored));
-    } else {
-      saveDb(INITIAL_DATA);
-    }
-  }, [saveDb]);
 
   const setSchoolId = (id: string) => {
     const sanitizedId = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -75,40 +91,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toast({
         variant: 'destructive',
         title: 'Invalid ID',
-        description: 'School ID must be at least 3 characters.',
+        description: 'School ID must be at least 3 characters long.',
       });
       return;
     }
     _setSchoolId(sanitizedId);
     localStorage.setItem('schoolId', sanitizedId);
-    loadLocalData(sanitizedId);
     router.push('/');
   };
 
   const changeSchoolId = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to switch to a different School ID?'
-      )
-    ) {
-      localStorage.removeItem('schoolId');
+    if (window.confirm('Are you sure? This will log you out.')) {
       _setSchoolId(null);
       setCurrentUser(null);
       setCurrentTeacher(null);
       setIsAdmin(false);
+      localStorage.removeItem('schoolId');
       router.push('/setup');
     }
   };
 
+  // Load schoolId from localStorage on initial app load
   useEffect(() => {
     const savedSchoolId = localStorage.getItem('schoolId');
     if (savedSchoolId) {
       _setSchoolId(savedSchoolId);
-      loadLocalData(savedSchoolId);
     }
     setIsInitialized(true);
-  }, [loadLocalData]);
-  
+  }, []);
+
+  // Handle printing logic
   useEffect(() => {
     if (couponsToPrint.length > 0) {
       setTimeout(() => {
@@ -131,7 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const enterAdmin = () => {
     setIsAdmin(true);
     router.push('/admin');
-  }
+  };
 
   const logout = () => {
     setCurrentUser(null);
@@ -141,13 +153,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getTeacherName = (id: string) => {
-    return db.teachers.find(t => t.id === id)?.name || 'Unassigned';
-  }
+    return db?.teachers.find((t) => t.id === id)?.name || 'Unassigned';
+  };
 
   const value = {
-    isInitialized,
+    isInitialized: isInitialized && (status === 'success' || (status === 'error' && !!schoolId)),
     schoolId,
-    db,
+    db: db || INITIAL_DATA, // Use live data or fallback to initial data structure
     currentUser,
     currentTeacher,
     isAdmin,

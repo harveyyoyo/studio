@@ -3,6 +3,10 @@ import { AppProvider } from "@/components/AppProvider";
 import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
+import {
+  ClientProvider,
+} from '@/firebase';
+
 
 export const metadata: Metadata = {
   title: "Arcade Rewards Hub",
@@ -29,15 +33,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppProvider>
-          <div id="screen-view" className="flex min-h-screen flex-col items-center p-4">
-            <Header />
-            <main id="app" className="w-full max-w-6xl relative z-10">
-              {children}
-            </main>
-          </div>
-          <Toaster />
-        </AppProvider>
+        <ClientProvider>
+          <AppProvider>
+            <div
+              id="screen-view"
+              className="flex min-h-screen flex-col items-center p-4"
+            >
+              <Header />
+              <main id="app" className="w-full max-w-6xl relative z-10">
+                {children}
+              </main>
+            </div>
+            <Toaster />
+          </AppProvider>
+        </ClientProvider>
       </body>
     </html>
   );
