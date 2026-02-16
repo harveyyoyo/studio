@@ -1,10 +1,8 @@
-// IMPORTANT: This is a placeholder. Replace with your actual Firebase config.
-// You can get this from your Firebase project settings.
 export const firebaseConfig = {
-  apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:1234567890abcdef"
+  apiKey: "AIzaSyBUH3r37IqZkJ9SmvWaaAJ5HU29Wa_hJLY",
+  authDomain: "studio-1273073612-71183.firebaseapp.com",
+  projectId: "studio-1273073612-71183",
+  storageBucket: "studio-1273073612-71183.firebasestorage.app",
+  messagingSenderId: "12494403927",
+  appId: "1:12494403927:web:60c2e4367b55c7921ee612"
 };

@@ -88,10 +88,13 @@ body {
     
     body, html { 
         background: white !important; 
+        color: black !important;
         margin: 0; 
         padding: 0; 
         width: 100%;
         height: 100%;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     /* Hide the main app UI completely */
@@ -104,7 +107,7 @@ body {
         display: grid !important;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(8, 1fr);
-        gap: 0.25in;
+        gap: 0; /* No gap, borders will separate */
         width: 7.5in; 
         height: 10in; 
         margin: 0 auto;
@@ -113,28 +116,92 @@ body {
         position: absolute;
         top: 0;
         left: 0;
+        right: 0;
+        bottom: 0;
         z-index: 9999;
     }
     
     .print-coupon {
-        border: 2px dashed #333;
-        padding: 4px;
+        border: 1px dotted #888;
+        padding: 6px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         text-align: center;
-        height: 100%;
-        width: 100%;
+        height: 1.25in;
+        width: 2.5in;
         page-break-inside: avoid;
-        border-radius: 8px;
         box-sizing: border-box;
         font-family: 'PT Sans', sans-serif;
+        position: relative;
+        background: #fff;
+        overflow: hidden;
     }
     
-    .print-coupon .title { font-weight: 800; font-size: 9pt; text-transform: uppercase; letter-spacing: 1px; }
-    .print-coupon .points { font-size: 24pt; font-weight: 900; line-height: 1; margin: 2px 0; font-family: 'Playfair Display', serif; }
-    .print-coupon .cat { font-size: 8pt; font-style: italic; margin-bottom: 2px;}
-    .print-coupon .barcode-font { font-family: 'Libre Barcode 39 Text', cursive; font-size: 36pt; line-height: 0.8; }
-    .print-coupon .meta { font-size: 7pt; font-family: 'Source Code Pro', monospace; color: #333; margin-top: 2px;}
+    .print-coupon .school-name {
+      background: #444;
+      color: #fff;
+      font-size: 7pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      width: 120%;
+      padding: 2px 0;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-4deg);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .print-coupon .points-value { 
+      font-size: 32pt; 
+      font-weight: 900; 
+      line-height: 1; 
+      margin-top: 24px;
+      font-family: 'Playfair Display', serif; 
+      color: #000;
+    }
+    
+    .print-coupon .points-label {
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .print-coupon .category { 
+      font-size: 8pt; 
+      font-style: italic; 
+      margin-top: 3px;
+      color: #555;
+    }
+
+    .print-coupon .barcode { 
+      font-family: 'Libre Barcode 39 Text', cursive; 
+      font-size: 30pt; 
+      line-height: 0.8;
+      margin-top: 3px;
+      color: #000;
+    }
+
+    .print-coupon .code-text {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 6pt;
+      letter-spacing: 0.5px;
+      margin-top: -2px;
+      color: #000;
+    }
+    
+    .print-coupon .footer { 
+      font-size: 6pt; 
+      font-family: 'Source Code Pro', monospace; 
+      color: #666;
+      margin-top: auto;
+      padding-bottom: 2px;
+      align-self: center;
+      text-align: center;
+      width: 100%;
+    }
 }
