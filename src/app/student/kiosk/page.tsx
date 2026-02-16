@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ScanBarcode,
@@ -39,7 +39,7 @@ export default function StudentKioskPage() {
   const [countdown, setCountdown] = useState(30);
   const { toast } = useToast();
 
-  const resetKioskTimer = () => {
+  const resetKioskTimer = useCallback(() => {
     setCountdown(30);
     if (kioskTimer.current) clearInterval(kioskTimer.current);
     kioskTimer.current = setInterval(() => {
@@ -53,23 +53,25 @@ export default function StudentKioskPage() {
         return prev - 1;
       });
     }, 1000);
-  };
-  
+  }, [logout, toast]);
+
   useEffect(() => {
     if (!currentUser) {
       router.replace('/student/login');
     } else {
       resetKioskTimer();
-      document.addEventListener('mousemove', resetKioskTimer);
-      document.addEventListener('keypress', resetKioskTimer);
+      const activityListener = () => resetKioskTimer();
+      document.addEventListener('mousemove', activityListener);
+      document.addEventListener('keypress', activityListener);
+
+      return () => {
+        if (kioskTimer.current) clearInterval(kioskTimer.current);
+        document.removeEventListener('mousemove', activityListener);
+        document.removeEventListener('keypress', activityListener);
+      };
     }
-    return () => {
-      if (kioskTimer.current) clearInterval(kioskTimer.current);
-      document.removeEventListener('mousemove', resetKioskTimer);
-      document.removeEventListener('keypress', resetKioskTimer);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, router]);
+  }, [currentUser, router, resetKioskTimer]);
+
 
   if (!currentUser) {
     return <div>Loading...</div>;

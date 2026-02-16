@@ -82,22 +82,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [schoolDocRef]
   );
 
-  const setSchoolId = (id: string) => {
-    const sanitizedId = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (sanitizedId.length < 3) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid ID',
-        description: 'School ID must be at least 3 characters long.',
-      });
-      return;
-    }
-    _setSchoolId(sanitizedId);
-    localStorage.setItem('schoolId', sanitizedId);
-    router.push('/');
-  };
+  const setSchoolId = useCallback(
+    (id: string) => {
+      const sanitizedId = id
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '');
+      if (sanitizedId.length < 3) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid ID',
+          description: 'School ID must be at least 3 characters long.',
+        });
+        return;
+      }
+      _setSchoolId(sanitizedId);
+      localStorage.setItem('schoolId', sanitizedId);
+      router.push('/');
+    },
+    [router, toast]
+  );
 
-  const changeSchoolId = () => {
+  const changeSchoolId = useCallback(() => {
     if (window.confirm('Are you sure? This will log you out.')) {
       _setSchoolId(null);
       setCurrentUser(null);
@@ -106,7 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('schoolId');
       router.push('/setup');
     }
-  };
+  }, [router]);
 
   // Load schoolId from localStorage on initial app load
   useEffect(() => {
@@ -127,49 +133,79 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [couponsToPrint]);
 
-  const loginStudent = (student: Student) => {
-    setCurrentUser(student);
-    router.push('/student/kiosk');
-  };
+  const loginStudent = useCallback(
+    (student: Student) => {
+      setCurrentUser(student);
+      router.push('/student/kiosk');
+    },
+    [router]
+  );
 
-  const loginTeacher = (teacher: Teacher) => {
-    setCurrentTeacher(teacher);
-    router.push('/teacher/dashboard');
-  };
+  const loginTeacher = useCallback(
+    (teacher: Teacher) => {
+      setCurrentTeacher(teacher);
+      router.push('/teacher/dashboard');
+    },
+    [router]
+  );
 
-  const enterAdmin = () => {
+  const enterAdmin = useCallback(() => {
     setIsAdmin(true);
     router.push('/admin');
-  };
+  }, [router]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
     setCurrentTeacher(null);
     setIsAdmin(false);
     router.push('/');
-  };
+  }, [router]);
 
-  const getTeacherName = (id: string) => {
-    return db?.teachers.find((t) => t.id === id)?.name || 'Unassigned';
-  };
+  const getTeacherName = useCallback(
+    (id: string) => {
+      return db?.teachers.find((t) => t.id === id)?.name || 'Unassigned';
+    },
+    [db]
+  );
 
-  const value = {
-    isInitialized: isInitialized && (status === 'success' || (status === 'error' && !!schoolId)),
-    schoolId,
-    db: db || INITIAL_DATA, // Use live data or fallback to initial data structure
-    currentUser,
-    currentTeacher,
-    isAdmin,
-    setSchoolId,
-    changeSchoolId,
-    loginStudent,
-    loginTeacher,
-    enterAdmin,
-    logout,
-    saveDb,
-    getTeacherName,
-    setCouponsToPrint,
-  };
+  const value = useMemo(
+    () => ({
+      isInitialized:
+        isInitialized &&
+        (status === 'success' || (status === 'error' && !!schoolId)),
+      schoolId,
+      db: db || INITIAL_DATA, // Use live data or fallback to initial data structure
+      currentUser,
+      currentTeacher,
+      isAdmin,
+      setSchoolId,
+      changeSchoolId,
+      loginStudent,
+      loginTeacher,
+      enterAdmin,
+      logout,
+      saveDb,
+      getTeacherName,
+      setCouponsToPrint,
+    }),
+    [
+      isInitialized,
+      status,
+      schoolId,
+      db,
+      currentUser,
+      currentTeacher,
+      isAdmin,
+      setSchoolId,
+      changeSchoolId,
+      loginStudent,
+      loginTeacher,
+      enterAdmin,
+      logout,
+      saveDb,
+      getTeacherName,
+    ]
+  );
 
   return (
     <AppContext.Provider value={value}>
