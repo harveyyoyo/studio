@@ -68,7 +68,7 @@ body {
     font-family: 'Playfair Display', serif;
   }
   .font-barcode {
-    font-family: 'Libre Barcode 128', cursive;
+    font-family: 'Libre Barcode 39 Text', cursive;
   }
   .font-code {
     font-family: 'Source Code Pro', monospace;
@@ -198,8 +198,9 @@ body {
     }
 
     .print-coupon-barcode .barcode-font {
-        font-family: 'Libre Barcode 128', cursive;
+        font-family: 'Libre Barcode 39 Text', cursive;
         font-size: 44pt;
+        letter-spacing: 2px;
         line-height: 1;
         color: #000;
         margin: 0;
