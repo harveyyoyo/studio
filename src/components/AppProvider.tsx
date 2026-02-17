@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
 
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('offline');
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
   const router = useRouter();
   const { toast } = useToast();
@@ -168,7 +168,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     const unsubscribe = onSnapshot(schoolDocRef,
       (snapshot) => {
-        setSyncStatus(snapshot.metadata.fromCache ? 'offline' : 'synced');
+        setSyncStatus(snapshot.metadata.fromCache ? 'syncing' : 'synced');
         if (snapshot.exists()) {
           const remoteData = snapshot.data();
           // Basic conflict resolution: last write wins.
