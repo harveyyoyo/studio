@@ -18,10 +18,15 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student } from '@/lib/types';
 import {
-  Ticket,
-  History,
   Nfc,
   Type,
+  ScanLine,
+  History,
+  Gift,
+  Pencil,
+  FileText,
+  LogOut,
+  ShoppingBag,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -34,11 +39,35 @@ function StudentDashboard({
   student: Student;
   onDone: () => void;
 }) {
-  const { redeemCoupon } = useAppContext();
+  const { redeemCoupon, updateStudent } = useAppContext();
   const { toast } = useToast();
   const [couponCode, setCouponCode] = useState('');
+  const [logoutTimer, setLogoutTimer] = useState(30);
 
-  const handleRedeem = async () => {
+  const rewards = [
+    { name: 'Cool Pencil', points: 50, icon: <Pencil className="w-8 h-8" /> },
+    { name: 'Candy Bar', points: 150, icon: <Gift className="w-8 h-8" /> },
+    { name: 'Homework Pass', points: 500, icon: <FileText className="w-8 h-8" /> },
+  ];
+
+  // Auto-logout timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLogoutTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          onDone();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [onDone]);
+
+
+  const handleRedeemCoupon = async () => {
     if (!couponCode) return;
     const result = await redeemCoupon(student.id, couponCode);
     if (result.success) {
@@ -56,86 +85,146 @@ function StudentDashboard({
     }
   };
 
+  const handleRedeemReward = async (reward: { name: string, points: number }) => {
+    if (student.points < reward.points) {
+        toast({
+            variant: 'destructive',
+            title: 'Not enough points',
+            description: `You need ${reward.points} points to redeem this item.`,
+        });
+        return;
+    }
+
+    const newHistoryItem = {
+        desc: `Redeemed: ${reward.name}`,
+        amount: -reward.points,
+        date: Date.now(),
+    };
+
+    const updatedStudent: Student = {
+        ...student,
+        points: student.points - reward.points,
+        history: [newHistoryItem, ...student.history],
+    };
+
+    await updateStudent(updatedStudent);
+    toast({
+        title: 'Reward Redeemed!',
+        description: `You redeemed a ${reward.name} for ${reward.points} points.`,
+    });
+};
+
   return (
     <div className="space-y-6 animate-in fade-in-50">
-      <Card className="bg-emerald-50 dark:bg-emerald-900/20 border-t-4 border-emerald-500">
+      <Card className="bg-emerald-600 text-white border-none shadow-lg">
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
-            <CardTitle className="font-headline text-2xl">
-              Welcome, {student.firstName} {student.lastName}!
+            <CardDescription className="text-emerald-200">Welcome back,</CardDescription>
+            <CardTitle className="font-headline text-4xl">
+              {student.firstName} {student.lastName}
             </CardTitle>
-            <CardDescription>Your current points balance:</CardDescription>
-            <p className="text-4xl font-bold text-emerald-600">
-              {student.points.toLocaleString()} pts
+          </div>
+          <div className="text-right">
+             <CardDescription className="text-emerald-200">Current Balance</CardDescription>
+             <p className="text-4xl font-bold">
+              {student.points.toLocaleString()}{' '}
+              <span className="text-2xl font-normal">pts</span>
             </p>
           </div>
-          <Button variant="secondary" onClick={onDone}>
-            Finish & Go Back
-          </Button>
         </CardHeader>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Ticket /> Redeem a Coupon
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Input
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              onKeyPress={(e) => e.key === 'Enter' && handleRedeem()}
-            />
-            <Button onClick={handleRedeem} className="w-full">
-              Redeem Points
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History /> Points History
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
-              {student.history.length > 0 ? (
-                student.history
-                  .sort((a, b) => b.date - a.date)
-                  .map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex justify-between items-center text-sm"
-                    >
-                      <div>
-                        <p className="font-medium">{item.desc}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(
-                            new Date(item.date),
-                            "MMM d, yyyy 'at' h:mm a"
-                          )}
-                        </p>
-                      </div>
-                      <span
-                        className={`font-bold ${
-                          item.amount > 0 ? 'text-green-500' : 'text-red-500'
-                        }`}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left Column */}
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <ScanLine /> Scan Coupon
+              </CardTitle>
+               <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
+                Auto-logout in {logoutTimer}s
+              </div>
+            </CardHeader>
+            <CardContent className="flex gap-2">
+              <Input
+                placeholder="Scan barcode now..."
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                autoFocus
+              />
+              <Button onClick={handleRedeemCoupon}>Redeem</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag /> Rewards Shop
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {rewards.map((reward) => (
+                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-slate-50 dark:bg-slate-800/50">
+                    <div className="text-muted-foreground mb-2">{reward.icon}</div>
+                    <p className="font-bold">{reward.name}</p>
+                    <p className="text-xs text-primary font-bold mb-2">{reward.points} pts</p>
+                    <Button size="sm" className="w-full" onClick={() => handleRedeemReward(reward)} disabled={student.points < reward.points}>Redeem</Button>
+                </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column */}
+        <div className="md:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History /> Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {student.history.length > 0 ? (
+                  student.history
+                    .sort((a, b) => b.date - a.date)
+                    .map((item, index) => (
+                      <li
+                        key={index}
+                        className="flex justify-between items-center text-sm"
                       >
-                        {item.amount > 0 ? `+${item.amount}` : item.amount}
-                      </span>
-                    </li>
-                  ))
-              ) : (
-                <p className="text-center text-muted-foreground italic py-4">
-                  No transaction history yet.
-                </p>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
+                        <div>
+                          <p className="font-medium">{item.desc}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(
+                              new Date(item.date),
+                              "MMM d, yyyy, h:mm a"
+                            )}
+                          </p>
+                        </div>
+                        <span
+                          className={`font-bold ${
+                            item.amount > 0 ? 'text-green-500' : 'text-red-500'
+                          }`}
+                        >
+                          {item.amount > 0 ? `+${item.amount}` : item.amount}
+                        </span>
+                      </li>
+                    ))
+                ) : (
+                  <p className="text-center text-muted-foreground italic py-4">
+                    No transaction history yet.
+                  </p>
+                )}
+              </ul>
+              <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onDone}>
+                <LogOut className="mr-2"/> Log Out
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -184,21 +273,6 @@ export default function StudentLoginPage() {
     setNfcId('');
   };
 
-  const handleSimulate = () => {
-    const testStudent = db.students.find((s) => s.nfcId === '100');
-    if (testStudent) {
-      setNfcId(testStudent.nfcId)
-      // Use a timeout to ensure state updates before submitting
-      setTimeout(() => handleNfcSubmit(), 0);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Simulation Failed',
-        description: 'Could not find student with NFC ID "100" in the database.',
-      });
-    }
-  };
-
   if (!isInitialized || loginState !== 'school') {
     return <p>Loading...</p>;
   }
@@ -243,18 +317,6 @@ export default function StudentLoginPage() {
                   onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
                   autoFocus
                 />
-              </div>
-              <div className="space-y-2 text-left">
-                <Label className="text-xs text-muted-foreground px-1">
-                  SIMULATOR
-                </Label>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleSimulate}
-                >
-                  Simulate Test Student (NFC: 100)
-                </Button>
               </div>
             </TabsContent>
             <TabsContent value="manual">
