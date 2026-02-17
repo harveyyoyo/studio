@@ -139,12 +139,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (state === 'school' && savedSchoolId) {
         setSchoolId(savedSchoolId);
       }
-      if (state === 'developer') {
-        fetchRegistry();
-      }
     }
     setIsInitialized(true);
-  }, [fetchRegistry]);
+  }, []);
+
+  // Fetch registry when logged in as developer and firestore is ready
+  useEffect(() => {
+    if (loginState === 'developer' && firestore) {
+      fetchRegistry();
+    }
+  }, [loginState, firestore, fetchRegistry]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -155,7 +159,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   useEffect(() => {
     if (!schoolDocRef) {
-        setDb(EMPTY_DB);
+        const defaultDb = { ...EMPTY_DB, ...INITIAL_DATA, passcode: db.passcode };
+        setDb(defaultDb);
         setIsDbLoading(false);
         return;
     }
@@ -172,9 +177,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
         if (snapshot.exists()) {
           const data = snapshot.data();
-          setDb({ ...EMPTY_DB, ...data });
+          const mergedData = {
+            ...EMPTY_DB,
+            ...data
+          };
+          setDb(mergedData);
         } else {
-          setDb(EMPTY_DB);
+           const defaultDb = { ...EMPTY_DB, ...INITIAL_DATA, passcode: db.passcode };
+           setDb(defaultDb);
         }
       }, (error) => {
         console.error('Firestore snapshot error:', error);
@@ -183,7 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
 
     return () => unsubscribe();
-  }, [schoolDocRef]);
+  }, [schoolDocRef, db.passcode]);
 
   // Fetch backups
   useEffect(() => {
@@ -208,7 +218,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     getAndSortBackups();
-
+    // This is a realtime listener, but we are fetching on first load to avoid a flicker
+    // We should consider if this is really needed or if we can rely on the snapshot listener alone
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
         backupList.sort((a, b) => parseInt(b.id) - parseInt(a.id));
@@ -218,6 +229,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error("Error fetching backups:", error);
         setBackups([]);
     });
+
 
     return () => unsubscribe();
   }, [schoolId, firestore]);
