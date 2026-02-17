@@ -88,7 +88,7 @@ function StudentDashboard({
   const eligibleRewards = db.prizes?.filter(r => student.points >= r.points) || [];
 
   return (
-    <div className="relative space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl">
+    <div className="relative space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
       {animatedValue !== null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
             <div className="text-8xl font-bold text-green-500 animate-fly-up">

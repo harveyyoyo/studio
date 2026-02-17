@@ -152,6 +152,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
         if (snapshot.exists()) {
           const data = snapshot.data();
+          // This is a small migration for older school documents that don't have a `prizes` field.
+          if (data.prizes === undefined) {
+              data.prizes = INITIAL_DATA.prizes;
+          }
           const mergedData = {
             ...EMPTY_DB,
             ...data
