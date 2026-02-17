@@ -39,6 +39,8 @@ export default withPWA({
   skipWaiting: true,
   reloadOnOnline: true,
   disable: false,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
   fallbacks: {
     document: '/offline.html',
   },

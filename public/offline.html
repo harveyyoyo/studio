@@ -3,48 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline | Arcade Rewards</title>
+    <title>Offline | Reward Arcade</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
             text-align: center;
+            flex-direction: column;
         }
         .container {
-            background-color: #fff;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        svg {
-            width: 60px;
-            height: 60px;
-            color: #ffc107;
-            margin-bottom: 20px;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
         h1 {
-            font-size: 24px;
-            margin: 0 0 10px;
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
         }
         p {
-            font-size: 16px;
-            color: #666;
+            color: #4b5563;
+            margin-top: 0.5rem;
+        }
+        button {
+            margin-top: 1.5rem;
+            background-color: #2563eb;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #1d4ed8;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5.3 10.3a7.5 7.5 0 0 1 11.2-5.1"/><path d="M5.3 10.3a7.5 7.5 0 0 0 5.6 7.8"/><path d="M18.7 10.3a7.5 7.5 0 0 1-5.6 7.8"/><path d="M12 12.5a2 2 0 0 1-2-2"/><path d="M12 21a2 2 0 0 0 2-2"/><path d="m2 2 20 20"/><path d="M19 12a2 2 0 0 0-2-2"/>
-        </svg>
         <h1>You are Offline</h1>
-        <p>It looks like you've lost your internet connection. This app has limited functionality while offline.</p>
+        <p>This page cannot be loaded because you're not connected to the internet.</p>
+        <p>Please check your connection and try again.</p>
+        <button onclick="window.location.reload()">Reload Page</button>
     </div>
 </body>
 </html>
