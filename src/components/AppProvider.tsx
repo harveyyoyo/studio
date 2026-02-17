@@ -28,6 +28,7 @@ import {
   query,
   orderBy,
   limit,
+  getDocs,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
@@ -191,11 +192,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
     }
     const backupsColRef = collection(firestore, 'schools', schoolId, 'backups');
-    const q = query(backupsColRef, orderBy('__name__', 'desc'), limit(10));
+    const q = query(backupsColRef);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
-        setBackups(backupList);
+        backupList.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+        const limitedBackups = backupList.slice(0, 10);
+        setBackups(limitedBackups);
     }, (error) => {
         console.error("Error fetching backups:", error);
         setBackups([]);
@@ -205,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [schoolId, firestore]);
 
   const updateDb = useCallback(
-    async (newDbState: Database) => {
+    async (newDbState: Partial<Database>) => {
       if (!schoolDocRef) return;
       const dbWithTimestamp = { ...newDbState, updatedAt: Date.now() };
 
@@ -288,6 +291,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!registryDocRef || !firestore) return;
 
+    // To delete all documents in a subcollection, you must do it manually.
+    // This is a simplified approach; for large subcollections, a Cloud Function would be better.
+    const backupsCollectionRef = collection(firestore, 'schools', schoolId, 'backups');
+    const backupsSnapshot = await getDocs(backupsCollectionRef);
+    const deletePromises = backupsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+
     await updateDoc(registryDocRef, { ids: arrayRemove(schoolId) });
     const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
     await deleteDoc(schoolToDeleteDocRef);
@@ -311,20 +321,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
     const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
-    const updatedDb = { ...db, students: [...db.students, newStudent] };
-    await updateDb(updatedDb);
-  }, [db, updateDb]);
+    await updateDb({ students: arrayUnion(newStudent) as any });
+  }, [updateDb]);
 
   const updateStudent = useCallback(async (updatedStudent: Student) => {
     const newStudents = db.students.map((s) => s.id === updatedStudent.id ? updatedStudent : s);
-    const updatedDb = { ...db, students: newStudents };
-    await updateDb(updatedDb);
+    await updateDb({ students: newStudents });
   }, [db, updateDb]);
 
   const deleteStudent = useCallback(async (studentId: string) => {
-    const newStudents = db.students.filter((s) => s.id !== studentId);
-    const updatedDb = { ...db, students: newStudents };
-    await updateDb(updatedDb);
+    const studentToDelete = db.students.find(s => s.id === studentId);
+    if (!studentToDelete) return;
+    await updateDb({ students: arrayRemove(studentToDelete) as any });
   }, [db, updateDb]);
 
   const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
@@ -333,18 +341,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return;
     }
     const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
-    const updatedDb = { ...db, teachers: [...db.teachers, newTeacher] };
-    await updateDb(updatedDb);
-  }, [db, updateDb, toast]);
+    await updateDb({ teachers: arrayUnion(newTeacher) as any });
+  }, [db.teachers, updateDb, toast]);
 
   const deleteTeacher = useCallback(async (teacherId: string) => {
-    const newTeachers = db.teachers.filter((t) => t.id !== teacherId);
+    const teacherToDelete = db.teachers.find(t => t.id === teacherId);
+    if (!teacherToDelete) return;
+
+    // This is a transaction-less update, which might have race conditions
+    // but is simpler for this app's scale.
     const newStudents = db.students.map((s) => ({
       ...s,
       teacherId: s.teacherId === teacherId ? '' : s.teacherId,
     }));
-    const updatedDb = { ...db, teachers: newTeachers, students: newStudents };
-    await updateDb(updatedDb);
+
+    await updateDb({ 
+        teachers: arrayRemove(teacherToDelete) as any,
+        students: newStudents
+    });
   }, [db, updateDb]);
 
   const addCategory = useCallback(async (newCategory: string) => {
@@ -352,19 +366,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toast({ variant: 'destructive', title: 'Category already exists.' });
         return;
     }
-    const updatedDb = { ...db, categories: [...db.categories, newCategory] };
-    await updateDb(updatedDb);
+    await updateDb({ categories: arrayUnion(newCategory) as any });
   }, [db, updateDb, toast]);
 
   const deleteCategory = useCallback(async (categoryName: string) => {
-    const updatedDb = { ...db, categories: db.categories.filter((c) => c !== categoryName) };
-    await updateDb(updatedDb);
-  }, [db, updateDb]);
+    await updateDb({ categories: arrayRemove(categoryName) as any });
+  }, [updateDb]);
 
   const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
-    const updatedDb = { ...db, coupons: [...db.coupons, ...newCoupons] };
-    await updateDb(updatedDb);
-  }, [db, updateDb]);
+    await updateDb({ coupons: arrayUnion(...newCoupons) as any });
+  }, [updateDb]);
 
   const redeemCoupon = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
     const coupon = db.coupons.find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
@@ -403,11 +414,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newStudents = db.students.map((s) => s.id === studentId ? updatedStudent : s);
     const newCoupons = db.coupons.map((c) => c.code === coupon.code ? updatedCoupon : c);
 
-    const updatedDb = { ...db, students: newStudents, coupons: newCoupons };
-    await updateDb(updatedDb);
+    await updateDb({ students: newStudents, coupons: newCoupons });
 
     return { success: true, message: 'Coupon redeemed!', value: coupon.value };
   }, [db, updateDb]);
+  
+  const setData = useCallback(async (data: Database) => {
+    if (!schoolDocRef) return;
+    await setDoc(schoolDocRef, data);
+  }, [schoolDocRef]);
 
   const createBackup = useCallback(async () => {
     if (!schoolId || !firestore) return;
@@ -467,14 +482,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
-      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
+      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
       addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb,
+      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup
     ]
   );

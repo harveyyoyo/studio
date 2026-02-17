@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Gift, User,
+  FileSpreadsheet, Printer, Settings, Edit, History, User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,7 +37,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StudentActivityModal } from '@/components/StudentActivityModal';
-import { format } from 'date-fns';
 
 function AdminDashboardSkeleton() {
   return (
@@ -47,20 +46,6 @@ function AdminDashboardSkeleton() {
           <Skeleton className="h-8 w-64 mb-2" />
         </div>
         <Skeleton className="h-9 w-36" />
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24 col-span-2" />
-          <Skeleton className="h-24 col-span-2" />
-        </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -105,6 +90,20 @@ function AdminDashboardSkeleton() {
                 ))}
             </CardContent>
         </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Database Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24 col-span-2" />
+          <Skeleton className="h-24 col-span-2" />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -251,20 +250,6 @@ function AdminDashboard() {
     .reduce((sum, c) => sum + c.value, 0);
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
 
-  const recentRedemptions = db.students
-    .flatMap(s => 
-        s.history
-            .filter(h => h.desc.startsWith('Redeemed:'))
-            .map(h => ({
-                studentName: `${s.firstName} ${s.lastName}`,
-                description: h.desc,
-                points: h.amount,
-                date: h.date,
-            }))
-    )
-    .sort((a, b) => b.date - a.date)
-    .slice(0, 10);
-
   return (
     <div className="space-y-6">
       <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
@@ -277,66 +262,7 @@ function AdminDashboard() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
         </Button>
       </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Database Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.students.length}</p>
-                <p className="text-sm text-muted-foreground">Students</p>
-              </div>
-              <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.teachers.length}</p>
-                <p className="text-sm text-muted-foreground">Teachers</p>
-              </div>
-              <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.coupons.length}</p>
-                <p className="text-sm text-muted-foreground">Coupons Created</p>
-              </div>
-              <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{usedCoupons}</p>
-                <p className="text-sm text-muted-foreground">Coupons Used</p>
-              </div>
-              <div className="bg-secondary p-4 rounded-lg col-span-2">
-                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Points Awarded</p>
-              </div>
-              <div className="bg-secondary p-4 rounded-lg col-span-2">
-                <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <div className="lg:col-span-1">
-           <Card className="border-t-4 border-chart-3">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Gift className="text-chart-3" /> Recent Prize Redemptions
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                {recentRedemptions.length > 0 ? (
-                    <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                        {recentRedemptions.map((item, index) => (
-                            <li key={index} className="text-sm">
-                                <p className="font-medium">{item.studentName} redeemed <span className="font-bold">{item.description.replace('Redeemed: ', '')}</span></p>
-                                <p className="text-xs text-muted-foreground">{format(new Date(item.date), "MMM d, h:mm a")}</p>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-center text-muted-foreground italic py-4">No prizes have been redeemed yet.</p>
-                )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-t-4 border-chart-1">
           <CardHeader>
@@ -458,7 +384,7 @@ function AdminDashboard() {
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
                 {backups.length > 0 ? backups.map(backup => (
                   <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <span className="font-code text-sm">{format(new Date(parseInt(backup.id)), "MMM d, yyyy, h:mm a")}</span>
+                    <span className="font-code text-sm">{new Date(parseInt(backup.id)).toLocaleString()}</span>
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
                       <AlertDialog>
@@ -468,7 +394,7 @@ function AdminDashboard() {
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
-                            <AlertDialogDescription>This will overwrite all current data with the data from {format(new Date(parseInt(backup.id)), "MMM d, yyyy")}. This action cannot be undone.</AlertDialogDescription>
+                            <AlertDialogDescription>This will overwrite all current data with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -645,6 +571,38 @@ function AdminDashboard() {
                 </li>
               ))}
           </ul>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Database Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="bg-secondary p-4 rounded-lg">
+            <p className="text-2xl font-bold">{db.students.length}</p>
+            <p className="text-sm text-muted-foreground">Students</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg">
+            <p className="text-2xl font-bold">{db.teachers.length}</p>
+            <p className="text-sm text-muted-foreground">Teachers</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg">
+            <p className="text-2xl font-bold">{db.coupons.length}</p>
+            <p className="text-sm text-muted-foreground">Coupons Created</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg">
+            <p className="text-2xl font-bold">{usedCoupons}</p>
+            <p className="text-sm text-muted-foreground">Coupons Used</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg col-span-2">
+            <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Total Points Awarded</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg col-span-2">
+            <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
+          </div>
         </CardContent>
       </Card>
 
