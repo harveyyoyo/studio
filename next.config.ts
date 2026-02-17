@@ -39,8 +39,21 @@ export default withPWA({
   skipWaiting: true,
   reloadOnOnline: true,
   disable: false,
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  runtimeCaching: [
+    {
+      // Apply a NetworkFirst strategy to all navigations.
+      urlPattern: ({ request }) => request.mode === 'navigate',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'pages',
+        expiration: {
+          maxEntries: 60,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        },
+        networkTimeoutSeconds: 5, // Fallback to cache if network is slow
+      },
+    },
+  ],
   fallbacks: {
     document: '/offline.html',
   },
