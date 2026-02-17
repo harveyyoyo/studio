@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  LogOut, Plus, Trash2, Server, Key, Edit
+  Plus, Trash2, Server, Key,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 
 export default function DeveloperPage() {
-  const { loginState, isInitialized, logout, allSchools, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
+  const { loginState, isInitialized, allSchools, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
@@ -91,9 +91,6 @@ export default function DeveloperPage() {
                   </h2>
                   <p className="text-slate-400 text-sm">Manage all school databases.</p>
               </div>
-              <Button onClick={logout} variant="secondary" size="sm">
-                  <LogOut className="mr-2 h-4 w-4" /> Log Out
-              </Button>
           </Card>
 
           <Card>
@@ -115,7 +112,7 @@ export default function DeveloperPage() {
                   </div>
 
                    <ul className="space-y-2">
-                      {allSchools.map((id) => (
+                      {allSchools.sort().map((id) => (
                           <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
                               <p className="font-bold font-code">{id}</p>
                               <div className="flex items-center gap-2">

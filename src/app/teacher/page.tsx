@@ -11,8 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Student, Coupon } from '@/lib/types';
-import { Award, PlusCircle, LogIn, User, ArrowLeft } from 'lucide-react';
-import { Coupon as CouponComponent } from '@/components/Coupon';
+import { Award, User, ArrowLeft, Printer, LogIn } from 'lucide-react';
 
 // AwardPointsModal component
 function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | null, isOpen: boolean, setIsOpen: (isOpen: boolean) => void }) {
@@ -76,16 +75,21 @@ function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | n
 }
 
 // Teacher Dashboard component
-function TeacherDashboard({ teacher, onLogout }: { teacher: Teacher, onLogout: () => void }) {
-    const { db, addCoupons } = useAppContext();
+function TeacherDashboard({ teacher }: { teacher: Teacher }) {
+    const { db, addCoupons, setCouponsToPrint } = useAppContext();
     const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
     const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
     const { toast } = useToast();
 
-    // State for creating coupons
-    const [couponValue, setCouponValue] = useState('25');
-    const [couponCategory, setCouponCategory] = useState(db.categories[0] || '');
-    const [createdCoupon, setCreatedCoupon] = useState<Coupon | null>(null);
+    // State for printing coupons
+    const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
+    const [printValue, setPrintValue] = useState('10');
+
+     useEffect(() => {
+        if (db.categories.length > 0 && !printCategory) {
+          setPrintCategory(db.categories[0]);
+        }
+      }, [db.categories, printCategory]);
 
     const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -94,25 +98,30 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: Teacher, onLogout: (
         setIsAwardModalOpen(true);
     };
     
-    const handleCreateCoupon = async () => {
-        const value = parseInt(couponValue);
-        if (isNaN(value) || value <= 0) {
-            toast({ variant: 'destructive', title: 'Invalid coupon value.' });
-            return;
+    const handlePrintSheet = async () => {
+        const value = parseInt(printValue);
+        if (!value || value <= 0) {
+          toast({
+            variant: 'destructive',
+            title: 'Invalid Value',
+            description: 'Coupon value must be a positive number.',
+          });
+          return;
         }
-
-        const newCoupon: Coupon = {
-            code: `C${Date.now().toString().slice(-6)}`,
+        const coupons = Array.from({ length: 24 }, () => {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          return {
+            code,
             value: value,
-            category: couponCategory,
-            teacher: teacher.name,
+            category: printCategory,
+            teacher: teacher.name, // Use logged-in teacher's name
             used: false,
             createdAt: Date.now(),
-        };
-
-        await addCoupons([newCoupon]);
-        setCreatedCoupon(newCoupon);
-        toast({ title: 'Coupon Created!' });
+          };
+        });
+        await addCoupons(coupons);
+        setCouponsToPrint(coupons);
+        toast({ title: 'Generating print sheet...' });
     };
 
     return (
@@ -121,9 +130,9 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: Teacher, onLogout: (
                 <CardHeader className="flex flex-row justify-between items-center">
                     <div>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2"><User />{teacher.name}'s Dashboard</CardTitle>
-                        <CardDescription>Award points and create coupons for your students.</CardDescription>
+                        <CardDescription>Award points and create coupon print sheets for your students.</CardDescription>
                     </div>
-                    <Button variant="outline" onClick={onLogout}><ArrowLeft className="mr-2"/> Back to login</Button>
+                    <Button asChild variant="outline"><Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal</Link></Button>
                 </CardHeader>
             </Card>
 
@@ -133,7 +142,7 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: Teacher, onLogout: (
                         <CardTitle>My Students ({myStudents.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        <ul className="space-y-2 max-h-[30rem] overflow-y-auto pr-2">
                             {myStudents.map(s => (
                                 <li key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border">
                                     <div>
@@ -149,30 +158,36 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: Teacher, onLogout: (
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Create Coupon</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                           <Printer className="text-indigo-500" /> Coupon Printer
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                         <div className="space-y-1">
-                            <Label>Category</Label>
-                            <Select value={couponCategory} onValueChange={setCouponCategory}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {db.categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                         <div className="space-y-1">
-                            <Label>Points Value</Label>
-                            <Input type="number" value={couponValue} onChange={e => setCouponValue(e.target.value)} />
+                    <CardContent className="grid grid-cols-1 gap-4 items-end">
+                       <div>
+                            <Label>Issue As</Label>
+                            <Input value={teacher.name} disabled />
                         </div>
-                        <Button onClick={handleCreateCoupon} className="w-full"><PlusCircle className="mr-2"/>Create Single Coupon</Button>
-
-                        {createdCoupon && (
-                            <div className="mt-4 space-y-2">
-                                <p className="text-sm font-bold text-center">Your new coupon:</p>
-                                <CouponComponent coupon={createdCoupon} isNew />
-                            </div>
-                        )}
+                      <div>
+                        <Label>Category</Label>
+                        <Select value={printCategory} onValueChange={setPrintCategory}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {db.categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Value</Label>
+                        <Input
+                          type="number"
+                          placeholder="e.g. 25"
+                          value={printValue}
+                          onChange={(e) => setPrintValue(e.target.value)}
+                        />
+                      </div>
+                      <Button onClick={handlePrintSheet} className="w-full font-bold gap-2">
+                        <Printer /> Print Sheet (24)
+                      </Button>
                     </CardContent>
                 </Card>
             </div>
@@ -195,16 +210,22 @@ export default function TeacherLoginPage() {
         }
     }, [isInitialized, loginState, router]);
 
+    useEffect(() => {
+        if(loginState === 'school') {
+            const savedTeacherId = sessionStorage.getItem('teacherId');
+            if (savedTeacherId) {
+                const teacher = db.teachers.find(t => t.id === savedTeacherId);
+                if (teacher) setLoggedInTeacher(teacher);
+            }
+        }
+    }, [loginState, db.teachers]);
+
     const handleLogin = () => {
         const teacher = db.teachers.find(t => t.id === selectedTeacherId);
         if (teacher) {
             setLoggedInTeacher(teacher);
+            sessionStorage.setItem('teacherId', teacher.id);
         }
-    };
-    
-    const handleLogout = () => {
-        setLoggedInTeacher(null);
-        setSelectedTeacherId('');
     };
 
     if (!isInitialized || loginState !== 'school') {
@@ -212,7 +233,7 @@ export default function TeacherLoginPage() {
     }
     
     if (loggedInTeacher) {
-        return <TeacherDashboard teacher={loggedInTeacher} onLogout={handleLogout} />;
+        return <TeacherDashboard teacher={loggedInTeacher} />;
     }
 
     return (
@@ -233,7 +254,7 @@ export default function TeacherLoginPage() {
                                     <SelectValue placeholder="Select your name..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {db.teachers.map((t) => (
+                                    {db.teachers.sort((a,b) => a.name.localeCompare(b.name)).map((t) => (
                                         <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                                     ))}
                                 </SelectContent>

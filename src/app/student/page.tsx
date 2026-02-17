@@ -1,19 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student } from '@/lib/types';
-import { GraduationCap, LogIn, LogOut, Ticket, History } from 'lucide-react';
+import { GraduationCap, ArrowRight, Ticket, History, Nfc } from 'lucide-react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
-// Student Dashboard component
-function StudentDashboard({ student, onLogout }: { student: Student, onLogout: () => void }) {
+// Student Dashboard component (for Kiosk)
+function StudentDashboard({ student, onDone }: { student: Student, onDone: () => void }) {
     const { redeemCoupon } = useAppContext();
     const { toast } = useToast();
     const [couponCode, setCouponCode] = useState('');
@@ -30,7 +29,7 @@ function StudentDashboard({ student, onLogout }: { student: Student, onLogout: (
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in-50">
             <Card className="bg-emerald-50 dark:bg-emerald-900/20 border-t-4 border-emerald-500">
                 <CardHeader className="flex flex-row justify-between items-start">
                     <div>
@@ -38,7 +37,7 @@ function StudentDashboard({ student, onLogout }: { student: Student, onLogout: (
                         <CardDescription>Your current points balance:</CardDescription>
                          <p className="text-4xl font-bold text-emerald-600">{student.points.toLocaleString()} pts</p>
                     </div>
-                    <Button variant="outline" onClick={onLogout}><LogOut className="mr-2"/> Log Out</Button>
+                    <Button variant="secondary" onClick={onDone}>Finish & Go Back</Button>
                 </CardHeader>
             </Card>
 
@@ -63,7 +62,7 @@ function StudentDashboard({ student, onLogout }: { student: Student, onLogout: (
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                           {student.history.length > 0 ? student.history.map((item, index) => (
+                           {student.history.length > 0 ? student.history.sort((a,b) => b.date - a.date).map((item, index) => (
                                <li key={index} className="flex justify-between items-center text-sm">
                                    <div>
                                        <p className="font-medium">{item.desc}</p>
@@ -84,57 +83,43 @@ function StudentDashboard({ student, onLogout }: { student: Student, onLogout: (
     )
 }
 
-// Main component
-export default function StudentLoginPage() {
+
+// Main Kiosk component
+export default function StudentKioskPage() {
     const { loginState, isInitialized, db } = useAppContext();
     const router = useRouter();
     const { toast } = useToast();
 
-    const [selectedStudentId, setSelectedStudentId] = useState('');
-    const [password, setPassword] = useState('');
-    const [loggedInStudent, setLoggedInStudent] = useState<Student | null>(null);
+    const [nfcId, setNfcId] = useState('');
+    const [activeStudent, setActiveStudent] = useState<Student | null>(null);
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
             router.replace('/');
         }
     }, [isInitialized, loginState, router]);
-    
-    // Restore student session
-    useEffect(() => {
-        if(loginState === 'school') {
-            const savedStudentId = sessionStorage.getItem('studentId');
-            if (savedStudentId) {
-                const student = db.students.find(s => s.id === savedStudentId);
-                if (student) setLoggedInStudent(student);
-            }
-        }
-    }, [loginState, db.students]);
 
-    const handleLogin = () => {
-        const student = db.students.find(s => s.id === selectedStudentId);
-        if (student && student.password === password) {
-            setLoggedInStudent(student);
-            sessionStorage.setItem('studentId', student.id); // Save student session
+    const handleIdSubmit = () => {
+        const student = db.students.find(s => s.nfcId === nfcId);
+        if (student) {
+            setActiveStudent(student);
         } else {
-            toast({ variant: 'destructive', title: 'Login Failed', description: 'Incorrect student name or password.' });
-            setPassword('');
+            toast({ variant: 'destructive', title: 'Student Not Found', description: 'The provided ID does not match any student.' });
+            setNfcId('');
         }
     };
     
-    const handleLogout = () => {
-        setLoggedInStudent(null);
-        sessionStorage.removeItem('studentId'); // Clear student session
-        setSelectedStudentId('');
-        setPassword('');
+    const handleDone = () => {
+        setActiveStudent(null);
+        setNfcId('');
     };
 
     if (!isInitialized || loginState !== 'school') {
         return <p>Loading...</p>;
     }
     
-    if (loggedInStudent) {
-        return <StudentDashboard student={loggedInStudent} onLogout={handleLogout} />;
+    if (activeStudent) {
+        return <StudentDashboard student={activeStudent} onDone={handleDone} />;
     }
 
     return (
@@ -144,34 +129,25 @@ export default function StudentLoginPage() {
                     <div className="mx-auto bg-emerald-100 dark:bg-emerald-900/50 p-3 rounded-full mb-4">
                         <GraduationCap className="w-12 h-12 text-emerald-500" />
                     </div>
-                    <CardTitle className="font-headline text-2xl">Student Portal Login</CardTitle>
-                    <CardDescription>Please select your name and enter your password.</CardDescription>
+                    <CardTitle className="font-headline text-2xl">Student Kiosk</CardTitle>
+                    <CardDescription>Tap your student card or enter your NFC ID below.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {db.students.length > 0 ? (
-                         <>
-                            <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select your name..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {db.students.sort((a,b) => a.name.localeCompare(b.name)).map((s) => (
-                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                         <div className="flex items-center gap-2">
+                             <Nfc className="text-muted-foreground" />
                             <Input 
-                                type="password" 
-                                placeholder="Enter your password"
-                                value={password}
-                                onChange={e => setPassword(e.target.value)}
-                                onKeyPress={e => e.key === 'Enter' && handleLogin()}
-                                disabled={!selectedStudentId}
+                                type="text" 
+                                placeholder="Enter your ID..."
+                                value={nfcId}
+                                onChange={e => setNfcId(e.target.value)}
+                                onKeyPress={e => e.key === 'Enter' && handleIdSubmit()}
+                                autoFocus
                             />
-                            <Button onClick={handleLogin} className="w-full" disabled={!selectedStudentId || !password}>
-                                <LogIn className="mr-2" /> Sign In
+                            <Button onClick={handleIdSubmit}>
+                                <ArrowRight />
                             </Button>
-                        </>
+                        </div>
                     ) : (
                         <p className="text-muted-foreground italic">No students have been added to this school yet.</p>
                     )}

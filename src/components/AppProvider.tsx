@@ -210,7 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSchoolId(null);
     setDb(EMPTY_DB);
     setAllSchools([]);
-    router.push('/portal');
+    router.push('/');
   }, [router]);
   
   const createSchool = useCallback(async (schoolId: string): Promise<string | null> => {
