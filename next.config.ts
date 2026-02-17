@@ -37,24 +37,25 @@ export default withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  reloadOnOnline: true,
-  disable: false,
+  // Use the underlying workboxOptions for a more direct and robust offline fallback.
+  // This tells the service worker to serve '/offline.html' whenever a page navigation fails.
+  workboxOptions: {
+    navigateFallback: '/offline.html',
+  },
   runtimeCaching: [
     {
-      // Apply a NetworkFirst strategy to all navigations.
-      urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkFirst',
+      // Use a StaleWhileRevalidate strategy for all requests.
+      // This serves content from cache first for speed, and updates it from the network in the background.
+      // It's a robust strategy for both pages and assets like JS, CSS, and images.
+      urlPattern: /.*/i,
+      handler: 'StaleWhileRevalidate',
       options: {
-        cacheName: 'pages',
+        cacheName: 'all-content',
         expiration: {
-          maxEntries: 60,
+          maxEntries: 150,
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
         },
-        networkTimeoutSeconds: 5, // Fallback to cache if network is slow
       },
     },
   ],
-  fallbacks: {
-    document: '/offline.html',
-  },
 })(nextConfig);
