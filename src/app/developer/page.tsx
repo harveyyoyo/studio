@@ -108,7 +108,7 @@ export default function DeveloperPage() {
                   </div>
 
                    <ul className="space-y-2">
-                      {allSchools.sort().map((id) => (
+                      {[...allSchools].sort().map((id) => (
                           <li key={id} className="flex justify-between items-center bg-secondary p-3 rounded-lg border">
                               <p className="font-bold font-code">{id}</p>
                               <div className="flex items-center gap-0.5">
