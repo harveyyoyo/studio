@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon } from '@/lib/types';
-import { Users, ArrowLeft, Printer, Plus } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,12 +21,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export default function TeacherPage() {
-    const { loginState, isInitialized, db, addCoupons, setCouponsToPrint, addCategory, isDbLoading } = useAppContext();
-    const router = useRouter();
+function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
+    const { db, addCoupons, setCouponsToPrint, addCategory } = useAppContext();
     const { toast } = useToast();
 
-    const [printTeacher, setPrintTeacher] = useState(db.teachers?.[0]?.name || '');
     const [printCategory, setPrintCategory] = useState(db.categories?.[0] || '');
     const [printValue, setPrintValue] = useState('10');
     
@@ -34,19 +32,10 @@ export default function TeacherPage() {
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
     useEffect(() => {
-        if (isInitialized && loginState !== 'school') {
-            router.replace('/');
-        }
-    }, [isInitialized, loginState, router]);
-    
-    useEffect(() => {
-        if (db.teachers?.length > 0 && !printTeacher) {
-            setPrintTeacher(db.teachers[0].name);
-        }
         if (db.categories?.length > 0 && !printCategory) {
           setPrintCategory(db.categories[0]);
         }
-    }, [db.teachers, db.categories, printTeacher, printCategory]);
+    }, [db.categories, printCategory]);
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName) return;
@@ -59,8 +48,8 @@ export default function TeacherPage() {
 
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
-        if (!printTeacher) {
-            toast({ variant: 'destructive', title: 'Please select a teacher.' });
+        if (!teacherName) {
+            toast({ variant: 'destructive', title: 'An error occurred. Please log in again.' });
             return;
         }
         if (!value || value <= 0) {
@@ -77,7 +66,7 @@ export default function TeacherPage() {
             code,
             value: value,
             category: printCategory,
-            teacher: printTeacher,
+            teacher: teacherName,
             used: false,
             createdAt: Date.now(),
           };
@@ -85,20 +74,22 @@ export default function TeacherPage() {
         await addCoupons(coupons);
         setCouponsToPrint(coupons);
     };
-
-    if (!isInitialized || loginState !== 'school' || isDbLoading) {
-        return <p>Loading...</p>;
-    }
     
     return (
-         <div className="space-y-6">
+        <div className="space-y-6">
              <Card className="bg-card border-t-4 border-chart-1">
                 <CardHeader className="flex flex-row justify-between items-center">
                     <div>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2"><Printer className="text-chart-1"/>Teacher Portal</CardTitle>
                         <CardDescription>Create coupon print sheets.</CardDescription>
                     </div>
-                    <Button asChild variant="outline"><Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal</Link></Button>
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                           <p className="text-sm text-muted-foreground">Logged in as</p>
+                           <p className="font-bold flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" /> {teacherName}</p>
+                        </div>
+                        <Button variant="outline" onClick={onLogout}><LogOut className="mr-2"/> Log Out</Button>
+                   </div>
                 </CardHeader>
             </Card>
 
@@ -110,15 +101,6 @@ export default function TeacherPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 gap-4 items-end">
-                       <div>
-                            <Label>Issue By</Label>
-                            <Select value={printTeacher} onValueChange={setPrintTeacher}>
-                              <SelectTrigger><SelectValue placeholder="Select a teacher..." /></SelectTrigger>
-                              <SelectContent>
-                                {db.teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                        </div>
                       <div>
                         <Label>Category</Label>
                         <div className="flex items-center gap-2">
@@ -163,6 +145,75 @@ export default function TeacherPage() {
                     </CardContent>
                 </Card>
             </div>
+        </div>
+    )
+}
+
+
+export default function TeacherPage() {
+    const { loginState, isInitialized, db, isDbLoading } = useAppContext();
+    const router = useRouter();
+    const [loggedInTeacher, setLoggedInTeacher] = useState<string | null>(null);
+    const [selectedLoginName, setSelectedLoginName] = useState('Admin');
+
+    useEffect(() => {
+        if (isInitialized && loginState !== 'school') {
+            router.replace('/');
+        }
+    }, [isInitialized, loginState, router]);
+    
+    useEffect(() => {
+        if (db.teachers && db.teachers.length > 0) {
+            setSelectedLoginName('Admin');
+        }
+    }, [db.teachers]);
+
+    const handleLogin = () => {
+        if (selectedLoginName) {
+            setLoggedInTeacher(selectedLoginName);
+        }
+    };
+
+    const handleLogout = () => {
+        setLoggedInTeacher(null);
+    };
+
+    if (!isInitialized || loginState !== 'school' || isDbLoading) {
+        return <p>Loading...</p>;
+    }
+    
+    if (loggedInTeacher) {
+        return <TeacherPrinter teacherName={loggedInTeacher} onLogout={handleLogout} />;
+    }
+
+    return (
+        <div className="flex flex-col items-center justify-center py-10">
+            <Card className="w-full max-w-md border-t-4 border-chart-1">
+                <CardHeader className="text-center">
+                    <CardTitle className="text-2xl font-bold font-headline">Teacher Portal Login</CardTitle>
+                    <CardDescription>Select your name to continue.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="teacher-name">Select Your Name</Label>
+                        <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
+                          <SelectTrigger id="teacher-name"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                             <SelectItem value="Admin">Admin</SelectItem>
+                            {db.teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <Button onClick={handleLogin} className="w-full font-bold">
+                       <LogIn className="mr-2" /> Log In
+                    </Button>
+                    <div className="text-center mt-6">
+                        <Button asChild variant="link" className="text-xs h-auto p-0">
+                            <Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal Selection</Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -33,7 +33,7 @@ export default function PortalPage() {
                             <GraduationCap className="w-10 h-10 mb-2 text-primary" />
                             <CardTitle>Student Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                Check points, redeem coupons & view eligible rewards <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Check points, redeem coupons &amp; prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
@@ -42,9 +42,9 @@ export default function PortalPage() {
                     <Card className="h-full border-t-4 border-chart-1 hover:shadow-xl hover:border-chart-1/80 transition-all transform hover:-translate-y-1">
                         <CardHeader>
                             <Printer className="w-10 h-10 mb-2 text-chart-1" />
-                            <CardTitle>Coupon Printing</CardTitle>
+                            <CardTitle>Teacher Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                Generate and print coupon sheets for any class <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Log in as a teacher to generate and print coupon sheets <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
