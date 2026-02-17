@@ -43,7 +43,7 @@ interface AppContextType {
     credentials: { schoolId?: string; passcode: string }
   ) => Promise<boolean>;
   logout: () => void;
-  getTeacherName: (id: string) => string;
+  getTeacherName: (ids: string[]) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
   addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
@@ -273,7 +273,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(schoolDoc, { passcode });
   }, [firestore]);
 
-  const getTeacherName = useCallback((id: string) => db.teachers.find((t) => t.id === id)?.name || 'Unassigned', [db.teachers]);
+  const getTeacherName = useCallback((ids: string[]) => {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return 'Unassigned';
+    }
+    return ids
+      .map((id) => db.teachers.find((t) => t.id === id)?.name)
+      .filter(Boolean)
+      .join(', ') || 'Unassigned';
+  }, [db.teachers]);
   
   const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
     const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
@@ -305,7 +313,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteTeacher = useCallback(async (teacherId: string) => {
     const newTeachers = db.teachers.filter((t) => t.id !== teacherId);
-    const newStudents = db.students.map((s) => s.teacherId === teacherId ? { ...s, teacherId: '' } : s);
+    const newStudents = db.students.map((s) => ({
+      ...s,
+      teacherIds: s.teacherIds.filter((id) => id !== teacherId),
+    }));
     const updatedDb = { ...db, teachers: newTeachers, students: newStudents };
     await updateDb(updatedDb);
   }, [db, updateDb]);

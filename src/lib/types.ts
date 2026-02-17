@@ -10,7 +10,7 @@ export interface Student {
   lastName: string;
   nfcId: string;
   points: number;
-  teacherId: string;
+  teacherIds: string[];
   history: HistoryItem[];
 }
 

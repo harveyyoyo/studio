@@ -15,8 +15,8 @@ import { Award, User, ArrowLeft, Printer, LogIn } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // AwardPointsModal component
-function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | null, isOpen: boolean, setIsOpen: (isOpen: boolean) => void }) {
-    const { updateStudent, getTeacherName } = useAppContext();
+function AwardPointsModal({ student, isOpen, setIsOpen, teacherName }: { student: Student | null, isOpen: boolean, setIsOpen: (isOpen: boolean) => void, teacherName: string }) {
+    const { updateStudent } = useAppContext();
     const { toast } = useToast();
     const [amount, setAmount] = useState('10');
     const [description, setDescription] = useState('');
@@ -30,7 +30,7 @@ function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | n
         }
 
         const newHistoryItem = {
-            desc: description || `Awarded by ${getTeacherName(student.teacherId)}`,
+            desc: description || `Awarded by ${teacherName}`,
             amount: points,
             date: Date.now(),
         };
@@ -133,7 +133,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
         }
       }, [db.categories, printCategory]);
 
-    const myStudents = db.students.filter(s => s.teacherId === teacher.id);
+    const myStudents = db.students.filter(s => s.teacherIds?.includes(teacher.id));
     const filteredStudents = myStudents
         .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
         .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''));
@@ -251,7 +251,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                 </Card>
             </div>
             
-            <AwardPointsModal student={awardingStudent} isOpen={isAwardModalOpen} setIsOpen={setIsAwardModalOpen} />
+            <AwardPointsModal student={awardingStudent} isOpen={isAwardModalOpen} setIsOpen={setIsAwardModalOpen} teacherName={teacher.name} />
         </div>
     );
 }

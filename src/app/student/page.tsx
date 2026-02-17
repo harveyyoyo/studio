@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -42,7 +42,9 @@ function StudentDashboard({
   const { redeemCoupon, updateStudent } = useAppContext();
   const { toast } = useToast();
   const [couponCode, setCouponCode] = useState('');
-  const [logoutTimer, setLogoutTimer] = useState(30);
+  const [logoutTimer, setLogoutTimer] = useState(10);
+
+  const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
   const rewards = [
     { name: 'Cool Pencil', points: 50, icon: <Pencil className="w-8 h-8" /> },
@@ -52,24 +54,26 @@ function StudentDashboard({
 
   // Auto-logout timer effect
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLogoutTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onDone();
-          return 0;
-        }
-        return prev - 1;
-      });
+    // This effect handles the countdown and calls onDone when timer reaches 0
+    if (logoutTimer <= 0) {
+      onDone();
+      return; // Stop the interval when we trigger onDone
+    }
+
+    const intervalId = setInterval(() => {
+      setLogoutTimer((prev) => prev - 1);
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [onDone]);
+    // Cleanup interval on unmount or when timer changes
+    return () => clearInterval(intervalId);
+  }, [logoutTimer, onDone]);
 
 
   const handleRedeemCoupon = async () => {
     if (!couponCode) return;
+    resetTimer(); // Reset timer on any attempt
     const result = await redeemCoupon(student.id, couponCode);
+    
     if (result.success) {
       toast({
         title: 'Coupon Redeemed!',
@@ -82,10 +86,12 @@ function StudentDashboard({
         title: 'Redemption Failed',
         description: result.message,
       });
+      setCouponCode(''); // Also clear on failure
     }
   };
 
   const handleRedeemReward = async (reward: { name: string, points: number }) => {
+    resetTimer(); // Reset timer on activity
     if (student.points < reward.points) {
         toast({
             variant: 'destructive',

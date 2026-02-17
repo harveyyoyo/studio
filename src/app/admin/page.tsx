@@ -489,7 +489,7 @@ function AdminDashboard() {
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Teacher: {getTeacherName(s.teacherId)} | NFC: {s.nfcId}
+                      Teacher: {getTeacherName(s.teacherIds)} | NFC: {s.nfcId}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">

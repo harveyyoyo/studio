@@ -45,7 +45,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setLastName(student.lastName);
         setPoints(student.points.toString());
         setNfcId(student.nfcId);
-        setTeacherId(student.teacherId);
+        setTeacherId(student.teacherIds?.[0] || '');
       } else { // Create mode
         setFirstName('');
         setLastName('');
@@ -67,14 +67,14 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
     }
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, teacherId };
+      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, teacherIds: teacherId ? [teacherId] : [] };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
         firstName, lastName, nfcId,
         points: parseInt(points) || 0,
-        teacherId: teacherId,
+        teacherIds: teacherId ? [teacherId] : [],
       };
       await addStudent(newStudent);
       toast({ title: 'Student added!' });
