@@ -40,7 +40,7 @@ function StudentDashboard({
   student: Student;
   onDone: () => void;
 }) {
-  const { redeemCoupon, updateStudent } = useAppContext();
+  const { redeemCoupon } = useAppContext();
   const { toast } = useToast();
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
@@ -83,35 +83,7 @@ function StudentDashboard({
     setCouponCode('');
   };
 
-  const handleRedeemReward = async (reward: Reward) => {
-    resetTimer();
-    if (student.points < reward.points) {
-        toast({
-            variant: 'destructive',
-            title: 'Not enough points',
-            description: `You need ${reward.points} points to redeem this item.`,
-        });
-        return;
-    }
-
-    const newHistoryItem = {
-        desc: `Redeemed: ${reward.name}`,
-        amount: -reward.points,
-        date: Date.now(),
-    };
-
-    const updatedStudent: Student = {
-        ...student,
-        points: student.points - reward.points,
-        history: [newHistoryItem, ...student.history],
-    };
-
-    await updateStudent(updatedStudent);
-    toast({
-        title: 'Reward Redeemed!',
-        description: `You redeemed a ${reward.name} for ${reward.points} points.`,
-    });
-};
+  const eligibleRewards = rewards.filter(r => student.points >= r.points);
 
   return (
     <div className="space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl">
@@ -142,7 +114,7 @@ function StudentDashboard({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <ScanLine /> Scan Coupon
+                <ScanLine /> Redeem Coupon Code
               </CardTitle>
                <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
                 Auto-logout in {logoutTimer}s
@@ -150,7 +122,7 @@ function StudentDashboard({
             </CardHeader>
             <CardContent className="flex gap-2">
               <Input
-                placeholder="Scan barcode now..."
+                placeholder="Scan or type barcode now..."
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                 onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
@@ -163,21 +135,22 @@ function StudentDashboard({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-headline text-2xl">
-                <ShoppingBag /> Rewards Shop
+                <ShoppingBag /> Eligible Rewards
               </CardTitle>
-              <CardDescription>Use your points to get cool stuff!</CardDescription>
+              <CardDescription>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {rewards.map((reward) => (
-                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50 transition-all hover:shadow-lg hover:-translate-y-1">
+              {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
+                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
                     <div className="p-4 bg-accent rounded-full mb-3 text-primary">
                       {reward.icon}
                     </div>
                     <p className="font-bold text-lg">{reward.name}</p>
-                    <Badge variant="secondary" className="mb-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
-                    <Button size="sm" className="w-full" onClick={() => handleRedeemReward(reward)} disabled={student.points < reward.points}>Redeem</Button>
+                    <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
                 </Card>
-              ))}
+              )) : (
+                <p className="text-center text-muted-foreground italic md:col-span-3 py-4">Keep earning points to unlock rewards!</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -293,6 +266,7 @@ export default function StudentLoginPage() {
           <CardTitle className="text-2xl font-bold font-headline">
             Student Kiosk
           </CardTitle>
+          <CardDescription>Check your points and redeem coupons.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="nfc" className="w-full">

@@ -33,7 +33,7 @@ export default function PortalPage() {
                             <GraduationCap className="w-10 h-10 mb-2 text-primary" />
                             <CardTitle>Student Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                Check points, redeem coupons & prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Check points, redeem coupons & view eligible rewards <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
@@ -66,7 +66,7 @@ export default function PortalPage() {
                             <ShoppingBag className="w-10 h-10 mb-2 text-chart-3" />
                             <CardTitle>Prize Shop</CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                Browse all available prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Redeem your points for awesome prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
