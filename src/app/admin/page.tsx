@@ -137,12 +137,6 @@ function AdminDashboard() {
       setPrintCategory(db.categories[0]);
     }
   }, [db.categories, printCategory]);
-  
-  useEffect(() => {
-    if (db.teachers?.length > 0 && printTeacher === 'Admin') {
-      setPrintTeacher(db.teachers[0].name);
-    }
-  }, [db.teachers, printTeacher]);
 
   if (isDbLoading) {
       return <AdminDashboardSkeleton />;

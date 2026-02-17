@@ -161,12 +161,6 @@ export default function TeacherPage() {
             router.replace('/');
         }
     }, [isInitialized, loginState, router]);
-    
-    useEffect(() => {
-        if (db.teachers && db.teachers.length > 0) {
-            setSelectedLoginName('Admin');
-        }
-    }, [db.teachers]);
 
     const handleLogin = () => {
         if (selectedLoginName) {
