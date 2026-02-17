@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  LogOut, Plus, Trash2, Server
+  LogOut, Plus, Trash2, Server, Key, Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,13 +20,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export default function DeveloperPage() {
-  const { loginState, isInitialized, logout, allSchools, createSchool, deleteSchool } = useAppContext();
+  const { loginState, isInitialized, logout, allSchools, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
+  
+  // State for showing new school passcode
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{id: string, passcode: string} | null>(null);
+  
+  // State for editing a school's passcode
+  const [editingSchoolId, setEditingSchoolId] = useState<string | null>(null);
+  const [newPasscode, setNewPasscode] = useState('');
 
   useEffect(() => {
     if (isInitialized && loginState !== 'developer') {
@@ -45,9 +53,29 @@ export default function DeveloperPage() {
       }
       setNewSchoolId('');
   };
-
+  
   const handleDeleteSchool = async (id: string) => {
     await deleteSchool(id);
+  }
+
+  const handleOpenEditModal = (id: string) => {
+    setEditingSchoolId(id);
+    setNewPasscode('');
+  }
+
+  const handleCloseEditModal = () => {
+    setEditingSchoolId(null);
+    setNewPasscode('');
+  }
+
+  const handleUpdatePasscode = async () => {
+    if (!editingSchoolId || !newPasscode) {
+      toast({ variant: 'destructive', title: 'New passcode cannot be empty.' });
+      return;
+    }
+    await updateSchoolPasscode(editingSchoolId, newPasscode);
+    toast({ title: `Passcode for ${editingSchoolId} updated!` });
+    handleCloseEditModal();
   }
 
   if (!isInitialized || loginState !== 'developer') {
@@ -90,25 +118,30 @@ export default function DeveloperPage() {
                       {allSchools.map((id) => (
                           <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
                               <p className="font-bold font-code">{id}</p>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{id}</span>.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteSchool(id)}>Continue</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
+                                  <Key className="w-4 h-4 text-blue-500" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{id}</span>.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteSchool(id)}>Continue</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                           </li>
                       ))}
                       {allSchools.length === 0 && (
@@ -117,19 +150,20 @@ export default function DeveloperPage() {
                   </ul>
               </CardContent>
           </Card>
-
+          
+          {/* Dialog for showing new school passcode */}
           <AlertDialog open={!!createdSchoolInfo} onOpenChange={() => setCreatedSchoolInfo(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>School Created Successfully!</AlertDialogTitle>
                 <AlertDialogDescription>
-                  The school <span className="font-bold font-code">{createdSchoolInfo?.id}</span> has been created. Here is the passcode. Please store it securely.
+                  The school <span className="font-bold font-code">{createdSchoolInfo?.id}</span> has been created. Here is the passcode. Please store it securely, as it will not be shown again.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 text-center my-4">
                   <p className="text-sm text-muted-foreground">School ID</p>
                   <p className="font-code font-bold text-lg">{createdSchoolInfo?.id}</p>
-                  <p className="text-sm text-muted-foreground mt-2">School Passcode</p>
+                  <p className="text-sm text-muted-foreground mt-2">New School Passcode</p>
                   <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.passcode}</p>
               </div>
               <AlertDialogFooter>
@@ -137,6 +171,28 @@ export default function DeveloperPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          
+          {/* Dialog for editing passcode */}
+          <Dialog open={!!editingSchoolId} onOpenChange={handleCloseEditModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Passcode for <span className="font-code">{editingSchoolId}</span></DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Label htmlFor="new-passcode">New Passcode</Label>
+                <Input
+                  id="new-passcode"
+                  value={newPasscode}
+                  onChange={(e) => setNewPasscode(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && handleUpdatePasscode()}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="secondary" onClick={handleCloseEditModal}>Cancel</Button>
+                <Button onClick={handleUpdatePasscode}>Save New Passcode</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
       </div>
   )
 }

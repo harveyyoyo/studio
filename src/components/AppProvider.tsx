@@ -53,6 +53,7 @@ interface AppContextType {
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   createSchool: (schoolId: string) => Promise<string | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
+  updateSchoolPasscode: (schoolId: string, passcode: string) => Promise<void>;
   setData: (data: Database) => Promise<void>;
 }
 
@@ -240,7 +241,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!registryDocRef || !firestore) return;
-    if(!window.confirm(`Are you sure you want to permanently delete school "${schoolId}"? This cannot be undone.`)) return;
 
     await updateDoc(registryDocRef, { ids: arrayRemove(schoolId) });
     const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
@@ -249,6 +249,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await fetchRegistry();
     toast({title: `School "${schoolId}" deleted!`});
   }, [registryDocRef, firestore, fetchRegistry, toast]);
+
+  const updateSchoolPasscode = useCallback(async (schoolId: string, passcode: string) => {
+    if (!firestore) return;
+    const schoolDoc = doc(firestore, 'schools', schoolId);
+    await updateDoc(schoolDoc, { passcode });
+  }, [firestore]);
 
   const getTeacherName = useCallback((id: string) => db.teachers.find((t) => t.id === id)?.name || 'Unassigned', [db.teachers]);
   
@@ -326,13 +332,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
-      addCoupons, createSchool, deleteSchool, setData: updateDb,
+      addCoupons, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
     }),
     [
       isInitialized, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
       addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      createSchool, deleteSchool, updateDb
+      createSchool, deleteSchool, updateSchoolPasscode, updateDb
     ]
   );
 
