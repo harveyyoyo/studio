@@ -1,6 +1,6 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { UserGraduate } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/components/AppProvider";
@@ -26,7 +26,7 @@ export default function StudentLoginPage() {
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <div className="mx-auto bg-emerald-100 dark:bg-emerald-900/50 p-3 rounded-full mb-4">
-                        <UserGraduate className="w-12 h-12 text-emerald-500" />
+                        <GraduationCap className="w-12 h-12 text-emerald-500" />
                     </div>
                     <CardTitle className="font-headline text-2xl">Student Portal</CardTitle>
                     <CardDescription>This is a placeholder for the student login page.</CardDescription>
