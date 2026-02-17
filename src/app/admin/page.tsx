@@ -32,7 +32,7 @@ import { format } from 'date-fns';
 function AdminDashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
+      <Card className="bg-card p-6 shadow-lg flex justify-between items-center">
         <div>
           <Skeleton className="h-8 w-64 mb-2" />
         </div>
@@ -243,10 +243,10 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
+      <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-            <Settings /> Admin Portal: <span className="text-yellow-300">{schoolId}</span>
+            <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
           </h2>
         </div>
         <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
@@ -261,27 +261,27 @@ function AdminDashboard() {
               <CardTitle>Database Summary</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+              <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.students.length}</p>
                 <p className="text-sm text-muted-foreground">Students</p>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+              <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.teachers.length}</p>
                 <p className="text-sm text-muted-foreground">Teachers</p>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+              <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.coupons.length}</p>
                 <p className="text-sm text-muted-foreground">Coupons Created</p>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+              <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{usedCoupons}</p>
                 <p className="text-sm text-muted-foreground">Coupons Used</p>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
+              <div className="bg-secondary p-4 rounded-lg col-span-2">
                 <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Total Points Awarded</p>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
+              <div className="bg-secondary p-4 rounded-lg col-span-2">
                 <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
               </div>
@@ -289,10 +289,10 @@ function AdminDashboard() {
           </Card>
         </div>
         <div className="lg:col-span-1">
-           <Card className="border-t-4 border-teal-500">
+           <Card className="border-t-4 border-chart-3">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Gift className="text-teal-500" /> Recent Prize Redemptions
+                    <Gift className="text-chart-3" /> Recent Prize Redemptions
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -314,10 +314,10 @@ function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-t-4 border-indigo-500">
+        <Card className="border-t-4 border-chart-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserCheck className="text-indigo-500" /> Teachers
+              <UserCheck className="text-chart-1" /> Teachers
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -333,7 +333,7 @@ function AdminDashboard() {
               {db.teachers.map((t) => (
                 <li
                   key={t.id}
-                  className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded border"
+                  className="flex justify-between items-center bg-secondary p-2 rounded border"
                 >
                   <span className="font-bold text-sm">{t.name}</span>
                   <AlertDialog>
@@ -364,10 +364,10 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-pink-500">
+        <Card className="border-t-4 border-chart-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Tag className="text-pink-500" /> Categories
+              <Tag className="text-chart-2" /> Categories
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -379,7 +379,6 @@ function AdminDashboard() {
               />
               <Button
                 onClick={handleAddCategory}
-                className="bg-pink-600 hover:bg-pink-700"
               >
                 Add
               </Button>
@@ -388,7 +387,7 @@ function AdminDashboard() {
               {db.categories.map((c) => (
                 <li
                   key={c}
-                  className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded border"
+                  className="flex justify-between items-center bg-secondary p-2 rounded border"
                 >
                   <span className="text-sm">{c}</span>
                   <AlertDialog>
@@ -419,10 +418,10 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-yellow-500">
+        <Card className="border-t-4 border-chart-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Database className="text-yellow-500" /> System Data
+              <Database className="text-chart-4" /> System Data
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
@@ -451,10 +450,10 @@ function AdminDashboard() {
         </Card>
       </div>
 
-      <Card className="border-t-4 border-indigo-500">
+      <Card className="border-t-4 border-primary">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Printer className="text-indigo-500" /> Master Coupon Printer
+            <Printer className="text-primary" /> Master Coupon Printer
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -527,12 +526,12 @@ function AdminDashboard() {
               .map((s) => (
                 <li
                   key={s.id}
-                  className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border"
+                  className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
                 >
                   <div>
                     <p className="font-bold">
                       {s.lastName}, {s.firstName}{' '}
-                      <span className="text-emerald-600 font-normal text-xs">
+                      <span className="text-primary font-normal text-xs">
                         ({s.points} pts)
                       </span>
                     </p>

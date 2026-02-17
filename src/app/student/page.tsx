@@ -56,25 +56,23 @@ function StudentDashboard({
 
   // Auto-logout timer effect
   useEffect(() => {
-    // This effect handles the countdown and calls onDone when timer reaches 0
     const handleDone = () => onDone();
     if (logoutTimer <= 0) {
       handleDone();
-      return; // Stop the interval when we trigger onDone
+      return;
     }
 
     const intervalId = setInterval(() => {
       setLogoutTimer((prev) => prev - 1);
     }, 1000);
 
-    // Cleanup interval on unmount or when timer changes
     return () => clearInterval(intervalId);
   }, [logoutTimer, onDone]);
 
 
   const handleRedeemCoupon = async () => {
     if (!couponCode) return;
-    resetTimer(); // Reset timer on any attempt
+    resetTimer(); 
     const result = await redeemCoupon(student.id, couponCode);
     setCouponCode('');
     
@@ -93,7 +91,7 @@ function StudentDashboard({
   };
 
   const handleRedeemReward = async (reward: { name: string, points: number }) => {
-    resetTimer(); // Reset timer on activity
+    resetTimer();
     if (student.points < reward.points) {
         toast({
             variant: 'destructive',
@@ -123,20 +121,20 @@ function StudentDashboard({
 };
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 bg-gradient-to-br from-emerald-50 via-sky-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 p-2 md:p-4 rounded-xl">
-      <Card className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-none shadow-lg overflow-hidden">
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 text-white/20">
+    <div className="space-y-6 animate-in fade-in-50 bg-secondary/50 dark:bg-background p-2 md:p-4 rounded-xl">
+      <Card className="bg-primary text-primary-foreground border-none shadow-lg overflow-hidden">
+        <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
             <Gift size={128} strokeWidth={1} />
         </div>
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
-            <CardDescription className="text-emerald-200">Welcome back,</CardDescription>
+            <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
             <CardTitle className="font-headline text-4xl">
               {student.firstName} {student.lastName}
             </CardTitle>
           </div>
           <div className="text-right">
-             <CardDescription className="text-emerald-200">Current Balance</CardDescription>
+             <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
              <p className="text-5xl font-bold">
               {student.points.toLocaleString()}{' '}
               <span className="text-3xl font-normal">pts</span>
@@ -178,8 +176,8 @@ function StudentDashboard({
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {rewards.map((reward) => (
-                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-slate-100 dark:bg-slate-800/50 transition-all hover:shadow-lg hover:-translate-y-1">
-                    <div className="p-4 bg-white/50 dark:bg-black/20 rounded-full mb-3 text-primary">
+                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all hover:shadow-lg hover:-translate-y-1">
+                    <div className="p-4 bg-accent rounded-full mb-3 text-primary">
                       {reward.icon}
                     </div>
                     <p className="font-bold text-lg">{reward.name}</p>
@@ -297,7 +295,7 @@ export default function StudentLoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center py-10">
-      <Card className="w-full max-w-md border-t-4 border-emerald-500">
+      <Card className="w-full max-w-md border-t-4 border-primary">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold font-headline">
             Student Kiosk
@@ -316,8 +314,8 @@ export default function StudentLoginPage() {
             <TabsContent value="nfc" className="text-center">
               <div className="py-8 space-y-4">
                 <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 animate-pulse"></div>
-                  <Nfc className="w-16 h-16 text-slate-400" />
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-primary/50 dark:border-primary/40 animate-pulse"></div>
+                  <Nfc className="w-16 h-16 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">
                   Tap your card on the reader...

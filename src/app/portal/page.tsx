@@ -28,9 +28,9 @@ export default function PortalPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
                 <Link href="/student" className="group">
-                    <Card className="h-full border-t-4 border-emerald-500 hover:shadow-xl hover:border-emerald-600 transition-all transform hover:-translate-y-1">
+                    <Card className="h-full border-t-4 border-primary hover:shadow-xl hover:border-primary/80 transition-all transform hover:-translate-y-1">
                         <CardHeader>
-                            <GraduationCap className="w-10 h-10 mb-2 text-emerald-500" />
+                            <GraduationCap className="w-10 h-10 mb-2 text-primary" />
                             <CardTitle>Student Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 Access your points and rewards <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -39,9 +39,9 @@ export default function PortalPage() {
                     </Card>
                 </Link>
                 <Link href="/teacher" className="group">
-                    <Card className="h-full border-t-4 border-blue-500 hover:shadow-xl hover:border-blue-600 transition-all transform hover:-translate-y-1">
+                    <Card className="h-full border-t-4 border-chart-1 hover:shadow-xl hover:border-chart-1/80 transition-all transform hover:-translate-y-1">
                         <CardHeader>
-                            <User className="w-10 h-10 mb-2 text-blue-500" />
+                            <User className="w-10 h-10 mb-2 text-chart-1" />
                             <CardTitle>Teacher Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 Award points and manage your students <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -50,9 +50,9 @@ export default function PortalPage() {
                     </Card>
                 </Link>
                 <Link href="/admin" className="group">
-                    <Card className="h-full border-t-4 border-purple-500 hover:shadow-xl hover:border-purple-600 transition-all transform hover:-translate-y-1">
+                    <Card className="h-full border-t-4 border-chart-2 hover:shadow-xl hover:border-chart-2/80 transition-all transform hover:-translate-y-1">
                         <CardHeader>
-                            <UserCog className="w-10 h-10 mb-2 text-purple-500" />
+                            <UserCog className="w-10 h-10 mb-2 text-chart-2" />
                             <CardTitle>Admin Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 Manage all school data and settings <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />

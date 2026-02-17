@@ -181,10 +181,10 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
 
     return (
         <div className="space-y-6">
-             <Card className="bg-blue-50 dark:bg-blue-900/20 border-t-4 border-blue-500">
+             <Card className="bg-card border-t-4 border-chart-1">
                 <CardHeader className="flex flex-row justify-between items-center">
                     <div>
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><User />{teacher.name}'s Dashboard</CardTitle>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><User className="text-chart-1"/>{teacher.name}'s Dashboard</CardTitle>
                         <CardDescription>Award points and create coupon print sheets for your students.</CardDescription>
                     </div>
                     <Button asChild variant="outline"><Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal</Link></Button>
@@ -206,7 +206,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                         </div>
                         <ul className="space-y-2 max-h-[30rem] overflow-y-auto pr-2">
                             {filteredStudents.map(s => (
-                                <li key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border">
+                                <li key={s.id} className="flex items-center justify-between p-3 bg-secondary rounded-md border">
                                     <div>
                                         <p className="font-bold">{s.lastName}, {s.firstName}</p>
                                         <p className="text-sm text-muted-foreground">{s.points} points</p>
@@ -229,7 +229,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                           <Printer className="text-indigo-500" /> Coupon Printer
+                           <Printer className="text-primary" /> Coupon Printer
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 gap-4 items-end">
@@ -311,8 +311,8 @@ export default function TeacherLoginPage() {
         <div className="flex flex-col items-center justify-center py-10">
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
-                    <div className="mx-auto bg-blue-100 dark:bg-blue-900/50 p-3 rounded-full mb-4">
-                        <User className="w-12 h-12 text-blue-500" />
+                    <div className="mx-auto bg-accent p-3 rounded-full mb-4">
+                        <User className="w-12 h-12 text-primary" />
                     </div>
                     <CardTitle className="font-headline text-2xl">Teacher Portal Login</CardTitle>
                     <CardDescription>Please select your name to continue.</CardDescription>

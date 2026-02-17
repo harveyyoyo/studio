@@ -32,7 +32,7 @@ export default function Header() {
   const getSubTitle = () => {
     switch(loginState) {
         case 'developer':
-            return <span className="font-code text-pink-500">Developer Mode</span>;
+            return <span className="font-code text-destructive">Developer Mode</span>;
         case 'school':
              return <span className="font-code text-primary/80">{schoolId}</span>;
         default:
@@ -43,7 +43,7 @@ export default function Header() {
   return (
     <header className="no-print w-full max-w-6xl bg-card rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center border-b-4 border-primary shadow-lg relative overflow-hidden">
       
-      <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-5xl md:text-8xl font-black text-slate-300/70 dark:text-slate-700/70 uppercase tracking-widest italic select-none">
+      <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-5xl md:text-8xl font-black text-slate-200 dark:text-slate-800 uppercase tracking-widest italic select-none">
           {getTitle()}
       </div>
 

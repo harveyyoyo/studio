@@ -80,7 +80,7 @@ export default function DeveloperPage() {
   
   return (
       <div className="space-y-6">
-          <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
+          <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
               <div>
                   <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
                       <Server /> Developer Mode
@@ -109,7 +109,7 @@ export default function DeveloperPage() {
 
                    <ul className="space-y-2">
                       {allSchools.sort().map((id) => (
-                          <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
+                          <li key={id} className="flex justify-between items-center bg-secondary p-3 rounded-lg border">
                               <p className="font-bold font-code">{id}</p>
                               <div className="flex items-center gap-0.5">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
