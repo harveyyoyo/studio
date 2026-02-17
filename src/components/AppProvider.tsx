@@ -110,8 +110,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [firestore]);
 
-  const registryDocRef = useMemo(() => firestore ? doc(firestore, 'schools', REGISTRY_DOC_ID) : null, [firestore]);
-
   // Restore session
   useEffect(() => {
     const savedState = sessionStorage.getItem('loginState');
@@ -126,33 +124,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(true);
   }, []);
 
-  // Listen for school registry changes in real-time
+  // Listen for school list changes in real-time
   useEffect(() => {
-    if (loginState !== 'developer' || !registryDocRef) {
+    if (loginState !== 'developer' || !firestore) {
       setAllSchools([]);
       return;
     }
 
-    const unsubscribe = onSnapshot(registryDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setAllSchools(data?.ids || []);
-      } else {
-        // If the registry doc doesn't exist, create it.
-        // The listener will then pick up the new empty doc.
-        setDoc(registryDocRef, { ids: [] }).catch(err => {
-             console.error("Error creating school registry:", err);
-             toast({ variant: 'destructive', title: "Could not create school registry."});
-        });
-      }
+    const schoolsColRef = collection(firestore, 'schools');
+    
+    const unsubscribe = onSnapshot(schoolsColRef, (querySnapshot) => {
+      const schoolIds = querySnapshot.docs
+        .map(doc => doc.id)
+        .filter(id => id !== REGISTRY_DOC_ID);
+      setAllSchools(schoolIds);
     }, (error) => {
-      console.error("Error listening to school registry:", error);
+      console.error("Error listening to schools collection:", error);
       toast({ variant: 'destructive', title: "Could not fetch school list."});
       setAllSchools([]);
     });
 
     return () => unsubscribe();
-  }, [loginState, registryDocRef, toast]);
+  }, [loginState, firestore, toast]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -293,44 +286,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
   
   const createSchool = useCallback(async (schoolId: string): Promise<string | null> => {
-    if (!registryDocRef || !firestore) return null;
+    if (!firestore) return null;
     const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!cleanId) {
         toast({variant: 'destructive', title: "Invalid School ID"});
         return null;
     }
     
-    const currentSchoolsSnap = await getDoc(registryDocRef);
-    if(currentSchoolsSnap.exists() && currentSchoolsSnap.data().ids.includes(cleanId)) {
+    if(allSchools.includes(cleanId)) {
       toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
       return null;
     }
     
     const newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
     const schoolData = { ...INITIAL_DATA, passcode: newPasscode };
-
-    await updateDoc(registryDocRef, { ids: arrayUnion(cleanId) });
+    
     const newSchoolDocRef = doc(firestore, 'schools', cleanId);
     await setDoc(newSchoolDocRef, schoolData);
     
     toast({title: `School "${cleanId}" created!`});
     return newPasscode;
-  }, [registryDocRef, firestore, toast]);
+  }, [firestore, allSchools, toast]);
   
   const deleteSchool = useCallback(async (schoolId: string) => {
-    if (!registryDocRef || !firestore) return;
+    if (!firestore) return;
 
     const backupsCollectionRef = collection(firestore, 'schools', schoolId, 'backups');
     const backupsSnapshot = await getDocs(backupsCollectionRef);
     const deletePromises = backupsSnapshot.docs.map(doc => deleteDoc(doc.ref));
     await Promise.all(deletePromises);
 
-    await updateDoc(registryDocRef, { ids: arrayRemove(schoolId) });
     const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
     await deleteDoc(schoolToDeleteDocRef);
     
     toast({title: `School "${schoolId}" deleted!`});
-  }, [registryDocRef, firestore, toast]);
+  }, [firestore, toast]);
 
   const updateSchoolPasscode = useCallback(async (schoolId: string, passcode: string) => {
     if (!firestore) return;
