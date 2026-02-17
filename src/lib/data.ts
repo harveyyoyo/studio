@@ -8,13 +8,13 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
       lastName: 'Student',
       nfcId: '100',
       points: 100,
-      teacherId: 't1',
+      classId: 'c1',
       history: [],
     },
   ],
-  teachers: [
-    { id: 't1', name: 'Mrs. Johnson' },
-    { id: 't2', name: 'Mr. Smith' },
+  classes: [
+    { id: 'c1', name: 'Mrs. Johnson' },
+    { id: 'c2', name: 'Mr. Smith' },
   ],
   categories: [
     'Good Behavior',
@@ -28,7 +28,7 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
       code: 'REWARD-500',
       value: 500,
       category: 'Good Behavior',
-      teacher: 'Mrs. Johnson',
+      className: 'Mrs. Johnson',
       used: false,
       createdAt: Date.now(),
       description: 'For an outstanding display of classroom leadership.',

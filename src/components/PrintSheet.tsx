@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Coupon } from '@/lib/types';
 
 interface PrintSheetProps {
@@ -10,32 +10,24 @@ interface PrintSheetProps {
 }
 
 export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetProps) {
+  const printTriggered = useRef(false);
   
   useEffect(() => {
-    const handleAfterPrint = () => {
-      onPrintComplete();
-    };
+    if (coupons.length > 0 && !printTriggered.current) {
+      printTriggered.current = true;
 
-    if (coupons.length > 0) {
-      window.addEventListener('afterprint', handleAfterPrint, { once: true });
-      
-      // This is the most reliable method to solve a font-loading "race condition".
-      // We must ensure the 'Libre Barcode 39 Text' font is fully loaded and ready
-      // to be rendered before we trigger the browser's print dialog.
-      // Using `document.fonts.load()` is more specific than `document.fonts.ready`.
-      // We check for the font at the specific size it's used for printing.
-      document.fonts.load('38pt "Libre Barcode 39 Text"').then(() => {
-        // Once the promise resolves, the font is ready. We can now print.
-        window.print();
-      }).catch((error) => {
-        console.error("Barcode font could not be loaded. Printing with fallback.", error);
-        // If the font fails to load for some reason, we still trigger the print.
-        window.print();
-      });
-
-      return () => {
+      const handleAfterPrint = () => {
+        onPrintComplete();
         window.removeEventListener('afterprint', handleAfterPrint);
       };
+      
+      window.addEventListener('afterprint', handleAfterPrint);
+
+      document.fonts.load('38pt "Libre Barcode 39 Text"').finally(() => {
+        setTimeout(() => {
+          window.print();
+        }, 100); 
+      });
     }
   }, [coupons, onPrintComplete]);
   
@@ -57,7 +49,7 @@ export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetPro
                 </div>
                 <div className="print-coupon-details">
                     <div className="print-coupon-category">{c.category || 'General'}</div>
-                    <div className="print-coupon-teacher">Issued by: {c.teacher}</div>
+                    <div className="print-coupon-teacher">Issued for: {c.className}</div>
                 </div>
             </div>
             <div className="print-coupon-barcode">

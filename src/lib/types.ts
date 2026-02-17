@@ -4,26 +4,26 @@ export interface HistoryItem {
   date: number;
 }
 
+export interface Class {
+  id: string;
+  name: string;
+}
+
 export interface Student {
   id: string;
   firstName: string;
   lastName: string;
   nfcId: string;
   points: number;
-  teacherId: string;
+  classId: string;
   history: HistoryItem[];
-}
-
-export interface Teacher {
-  id: string;
-  name: string;
 }
 
 export interface Coupon {
   code: string;
   value: number;
   category: string;
-  teacher: string;
+  className: string;
   used: boolean;
   createdAt: number;
   description?: string;
@@ -34,7 +34,7 @@ export interface Coupon {
 export interface Database {
   passcode: string;
   students: Student[];
-  teachers: Teacher[];
+  classes: Class[];
   categories: string[];
   coupons: Coupon[];
   updatedAt: number;

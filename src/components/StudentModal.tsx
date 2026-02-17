@@ -32,7 +32,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
   const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
-  const [teacherId, setTeacherId] = useState('');
+  const [classId, setClassId] = useState('');
   const { toast } = useToast();
 
   const isEditing = !!student;
@@ -44,16 +44,16 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setLastName(student.lastName);
         setPoints(student.points.toString());
         setNfcId(student.nfcId);
-        setTeacherId(student.teacherId || '');
+        setClassId(student.classId || '');
       } else { // Create mode
         setFirstName('');
         setLastName('');
         setPoints('0');
         setNfcId('');
-        setTeacherId(db.teachers[0]?.id || '');
+        setClassId(db.classes?.[0]?.id || '');
       }
     }
-  }, [student, isOpen, db.teachers]);
+  }, [student, isOpen, db.classes]);
 
   const handleSave = async () => {
     if (!firstName || !lastName) {
@@ -66,14 +66,14 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
     }
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, teacherId: teacherId };
+      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, classId: classId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
         firstName, lastName, nfcId,
         points: parseInt(points) || 0,
-        teacherId: teacherId,
+        classId: classId,
       };
       await addStudent(newStudent);
       toast({ title: 'Student added!' });
@@ -107,11 +107,11 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
             <Input id="points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="teacher">Assign to Teacher</Label>
-            <Select value={teacherId} onValueChange={setTeacherId}>
-              <SelectTrigger id="teacher"><SelectValue /></SelectTrigger>
+            <Label htmlFor="class">Assign to Class</Label>
+            <Select value={classId} onValueChange={setClassId}>
+              <SelectTrigger id="class"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {db.teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                {db.classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

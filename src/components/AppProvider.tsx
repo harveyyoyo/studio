@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Teacher, Coupon, HistoryItem } from '@/lib/types';
+import type { Database, Student, Class, Coupon, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
@@ -26,14 +26,14 @@ import {
   enableMultiTabIndexedDbPersistence,
   collection,
   query,
-  orderBy,
-  limit,
   getDocs,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
+
+const REGISTRY_DOC_ID = '__registry__';
 
 interface AppContextType {
   isInitialized: boolean;
@@ -48,13 +48,13 @@ interface AppContextType {
     credentials: { schoolId?: string; passcode: string }
   ) => Promise<boolean>;
   logout: () => void;
-  getTeacherName: (teacherId: string) => string;
+  getClassName: (classId: string) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
   addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
-  deleteTeacher: (teacherId: string) => Promise<void>;
+  addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
+  deleteClass: (classId: string) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
@@ -74,13 +74,11 @@ const AppContext = createContext<AppContextType | null>(null);
 const EMPTY_DB: Database = {
   passcode: '',
   students: [],
-  teachers: [],
+  classes: [],
   categories: [],
   coupons: [],
   updatedAt: 0,
 };
-
-const REGISTRY_DOC_ID = '__registry__';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -194,6 +192,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const backupsColRef = collection(firestore, 'schools', schoolId, 'backups');
     const q = query(backupsColRef);
 
+    const getAndSortBackups = async () => {
+      try {
+        const snapshot = await getDocs(q);
+        const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
+        backupList.sort((a, b) => parseInt(b.id) - parseInt(a.id));
+        const limitedBackups = backupList.slice(0, 10);
+        setBackups(limitedBackups);
+      } catch (error) {
+        console.error("Error fetching backups:", error);
+        // This might happen if the index is not ready.
+        // We will just show an empty list in this case.
+        setBackups([]);
+      }
+    };
+
+    getAndSortBackups();
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
         backupList.sort((a, b) => parseInt(b.id) - parseInt(a.id));
@@ -291,8 +306,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!registryDocRef || !firestore) return;
 
-    // To delete all documents in a subcollection, you must do it manually.
-    // This is a simplified approach; for large subcollections, a Cloud Function would be better.
     const backupsCollectionRef = collection(firestore, 'schools', schoolId, 'backups');
     const backupsSnapshot = await getDocs(backupsCollectionRef);
     const deletePromises = backupsSnapshot.docs.map(doc => deleteDoc(doc.ref));
@@ -312,12 +325,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(schoolDoc, { passcode });
   }, [firestore]);
 
-  const getTeacherName = useCallback((teacherId: string) => {
-    if (!teacherId) {
+  const getClassName = useCallback((classId: string) => {
+    if (!classId) {
       return 'Unassigned';
     }
-    return db.teachers.find((t) => t.id === teacherId)?.name || 'Unassigned';
-  }, [db.teachers]);
+    return db.classes?.find((c) => c.id === classId)?.name || 'Unassigned';
+  }, [db.classes]);
   
   const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
     const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
@@ -335,28 +348,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDb({ students: arrayRemove(studentToDelete) as any });
   }, [db, updateDb]);
 
-  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
-    if (db.teachers.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
-        toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
+  const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
+    if (db.classes?.some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
+        toast({variant: 'destructive', title: 'Class with this name already exists.'});
         return;
     }
-    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
-    await updateDb({ teachers: arrayUnion(newTeacher) as any });
-  }, [db.teachers, updateDb, toast]);
+    const newClass: Class = { ...classData, id: 'c' + Date.now() };
+    await updateDb({ classes: arrayUnion(newClass) as any });
+  }, [db.classes, updateDb, toast]);
 
-  const deleteTeacher = useCallback(async (teacherId: string) => {
-    const teacherToDelete = db.teachers.find(t => t.id === teacherId);
-    if (!teacherToDelete) return;
+  const deleteClass = useCallback(async (classId: string) => {
+    const classToDelete = db.classes?.find(c => c.id === classId);
+    if (!classToDelete) return;
 
-    // This is a transaction-less update, which might have race conditions
-    // but is simpler for this app's scale.
     const newStudents = db.students.map((s) => ({
       ...s,
-      teacherId: s.teacherId === teacherId ? '' : s.teacherId,
+      classId: s.classId === classId ? '' : s.classId,
     }));
 
     await updateDb({ 
-        teachers: arrayRemove(teacherToDelete) as any,
+        classes: arrayRemove(classToDelete) as any,
         students: newStudents
     });
   }, [db, updateDb]);
@@ -480,15 +491,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
-      login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
-      deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
+      login, logout, getClassName, setCouponsToPrint, addStudent, updateStudent,
+      deleteStudent, addClass, deleteClass, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
-      login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
-      addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
+      login, logout, getClassName, addStudent, updateStudent, deleteStudent,
+      addClass, deleteClass, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup
     ]
@@ -497,7 +508,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={value}>
       {children}
-      <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={onPrintComplete} />
+      {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={onPrintComplete} />}
     </AppContext.Provider>
   );
 }

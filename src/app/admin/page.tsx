@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, User,
+  FileSpreadsheet, Printer, Settings, Edit, History, Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -109,22 +109,22 @@ function AdminDashboardSkeleton() {
 }
 
 function AdminDashboard() {
-  const { db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
-    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
+  const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
+    addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
     createBackup, backups, restoreFromBackup, downloadBackup
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newClassName, setNewClassName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
-  const [printTeacher, setPrintTeacher] = useState('Admin');
+  const [printClass, setPrintClass] = useState('Admin');
   const [printCategory, setPrintCategory] = useState('');
   const [printValue, setPrintValue] = useState('10');
   
@@ -132,7 +132,7 @@ function AdminDashboard() {
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
   useEffect(() => {
-    if (db.categories.length > 0 && !printCategory) {
+    if (db.categories?.length > 0 && !printCategory) {
       setPrintCategory(db.categories[0]);
     }
   }, [db.categories, printCategory]);
@@ -141,11 +141,11 @@ function AdminDashboard() {
       return <AdminDashboardSkeleton />;
   }
 
-  const handleAddTeacher = async () => {
-    if (!newTeacherName) return;
-    await addTeacher({ name: newTeacherName });
-    setNewTeacherName('');
-    toast({ title: 'Teacher Added' });
+  const handleAddClass = async () => {
+    if (!newClassName) return;
+    await addClass({ name: newClassName });
+    setNewClassName('');
+    toast({ title: 'Class Added' });
   };
 
   const handleAddCategory = async () => {
@@ -189,7 +189,7 @@ function AdminDashboard() {
         code,
         value: value,
         category: printCategory,
-        teacher: printTeacher,
+        className: printClass,
         used: false,
         createdAt: Date.now(),
       };
@@ -228,7 +228,7 @@ function AdminDashboard() {
     try {
       const text = await file.text();
       const data = JSON.parse(text) as DbInfo;
-      if (data.students && data.teachers && data.categories && data.coupons) {
+      if (data.students && data.classes && data.categories && data.coupons) {
         await setData(data);
         toast({ title: 'Data restored successfully!' });
       } else {
@@ -267,25 +267,25 @@ function AdminDashboard() {
         <Card className="border-t-4 border-chart-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="text-chart-1" /> Teachers
+              <Users className="text-chart-1" /> Classes
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-4">
               <Input
-                placeholder="Teacher Name"
-                value={newTeacherName}
-                onChange={(e) => setNewTeacherName(e.target.value)}
+                placeholder="Class Name"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
               />
-              <Button onClick={handleAddTeacher}>Add</Button>
+              <Button onClick={handleAddClass}>Add</Button>
             </div>
             <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.teachers.map((t) => (
+              {db.classes?.map((c) => (
                 <li
-                  key={t.id}
+                  key={c.id}
                   className="flex justify-between items-center bg-secondary p-2 rounded border"
                 >
-                  <span className="font-bold text-sm">{t.name}</span>
+                  <span className="font-bold text-sm">{c.name}</span>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -294,7 +294,7 @@ function AdminDashboard() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This action cannot be undone. Students in this class will become unassigned.
                         </AlertDialogDescription>
@@ -302,8 +302,8 @@ function AdminDashboard() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={async () => {
-                           await deleteTeacher(t.id);
-                           toast({ title: 'Teacher Deleted' });
+                           await deleteClass(c.id);
+                           toast({ title: 'Class Deleted' });
                         }}>Continue</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -334,7 +334,7 @@ function AdminDashboard() {
               </Button>
             </div>
             <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.categories.map((c) => (
+              {db.categories?.map((c) => (
                 <li
                   key={c}
                   className="flex justify-between items-center bg-secondary p-2 rounded border"
@@ -429,16 +429,16 @@ function AdminDashboard() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <Label>Issue As</Label>
-            <Select value={printTeacher} onValueChange={setPrintTeacher}>
+            <Label>Issue For</Label>
+            <Select value={printClass} onValueChange={setPrintClass}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Admin">Admin/General</SelectItem>
-                {db.teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.name}>
-                    {t.name}
+                {db.classes?.map((c) => (
+                  <SelectItem key={c.id} value={c.name}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -452,7 +452,7 @@ function AdminDashboard() {
                   <SelectValue placeholder="Select a category..."/>
                 </SelectTrigger>
                 <SelectContent>
-                  {db.categories.map((c) => (
+                  {db.categories?.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
                     </SelectItem>
@@ -527,7 +527,7 @@ function AdminDashboard() {
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Teacher: {getTeacherName(s.teacherId)} | NFC: {s.nfcId}
+                      Class: {getClassName(s.classId)} | NFC: {s.nfcId}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">
@@ -584,8 +584,8 @@ function AdminDashboard() {
             <p className="text-sm text-muted-foreground">Students</p>
           </div>
           <div className="bg-secondary p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.teachers.length}</p>
-            <p className="text-sm text-muted-foreground">Teachers</p>
+            <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
+            <p className="text-sm text-muted-foreground">Classes</p>
           </div>
           <div className="bg-secondary p-4 rounded-lg">
             <p className="text-2xl font-bold">{db.coupons.length}</p>
