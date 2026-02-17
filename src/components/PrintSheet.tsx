@@ -19,10 +19,17 @@ export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetPro
     if (coupons.length > 0) {
       window.addEventListener('afterprint', handleAfterPrint, { once: true });
       
-      // This is the robust fix:
-      // We wait for the browser to tell us all fonts are loaded and ready.
-      document.fonts.ready.then(() => {
-        // Now that fonts are loaded, we can safely trigger the print dialog.
+      // This is the most reliable method to solve a font-loading "race condition".
+      // We must ensure the 'Libre Barcode 39 Text' font is fully loaded and ready
+      // to be rendered before we trigger the browser's print dialog.
+      // Using `document.fonts.load()` is more specific than `document.fonts.ready`.
+      // We check for the font at the specific size it's used for printing.
+      document.fonts.load('38pt "Libre Barcode 39 Text"').then(() => {
+        // Once the promise resolves, the font is ready. We can now print.
+        window.print();
+      }).catch((error) => {
+        console.error("Barcode font could not be loaded. Printing with fallback.", error);
+        // If the font fails to load for some reason, we still trigger the print.
         window.print();
       });
 
