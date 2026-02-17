@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Student, Coupon } from '@/lib/types';
 import { Award, User, ArrowLeft, Printer, LogIn } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // AwardPointsModal component
 function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | null, isOpen: boolean, setIsOpen: (isOpen: boolean) => void }) {
@@ -74,9 +75,49 @@ function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | n
     );
 }
 
+function TeacherDashboardSkeleton() {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <Card>
+          <CardHeader className="flex flex-row justify-between items-center">
+            <div>
+              <Skeleton className="h-7 w-48 mb-2" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <Skeleton className="h-9 w-36" />
+          </CardHeader>
+        </Card>
+  
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 items-end">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+}
+
 // Teacher Dashboard component
 function TeacherDashboard({ teacher }: { teacher: Teacher }) {
-    const { db, addCoupons, setCouponsToPrint } = useAppContext();
+    const { db, addCoupons, setCouponsToPrint, isDbLoading } = useAppContext();
     const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
     const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
     const { toast } = useToast();
@@ -121,8 +162,11 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
         });
         await addCoupons(coupons);
         setCouponsToPrint(coupons);
-        toast({ title: 'Generating print sheet...' });
     };
+
+    if(isDbLoading) {
+        return <TeacherDashboardSkeleton />;
+    }
 
     return (
         <div className="space-y-6">
@@ -275,5 +319,3 @@ export default function TeacherLoginPage() {
         </div>
     );
 }
-
-    

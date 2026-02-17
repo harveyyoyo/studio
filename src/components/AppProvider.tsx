@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Database, Student, Teacher, Coupon, HistoryItem } from '@/lib/types';
@@ -31,6 +32,7 @@ export type LoginState = 'loggedOut' | 'school' | 'developer';
 
 interface AppContextType {
   isInitialized: boolean;
+  isDbLoading: boolean;
   loginState: LoginState;
   schoolId: string | null;
   allSchools: string[];
@@ -73,6 +75,7 @@ const REGISTRY_DOC_ID = '--registry--';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDbLoading, setIsDbLoading] = useState(false);
   const [loginState, setLoginState] = useState<LoginState>('loggedOut');
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [allSchools, setAllSchools] = useState<string[]>([]);
@@ -137,14 +140,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
     [firestore, schoolId]
   );
-
+  
+  const isInitialSnapshot = useRef(true);
+  
   useEffect(() => {
-    if (loginState !== 'school' || !schoolDocRef) {
-      setDb(EMPTY_DB);
-      return;
+    if (!schoolDocRef) {
+        setDb(EMPTY_DB);
+        setIsDbLoading(false);
+        return;
     }
+    
+    isInitialSnapshot.current = true;
+    setIsDbLoading(true);
     setSyncStatus('syncing');
+
     const unsubscribe = onSnapshot(schoolDocRef, (snapshot) => {
+        if (isInitialSnapshot.current) {
+            setIsDbLoading(false);
+            isInitialSnapshot.current = false;
+        }
         setSyncStatus(snapshot.metadata.hasPendingWrites ? 'syncing' : 'synced');
         if (snapshot.exists()) {
           setDb(snapshot.data() as Database);
@@ -154,9 +168,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }, (error) => {
         console.error('Firestore snapshot error:', error);
         setSyncStatus('error');
+        setIsDbLoading(false);
       });
+
     return () => unsubscribe();
-  }, [loginState, schoolDocRef]);
+  }, [schoolDocRef]);
 
   const updateDb = useCallback(
     async (newDbState: Database) => {
@@ -365,31 +381,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.addEventListener('afterprint', handleAfterPrint, { once: true });
       
       document.fonts.ready.then(() => {
-        // This timeout ensures that React has flushed the DOM updates
-        // and the browser has had time to apply the barcode font before printing.
         setTimeout(() => {
           window.print();
         }, 500); 
       });
-    }
 
-    // Cleanup in case the component unmounts or coupons change before printing.
-    return () => {
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      return () => {
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
   }, [couponsToPrint]);
 
 
   const value = useMemo(
     () => ({
-      isInitialized, loginState, schoolId, allSchools, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
     }),
     [
-      isInitialized, loginState, schoolId, allSchools, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
       addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb

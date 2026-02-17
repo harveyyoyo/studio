@@ -14,10 +14,81 @@ import type { Student, Database as DbInfo } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function AdminDashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+        </div>
+        <Skeleton className="h-9 w-36" />
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Database Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24 col-span-2" />
+          <Skeleton className="h-24 col-span-2" />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((i) => (
+            <Card key={i}>
+                <CardHeader>
+                    <Skeleton className="h-6 w-24" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                        <Skeleton className="h-10 flex-grow" />
+                        <Skeleton className="h-10 w-16" />
+                    </div>
+                     <Skeleton className="h-8" />
+                     <Skeleton className="h-8" />
+                     <Skeleton className="h-8" />
+                </CardContent>
+            </Card>
+        ))}
+      </div>
+
+       <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+            </CardContent>
+        </Card>
+
+       <Card>
+            <CardHeader className="flex flex-row justify-between items-center">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-10 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+                 {[1, 2, 3, 4].map(i => (
+                    <Skeleton key={i} className="h-16" />
+                ))}
+            </CardContent>
+        </Card>
+    </div>
+  );
+}
 
 function AdminDashboard() {
   const { db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
-    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData } = useAppContext();
+    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData, isDbLoading } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +107,10 @@ function AdminDashboard() {
       setPrintCategory(db.categories[0]);
     }
   }, [db.categories, printCategory]);
+
+  if (isDbLoading) {
+      return <AdminDashboardSkeleton />;
+  }
 
   const handleAddTeacher = async () => {
     if (!newTeacherName) return;
@@ -100,7 +175,6 @@ function AdminDashboard() {
     });
     await addCoupons(coupons);
     setCouponsToPrint(coupons);
-    toast({ title: 'Generating print sheet...' });
   };
 
   const handleBackup = () => {
@@ -445,5 +519,3 @@ export default function AdminPage() {
 
   return <AdminDashboard />;
 }
-
-    
