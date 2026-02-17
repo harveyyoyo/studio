@@ -9,7 +9,7 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Teacher, Coupon } from '@/lib/types';
+import type { Database, Student, Teacher, Coupon, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
@@ -51,6 +51,7 @@ interface AppContextType {
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
   createSchool: (schoolId: string) => Promise<string | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchoolPasscode: (schoolId: string, passcode: string) => Promise<void>;
@@ -209,7 +210,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSchoolId(null);
     setDb(EMPTY_DB);
     setAllSchools([]);
-    router.push('/');
+    router.push('/portal');
   }, [router]);
   
   const createSchool = useCallback(async (schoolId: string): Promise<string | null> => {
@@ -312,6 +313,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDb(updatedDb);
   }, [db, updateDb]);
 
+  const redeemCoupon = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
+    const coupon = db.coupons.find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
+
+    if (!coupon) {
+      return { success: false, message: 'Coupon code not found.' };
+    }
+    if (coupon.used) {
+      return { success: false, message: 'This coupon has already been used.' };
+    }
+
+    const student = db.students.find((s) => s.id === studentId);
+    if (!student) {
+      return { success: false, message: 'Student not found.' };
+    }
+
+    const newHistoryItem: HistoryItem = {
+      desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
+      amount: coupon.value,
+      date: Date.now(),
+    };
+
+    const updatedStudent: Student = {
+      ...student,
+      points: student.points + coupon.value,
+      history: [newHistoryItem, ...student.history],
+    };
+    
+    const updatedCoupon: Coupon = {
+        ...coupon,
+        used: true,
+        usedAt: Date.now(),
+        usedBy: student.name,
+    };
+
+    const newStudents = db.students.map((s) => s.id === studentId ? updatedStudent : s);
+    const newCoupons = db.coupons.map((c) => c.code === coupon.code ? updatedCoupon : c);
+
+    const updatedDb = { ...db, students: newStudents, coupons: newCoupons };
+    await updateDb(updatedDb);
+
+    return { success: true, message: 'Coupon redeemed!', value: coupon.value };
+  }, [db, updateDb]);
+
   useEffect(() => {
     const handlePrint = () => {
       if (couponsToPrint.length > 0) {
@@ -332,13 +376,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
-      addCoupons, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
+      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
     }),
     [
       isInitialized, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
       addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      createSchool, deleteSchool, updateSchoolPasscode, updateDb
+      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb
     ]
   );
 
