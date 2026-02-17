@@ -39,4 +39,7 @@ export default withPWA({
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: false,
+  fallbacks: {
+    document: '/offline.html',
+  },
 })(nextConfig);
