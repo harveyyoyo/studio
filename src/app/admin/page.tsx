@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  LogOut, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
+  ArrowLeft, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
   FileSpreadsheet, Printer, Settings, Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StudentModal } from '@/components/StudentModal';
 
 function AdminDashboard() {
-  const { logout, db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
+  const { db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
     addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData } = useAppContext();
+  const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,8 +163,8 @@ function AdminDashboard() {
             <Settings /> Admin Portal: <span className="text-yellow-300">{schoolId}</span>
           </h2>
         </div>
-        <Button onClick={logout} variant="secondary" size="sm">
-          <LogOut className="mr-2 h-4 w-4" /> Log Out
+        <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
         </Button>
       </Card>
 
