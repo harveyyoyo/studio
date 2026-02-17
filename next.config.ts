@@ -72,12 +72,13 @@ export default withPWA({
         },
       },
     },
-    // Cache JS and CSS with a StaleWhileRevalidate strategy.
+    // Cache JS and CSS with a NetworkFirst strategy for freshness.
     {
         urlPattern: /\.(?:js|css)$/,
-        handler: 'StaleWhileRevalidate',
+        handler: 'NetworkFirst',
         options: {
           cacheName: 'js-css-cache',
+          networkTimeoutSeconds: 3, // Fail fast on slow networks
           expiration: {
             maxEntries: 100,
             maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
