@@ -381,7 +381,7 @@ function AdminDashboard() {
         <CardContent>
           <ul className="space-y-2">
             {db.students
-              .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+              .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
               .map((s) => (
                 <li
                   key={s.id}
@@ -445,3 +445,5 @@ export default function AdminPage() {
 
   return <AdminDashboard />;
 }
+
+    

@@ -91,7 +91,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
         }
       }, [db.categories, printCategory]);
 
-    const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
+    const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''));
 
     const handleOpenAwardModal = (student: Student) => {
         setAwardingStudent(student);
@@ -275,3 +275,5 @@ export default function TeacherLoginPage() {
         </div>
     );
 }
+
+    
