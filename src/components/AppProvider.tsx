@@ -112,23 +112,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const registryDocRef = useMemo(() => firestore ? doc(firestore, 'schools', REGISTRY_DOC_ID) : null, [firestore]);
 
-  const fetchRegistry = useCallback(async () => {
-    if (!registryDocRef) return;
-    try {
-      const docSnap = await getDoc(registryDocRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setAllSchools(data?.ids || []);
-      } else {
-        await setDoc(registryDocRef, { ids: [] });
-        setAllSchools([]);
-      }
-    } catch (error) {
-      console.error("Error fetching school registry:", error);
-      toast({ variant: 'destructive', title: "Could not fetch school list."});
-    }
-  }, [registryDocRef, toast]);
-  
   // Restore session
   useEffect(() => {
     const savedState = sessionStorage.getItem('loginState');
@@ -143,12 +126,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(true);
   }, []);
 
-  // Fetch registry when logged in as developer and firestore is ready
+  // Listen for school registry changes in real-time
   useEffect(() => {
-    if (loginState === 'developer' && firestore) {
-      fetchRegistry();
+    if (loginState !== 'developer' || !registryDocRef) {
+      setAllSchools([]);
+      return;
     }
-  }, [loginState, firestore, fetchRegistry]);
+
+    const unsubscribe = onSnapshot(registryDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAllSchools(data?.ids || []);
+      } else {
+        // If the registry doc doesn't exist, create it.
+        // The listener will then pick up the new empty doc.
+        setDoc(registryDocRef, { ids: [] }).catch(err => {
+             console.error("Error creating school registry:", err);
+             toast({ variant: 'destructive', title: "Could not create school registry."});
+        });
+      }
+    }, (error) => {
+      console.error("Error listening to school registry:", error);
+      toast({ variant: 'destructive', title: "Could not fetch school list."});
+      setAllSchools([]);
+    });
+
+    return () => unsubscribe();
+  }, [loginState, registryDocRef, toast]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -256,7 +260,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (credentials.passcode === '1234') { 
           setLoginState('developer');
           sessionStorage.setItem('loginState', 'developer');
-          await fetchRegistry();
           return true;
         }
       } else if (type === 'school' && credentials.schoolId && firestore) {
@@ -277,7 +280,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     },
-    [fetchRegistry, firestore]
+    [firestore]
   );
   
   const logout = useCallback(() => {
@@ -310,10 +313,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newSchoolDocRef = doc(firestore, 'schools', cleanId);
     await setDoc(newSchoolDocRef, schoolData);
     
-    await fetchRegistry();
     toast({title: `School "${cleanId}" created!`});
     return newPasscode;
-  }, [registryDocRef, firestore, fetchRegistry, toast]);
+  }, [registryDocRef, firestore, toast]);
   
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!registryDocRef || !firestore) return;
@@ -327,9 +329,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
     await deleteDoc(schoolToDeleteDocRef);
     
-    await fetchRegistry();
     toast({title: `School "${schoolId}" deleted!`});
-  }, [registryDocRef, firestore, fetchRegistry, toast]);
+  }, [registryDocRef, firestore, toast]);
 
   const updateSchoolPasscode = useCallback(async (schoolId: string, passcode: string) => {
     if (!firestore) return;
