@@ -382,31 +382,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return { success: true, message: 'Coupon redeemed!', value: coupon.value };
   }, [db, updateDb]);
-
-  useEffect(() => {
-    const handleAfterPrint = () => {
-      setTimeout(() => {
-        setCouponsToPrint([]);
-      }, 0);
-    };
-
-    if (couponsToPrint.length > 0) {
-      window.addEventListener('afterprint', handleAfterPrint, { once: true });
-
-      // By using `display=block` in the font URL and `requestAnimationFrame`,
-      // we give the browser the best possible chance to have the font
-      // rendered before the print dialog is shown.
-      document.fonts.ready.then(() => {
-        requestAnimationFrame(() => {
-            window.print();
-        });
-      });
-
-      return () => {
-        window.removeEventListener('afterprint', handleAfterPrint);
-      };
-    }
-  }, [couponsToPrint]);
+  
+  const handlePrintComplete = useCallback(() => {
+    setCouponsToPrint([]);
+  }, []);
 
 
   const value = useMemo(
@@ -427,7 +406,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={value}>
       {children}
-      <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />
+      <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={handlePrintComplete} />
     </AppContext.Provider>
   );
 }

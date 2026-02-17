@@ -1,11 +1,36 @@
+'use client';
+
+import { useEffect } from 'react';
 import type { Coupon } from '@/lib/types';
 
 interface PrintSheetProps {
   coupons: Coupon[];
   schoolId: string | null;
+  onPrintComplete: () => void;
 }
 
-export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
+export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetProps) {
+  
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      onPrintComplete();
+    };
+
+    if (coupons.length > 0) {
+      window.addEventListener('afterprint', handleAfterPrint, { once: true });
+      
+      // A small delay to ensure DOM is fully painted with the new content and fonts.
+      const printTimeout = setTimeout(() => {
+        window.print();
+      }, 100);
+
+      return () => {
+        clearTimeout(printTimeout);
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+    }
+  }, [coupons, onPrintComplete]);
+  
   if (coupons.length === 0) {
     return null;
   }
