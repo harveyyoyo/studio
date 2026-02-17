@@ -9,9 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Class, Coupon } from '@/lib/types';
-import { User, ArrowLeft, Printer, LogIn, Plus } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import type { Coupon } from '@/lib/types';
+import { User, ArrowLeft, Printer, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,69 +19,50 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 
-
-function TeacherDashboardSkeleton() {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <Card>
-          <CardHeader className="flex flex-row justify-between items-center">
-            <div>
-              <Skeleton className="h-7 w-48 mb-2" />
-              <Skeleton className="h-4 w-72" />
-            </div>
-            <Skeleton className="h-9 w-36" />
-          </CardHeader>
-        </Card>
-  
-        <div className="flex justify-center">
-            <Card className="w-full max-w-lg">
-                <CardHeader>
-                <Skeleton className="h-6 w-40" />
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4 items-end">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                </CardContent>
-            </Card>
-        </div>
-      </div>
-    );
-}
-
-// Teacher Dashboard component
-function TeacherDashboard({ klass }: { klass: Class }) {
-    const { db, addCoupons, setCouponsToPrint, isDbLoading, addCategory } = useAppContext();
+export default function TeacherPage() {
+    const { loginState, isInitialized, db, addCoupons, setCouponsToPrint, addCategory, isDbLoading } = useAppContext();
+    const router = useRouter();
     const { toast } = useToast();
 
-    // State for printing coupons
+    const [printTeacher, setPrintTeacher] = useState(db.teachers[0]?.name || '');
     const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
     const [printValue, setPrintValue] = useState('10');
     
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
-
-     useEffect(() => {
+    useEffect(() => {
+        if (isInitialized && loginState !== 'school') {
+            router.replace('/');
+        }
+    }, [isInitialized, loginState, router]);
+    
+    useEffect(() => {
+        if (db.teachers.length > 0 && !printTeacher) {
+            setPrintTeacher(db.teachers[0].name);
+        }
         if (db.categories.length > 0 && !printCategory) {
           setPrintCategory(db.categories[0]);
         }
-      }, [db.categories, printCategory]);
+    }, [db.teachers, db.categories, printTeacher, printCategory]);
 
     const handleAddPrintCategory = async () => {
-      if (!newPrintCategoryName) return;
-      await addCategory(newPrintCategoryName);
-      setPrintCategory(newPrintCategoryName);
-      setNewPrintCategoryName('');
-      setIsPrintCategoryDialogOpen(false);
-      toast({ title: 'Category Added' });
+        if (!newPrintCategoryName) return;
+        await addCategory(newPrintCategoryName);
+        setPrintCategory(newPrintCategoryName);
+        setNewPrintCategoryName('');
+        setIsPrintCategoryDialogOpen(false);
+        toast({ title: 'Category Added' });
     };
-    
+
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
+        if (!printTeacher) {
+            toast({ variant: 'destructive', title: 'Please select a teacher.' });
+            return;
+        }
         if (!value || value <= 0) {
           toast({
             variant: 'destructive',
@@ -97,7 +77,7 @@ function TeacherDashboard({ klass }: { klass: Class }) {
             code,
             value: value,
             category: printCategory,
-            teacher: klass.name, // Use logged-in class's name
+            teacher: printTeacher,
             used: false,
             createdAt: Date.now(),
           };
@@ -106,17 +86,17 @@ function TeacherDashboard({ klass }: { klass: Class }) {
         setCouponsToPrint(coupons);
     };
 
-    if(isDbLoading) {
-        return <TeacherDashboardSkeleton />;
+    if (!isInitialized || loginState !== 'school' || isDbLoading) {
+        return <p>Loading...</p>;
     }
-
+    
     return (
-        <div className="space-y-6">
+         <div className="space-y-6">
              <Card className="bg-card border-t-4 border-chart-1">
                 <CardHeader className="flex flex-row justify-between items-center">
                     <div>
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><User className="text-chart-1"/>{klass.name}'s Portal</CardTitle>
-                        <CardDescription>Create coupon print sheets.</CardDescription>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><User className="text-chart-1"/>Teacher Portal</CardTitle>
+                        <CardDescription>Create coupon print sheets for any teacher.</CardDescription>
                     </div>
                     <Button asChild variant="outline"><Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal</Link></Button>
                 </CardHeader>
@@ -132,7 +112,12 @@ function TeacherDashboard({ klass }: { klass: Class }) {
                     <CardContent className="grid grid-cols-1 gap-4 items-end">
                        <div>
                             <Label>Issue As</Label>
-                            <Input value={klass.name} disabled />
+                            <Select value={printTeacher} onValueChange={setPrintTeacher}>
+                              <SelectTrigger><SelectValue placeholder="Select a teacher..." /></SelectTrigger>
+                              <SelectContent>
+                                {db.teachers.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
                         </div>
                       <div>
                         <Label>Category</Label>
@@ -178,85 +163,6 @@ function TeacherDashboard({ klass }: { klass: Class }) {
                     </CardContent>
                 </Card>
             </div>
-        </div>
-    );
-}
-
-// Main component
-export default function TeacherLoginPage() {
-    const { loginState, isInitialized, db } = useAppContext();
-    const router = useRouter();
-    const [selectedClassId, setSelectedClassId] = useState<string>('');
-    const [loggedInClass, setLoggedInClass] = useState<Class | null>(null);
-
-    useEffect(() => {
-        if (isInitialized && loginState !== 'school') {
-            router.replace('/');
-        }
-    }, [isInitialized, loginState, router]);
-
-    useEffect(() => {
-        if(loginState === 'school') {
-            const savedClassId = sessionStorage.getItem('classId');
-            if (savedClassId) {
-                const klass = db.classes.find(c => c.id === savedClassId);
-                if (klass) setLoggedInClass(klass);
-            }
-        }
-    }, [loginState, db.classes]);
-
-    const handleLogin = () => {
-        const klass = db.classes.find(t => t.id === selectedClassId);
-        if (klass) {
-            setLoggedInClass(klass);
-            sessionStorage.setItem('classId', klass.id);
-        }
-    };
-
-    if (!isInitialized || loginState !== 'school') {
-        return <p>Loading...</p>;
-    }
-    
-    if (loggedInClass) {
-        return <TeacherDashboard klass={loggedInClass} />;
-    }
-
-    return (
-        <div className="flex flex-col items-center justify-center py-10">
-            <Card className="w-full max-w-md text-center">
-                <CardHeader>
-                    <div className="mx-auto bg-accent p-3 rounded-full mb-4">
-                        <User className="w-12 h-12 text-primary" />
-                    </div>
-                    <CardTitle className="font-headline text-2xl">Class Portal Login</CardTitle>
-                    <CardDescription>Please select your class to continue.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {db.classes.length > 0 ? (
-                         <>
-                            <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select your class..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {db.classes.sort((a,b) => a.name.localeCompare(b.name)).map((c) => (
-                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Button onClick={handleLogin} className="w-full" disabled={!selectedClassId}>
-                                <LogIn className="mr-2" /> Sign In
-                            </Button>
-                        </>
-                    ) : (
-                        <p className="text-muted-foreground italic">No classes have been added to this school yet.</p>
-                    )}
-                    <hr className="my-4"/>
-                    <Button asChild variant="link">
-                        <Link href="/portal">Back to Portal Selection</Link>
-                    </Button>
-                </CardContent>
-            </Card>
         </div>
     );
 }

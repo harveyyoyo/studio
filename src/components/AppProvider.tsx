@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Class, Coupon, HistoryItem } from '@/lib/types';
+import type { Database, Student, Teacher, Coupon, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
@@ -43,13 +43,13 @@ interface AppContextType {
     credentials: { schoolId?: string; passcode: string }
   ) => Promise<boolean>;
   logout: () => void;
-  getClassName: (classId: string) => string;
+  getTeacherName: (teacherId: string) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
   addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addClass: (klass: Omit<Class, 'id'>) => Promise<void>;
-  deleteClass: (classId: string) => Promise<void>;
+  addTeacher: (teacher: Omit<Teacher, 'id'>) => Promise<void>;
+  deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
@@ -65,7 +65,7 @@ const AppContext = createContext<AppContextType | null>(null);
 const EMPTY_DB: Database = {
   passcode: '',
   students: [],
-  classes: [],
+  teachers: [],
   categories: [],
   coupons: [],
   updatedAt: 0,
@@ -161,7 +161,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
         if (snapshot.exists()) {
-          setDb({ ...EMPTY_DB, ...snapshot.data() });
+          const data = snapshot.data();
+          setDb({ ...EMPTY_DB, ...data });
         } else {
           setDb(EMPTY_DB);
         }
@@ -273,12 +274,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDoc(schoolDoc, { passcode });
   }, [firestore]);
 
-  const getClassName = useCallback((classId: string) => {
-    if (!classId) {
+  const getTeacherName = useCallback((teacherId: string) => {
+    if (!teacherId) {
       return 'Unassigned';
     }
-    return db.classes.find((c) => c.id === classId)?.name || 'Unassigned';
-  }, [db.classes]);
+    return db.teachers.find((t) => t.id === teacherId)?.name || 'Unassigned';
+  }, [db.teachers]);
   
   const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
     const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
@@ -298,23 +299,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await updateDb(updatedDb);
   }, [db, updateDb]);
 
-  const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
-    if (db.classes.some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
-        toast({variant: 'destructive', title: 'Class with this name already exists.'});
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
+    if (db.teachers.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
+        toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
         return;
     }
-    const newClass: Class = { ...classData, id: 'c' + Date.now() };
-    const updatedDb = { ...db, classes: [...db.classes, newClass] };
+    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+    const updatedDb = { ...db, teachers: [...db.teachers, newTeacher] };
     await updateDb(updatedDb);
   }, [db, updateDb, toast]);
 
-  const deleteClass = useCallback(async (classId: string) => {
-    const newClasses = db.classes.filter((c) => c.id !== classId);
+  const deleteTeacher = useCallback(async (teacherId: string) => {
+    const newTeachers = db.teachers.filter((t) => t.id !== teacherId);
     const newStudents = db.students.map((s) => ({
       ...s,
-      classId: s.classId === classId ? '' : s.classId,
+      teacherId: s.teacherId === teacherId ? '' : s.teacherId,
     }));
-    const updatedDb = { ...db, classes: newClasses, students: newStudents };
+    const updatedDb = { ...db, teachers: newTeachers, students: newStudents };
     await updateDb(updatedDb);
   }, [db, updateDb]);
 
@@ -388,14 +389,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
-      login, logout, getClassName, setCouponsToPrint, addStudent, updateStudent,
-      deleteStudent, addClass, deleteClass, addCategory, deleteCategory,
+      login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
+      deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
-      login, logout, getClassName, addStudent, updateStudent, deleteStudent,
-      addClass, deleteClass, addCategory, deleteCategory, addCoupons,
+      login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
+      addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb
     ]
   );

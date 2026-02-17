@@ -32,11 +32,10 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
   const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
-  const [classId, setClassId] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const { toast } = useToast();
 
   const isEditing = !!student;
-  const canAssignClass = true;
 
   useEffect(() => {
     if (isOpen) {
@@ -45,16 +44,16 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setLastName(student.lastName);
         setPoints(student.points.toString());
         setNfcId(student.nfcId);
-        setClassId(student.classId || '');
+        setTeacherId(student.teacherId || '');
       } else { // Create mode
         setFirstName('');
         setLastName('');
         setPoints('0');
         setNfcId('');
-        setClassId(db.classes[0]?.id || '');
+        setTeacherId(db.teachers[0]?.id || '');
       }
     }
-  }, [student, isOpen, db.classes]);
+  }, [student, isOpen, db.teachers]);
 
   const handleSave = async () => {
     if (!firstName || !lastName) {
@@ -67,14 +66,14 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
     }
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, classId: classId };
+      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, teacherId: teacherId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
         firstName, lastName, nfcId,
         points: parseInt(points) || 0,
-        classId: classId,
+        teacherId: teacherId,
       };
       await addStudent(newStudent);
       toast({ title: 'Student added!' });
@@ -107,17 +106,15 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
             <Label htmlFor="points">Points</Label>
             <Input id="points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
           </div>
-          {canAssignClass && (
-            <div className="space-y-1">
-              <Label htmlFor="class">Assign to Class</Label>
-              <Select value={classId} onValueChange={setClassId}>
-                <SelectTrigger id="class"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {db.classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-1">
+            <Label htmlFor="teacher">Assign to Teacher</Label>
+            <Select value={teacherId} onValueChange={setTeacherId}>
+              <SelectTrigger id="teacher"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {db.teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>

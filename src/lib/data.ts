@@ -8,11 +8,11 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
       lastName: 'Student',
       nfcId: '100',
       points: 100,
-      classId: 't1',
+      teacherId: 't1',
       history: [],
     },
   ],
-  classes: [
+  teachers: [
     { id: 't1', name: 'Mrs. Johnson' },
     { id: 't2', name: 'Mr. Smith' },
   ],

@@ -44,7 +44,7 @@ export default function PortalPage() {
                             <User className="w-10 h-10 mb-2 text-chart-1" />
                             <CardTitle>Teacher Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                Award points and manage your students <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Generate and print coupon sheets for your class <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
