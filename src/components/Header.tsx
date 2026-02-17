@@ -2,7 +2,7 @@
 'use client';
 import {
   Trophy,
-  TerminalSquare,
+  Database,
   Zap,
   CloudOff,
   AlertTriangle,
@@ -114,14 +114,14 @@ export default function Header() {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground"
-                title="Developer Mode"
+                title="Switch School"
               >
-                <TerminalSquare className="w-5 h-5" />
+                <Database className="w-5 h-5" />
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Developer Mode</DialogTitle>
+                <DialogTitle>Switch School</DialogTitle>
                 <DialogDescription>
                   Switch between school databases found on this device.
                 </DialogDescription>

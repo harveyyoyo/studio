@@ -50,9 +50,8 @@ function AdminDashboard() {
     setCouponsToPrint,
     deleteStudent,
     addTeacher,
-    deleteTeacher,
-    addCategory,
     deleteCategory,
+    addCategory,
     addCoupons,
     setData,
   } = useAppContext();
@@ -206,14 +205,14 @@ function AdminDashboard() {
       <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-            <Settings /> Developer Mode
+            <Settings /> Admin Portal
           </h2>
           <p className="text-slate-400 text-sm">
             System Configuration & Data Management
           </p>
         </div>
         <Button onClick={logout} variant="secondary" size="sm">
-          <LogOut className="mr-2 h-4 w-4" /> Exit Developer Mode
+          <LogOut className="mr-2 h-4 w-4" /> Exit Admin Mode
         </Button>
       </Card>
 
@@ -496,7 +495,7 @@ export default function AdminPage() {
   const handleLogin = () => {
     if (passcode === '1234') {
       enterAdmin();
-      toast({ title: 'Developer Access Granted' });
+      toast({ title: 'Admin Access Granted' });
     } else {
       toast({ variant: 'destructive', title: 'Incorrect Passcode' });
       setPasscode('');
@@ -513,7 +512,7 @@ export default function AdminPage() {
         <Card className="w-full max-w-md border-t-4 border-slate-500 shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold font-headline flex items-center justify-center gap-2">
-              <Key /> Developer Mode
+              <Key /> Admin Access
             </CardTitle>
             <CardDescription className="text-sm">
               Enter passcode to access system configuration.
@@ -544,7 +543,7 @@ export default function AdminPage() {
                 className="w-full font-bold shadow-lg"
                 disabled={!passcode}
               >
-                Enter Developer Mode
+                Enter Admin Mode
               </Button>
             </div>
           </CardContent>

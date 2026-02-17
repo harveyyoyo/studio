@@ -1,5 +1,5 @@
 'use client';
-import { Gamepad2, Printer, Settings } from 'lucide-react';
+import { Gamepad2, Printer, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,9 @@ const entryPoints = [
     color: 'indigo',
   },
   {
-    title: 'Developer Mode',
-    description: 'Manage system configuration & data.',
-    icon: Settings,
+    title: 'Admin Portal',
+    description: 'Manage school data & configuration.',
+    icon: ShieldCheck,
     href: '/admin',
     color: 'slate',
   },
