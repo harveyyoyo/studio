@@ -28,8 +28,8 @@ interface StudentModalProps {
 
 export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
   const { db, addStudent, updateStudent } = useAppContext();
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
   const [teacherId, setTeacherId] = useState('');
@@ -41,14 +41,14 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
   useEffect(() => {
     if (isOpen) {
       if (student) { // Edit mode
-        setName(student.name);
-        setPassword(student.password);
+        setFirstName(student.firstName);
+        setLastName(student.lastName);
         setPoints(student.points.toString());
         setNfcId(student.nfcId);
         setTeacherId(student.teacherId);
       } else { // Create mode
-        setName('');
-        setPassword('1234');
+        setFirstName('');
+        setLastName('');
         setPoints('0');
         setNfcId('');
         setTeacherId(db.teachers[0]?.id || '');
@@ -57,8 +57,8 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
   }, [student, isOpen, db.teachers]);
 
   const handleSave = async () => {
-    if (!name) {
-      toast({ variant: 'destructive', title: 'Student name is required.' });
+    if (!firstName || !lastName) {
+      toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
     if (!nfcId) {
@@ -67,12 +67,12 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
     }
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, name, password, nfcId, points: parseInt(points) || 0, teacherId };
+      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, teacherId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
-        name, password, nfcId,
+        firstName, lastName, nfcId,
         points: parseInt(points) || 0,
         teacherId: teacherId,
       };
@@ -89,13 +89,15 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
           <DialogTitle>{isEditing ? 'Edit Student' : 'New Student'}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="space-y-1">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" value={password} onChange={e => setPassword(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-1">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} />
+            </div>
+             <div className="space-y-1">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} />
+            </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="nfcId">NFC ID</Label>

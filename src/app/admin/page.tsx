@@ -381,7 +381,7 @@ function AdminDashboard() {
         <CardContent>
           <ul className="space-y-2">
             {db.students
-              .sort((a, b) => a.name.localeCompare(b.name))
+              .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
               .map((s) => (
                 <li
                   key={s.id}
@@ -389,7 +389,7 @@ function AdminDashboard() {
                 >
                   <div>
                     <p className="font-bold">
-                      {s.name}{' '}
+                      {s.lastName}, {s.firstName}{' '}
                       <span className="text-emerald-600 font-normal text-xs">
                         ({s.points} pts)
                       </span>

@@ -344,7 +344,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...coupon,
         used: true,
         usedAt: Date.now(),
-        usedBy: student.name,
+        usedBy: `${student.firstName} ${student.lastName}`,
     };
 
     const newStudents = db.students.map((s) => s.id === studentId ? updatedStudent : s);

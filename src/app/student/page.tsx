@@ -21,7 +21,7 @@ import {
   Ticket,
   History,
   Nfc,
-  User,
+  Type,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -62,7 +62,7 @@ function StudentDashboard({
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
             <CardTitle className="font-headline text-2xl">
-              Welcome, {student.name}!
+              Welcome, {student.firstName} {student.lastName}!
             </CardTitle>
             <CardDescription>Your current points balance:</CardDescription>
             <p className="text-4xl font-bold text-emerald-600">
@@ -151,9 +151,6 @@ export default function StudentLoginPage() {
   const [nfcId, setNfcId] = useState('');
   const nfcInputRef = useRef<HTMLInputElement>(null);
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
       router.replace('/');
@@ -167,8 +164,9 @@ export default function StudentLoginPage() {
     }
   }, [activeStudent]);
 
-  const handleNfcSubmit = (submittedId: string) => {
-    const student = db.students.find((s) => s.nfcId === submittedId);
+  const handleNfcSubmit = () => {
+    if(!nfcId) return;
+    const student = db.students.find((s) => s.nfcId === nfcId);
     if (student) {
       setActiveStudent(student);
     } else {
@@ -181,38 +179,22 @@ export default function StudentLoginPage() {
     setNfcId(''); // Clear after submit
   };
 
-  const handleUsernameSubmit = () => {
-    const student = db.students.find(
-      (s) => s.name.toLowerCase() === username.toLowerCase() && s.password === password
-    );
-    if (student) {
-      setActiveStudent(student);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid username or password.',
-      });
-    }
-    setPassword('');
-  };
-
   const handleDone = () => {
     setActiveStudent(null);
     setNfcId('');
-    setUsername('');
-    setPassword('');
   };
 
   const handleSimulate = () => {
-    const testStudent = db.students.find((s) => s.name === 'Test Student');
+    const testStudent = db.students.find((s) => s.nfcId === '100');
     if (testStudent) {
-      handleNfcSubmit(testStudent.nfcId);
+      setNfcId(testStudent.nfcId)
+      // Use a timeout to ensure state updates before submitting
+      setTimeout(() => handleNfcSubmit(), 0);
     } else {
       toast({
         variant: 'destructive',
         title: 'Simulation Failed',
-        description: 'Could not find "Test Student" in the database.',
+        description: 'Could not find student with NFC ID "100" in the database.',
       });
     }
   };
@@ -239,8 +221,8 @@ export default function StudentLoginPage() {
               <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
                 <Nfc className="mr-2 h-4 w-4" /> NFC Card
               </TabsTrigger>
-              <TabsTrigger value="username">
-                <User className="mr-2 h-4 w-4" /> Username
+              <TabsTrigger value="manual">
+                <Type className="mr-2 h-4 w-4" /> Manual
               </TabsTrigger>
             </TabsList>
             <TabsContent value="nfc" className="text-center">
@@ -258,7 +240,7 @@ export default function StudentLoginPage() {
                   className="absolute -top-[9999px] -left-[9999px]" // Visually hide but keep focusable
                   value={nfcId}
                   onChange={(e) => setNfcId(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit(nfcId)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
                   autoFocus
                 />
               </div>
@@ -271,33 +253,23 @@ export default function StudentLoginPage() {
                   className="w-full"
                   onClick={handleSimulate}
                 >
-                  Simulate "Test Student"
+                  Simulate Test Student (NFC: 100)
                 </Button>
               </div>
             </TabsContent>
-            <TabsContent value="username">
+            <TabsContent value="manual">
               <div className="space-y-4 py-4">
                 <div>
-                  <Label htmlFor="username">Student Name</Label>
+                  <Label htmlFor="manual-nfcId">Student NFC ID</Label>
                   <Input
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleUsernameSubmit()}
-                    placeholder="Enter your full name"
+                    id="manual-nfcId"
+                    value={nfcId}
+                    onChange={(e) => setNfcId(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
+                    placeholder="Enter student NFC ID"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleUsernameSubmit()}
-                  />
-                </div>
-                <Button onClick={handleUsernameSubmit} className="w-full">
+                <Button onClick={handleNfcSubmit} className="w-full">
                   Login
                 </Button>
               </div>

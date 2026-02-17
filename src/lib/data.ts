@@ -4,9 +4,9 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
   students: [
     {
       id: 's1',
-      name: 'Test Student',
-      password: 'test',
-      nfcId: '123456',
+      firstName: 'Test',
+      lastName: 'Student',
+      nfcId: '100',
       points: 100,
       teacherId: 't1',
       history: [],

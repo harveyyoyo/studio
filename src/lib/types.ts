@@ -6,8 +6,8 @@ export interface HistoryItem {
 
 export interface Student {
   id: string;
-  name: string;
-  password: string;
+  firstName: string;
+  lastName: string;
   nfcId: string;
   points: number;
   teacherId: string;

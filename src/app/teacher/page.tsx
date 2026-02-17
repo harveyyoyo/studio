@@ -41,7 +41,7 @@ function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | n
         };
 
         await updateStudent(updatedStudent);
-        toast({ title: 'Points Awarded!', description: `${points} points awarded to ${student.name}.` });
+        toast({ title: 'Points Awarded!', description: `${points} points awarded to ${student.firstName} ${student.lastName}.` });
         setIsOpen(false);
         setAmount('10');
         setDescription('');
@@ -53,7 +53,7 @@ function AwardPointsModal({ student, isOpen, setIsOpen }: { student: Student | n
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Award Points to {student.name}</DialogTitle>
+                    <DialogTitle>Award Points to {student.firstName} {student.lastName}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-1">
@@ -91,7 +91,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
         }
       }, [db.categories, printCategory]);
 
-    const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => a.name.localeCompare(b.name));
+    const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
 
     const handleOpenAwardModal = (student: Student) => {
         setAwardingStudent(student);
@@ -146,7 +146,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                             {myStudents.map(s => (
                                 <li key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border">
                                     <div>
-                                        <p className="font-bold">{s.name}</p>
+                                        <p className="font-bold">{s.lastName}, {s.firstName}</p>
                                         <p className="text-sm text-muted-foreground">{s.points} points</p>
                                     </div>
                                     <Button size="sm" onClick={() => handleOpenAwardModal(s)}><Award className="mr-2"/> Award</Button>
