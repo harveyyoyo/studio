@@ -144,8 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setIsInitialized(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchRegistry]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
