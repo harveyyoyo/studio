@@ -24,6 +24,10 @@ import {
   arrayUnion,
   arrayRemove,
   enableMultiTabIndexedDbPersistence,
+  collection,
+  query,
+  orderBy,
+  limit,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
@@ -58,6 +62,10 @@ interface AppContextType {
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchoolPasscode: (schoolId: string, passcode: string) => Promise<void>;
   setData: (data: Database) => Promise<void>;
+  backups: { id: string }[];
+  createBackup: () => Promise<void>;
+  restoreFromBackup: (backupId: string) => Promise<void>;
+  downloadBackup: (backupId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -82,6 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<Database>(EMPTY_DB);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+  const [backups, setBackups] = useState<{ id: string }[]>([]);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -175,6 +184,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [schoolDocRef]);
 
+  // Fetch backups
+  useEffect(() => {
+    if (!schoolId || !firestore) {
+        setBackups([]);
+        return;
+    }
+    const backupsColRef = collection(firestore, 'schools', schoolId, 'backups');
+    const q = query(backupsColRef, orderBy('__name__', 'desc'), limit(10));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
+        setBackups(backupList);
+    }, (error) => {
+        console.error("Error fetching backups:", error);
+        setBackups([]);
+    });
+
+    return () => unsubscribe();
+  }, [schoolId, firestore]);
+
   const updateDb = useCallback(
     async (newDbState: Database) => {
       if (!schoolDocRef) return;
@@ -238,7 +267,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
     }
     
-    // Check if school already exists
     const currentSchoolsSnap = await getDoc(registryDocRef);
     if(currentSchoolsSnap.exists() && currentSchoolsSnap.data().ids.includes(cleanId)) {
       toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
@@ -380,11 +408,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return { success: true, message: 'Coupon redeemed!', value: coupon.value };
   }, [db, updateDb]);
+
+  const createBackup = useCallback(async () => {
+    if (!schoolId || !firestore) return;
+    
+    const backupId = Date.now().toString();
+    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+    
+    const { passcode, updatedAt, ...backupData } = db;
+    
+    await setDoc(backupDocRef, backupData);
+  }, [schoolId, firestore, db]);
+
+  const restoreFromBackup = useCallback(async (backupId: string) => {
+    if (!schoolId || !firestore || !schoolDocRef) return;
+
+    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+    const backupSnap = await getDoc(backupDocRef);
+
+    if (backupSnap.exists()) {
+        const backupData = backupSnap.data();
+        const currentPasscode = db.passcode;
+        const restoredDb = { ...backupData, passcode: currentPasscode };
+        
+        await setDoc(schoolDocRef, restoredDb);
+    } else {
+        toast({ variant: 'destructive', title: 'Backup not found' });
+    }
+  }, [schoolId, firestore, schoolDocRef, db.passcode, toast]);
   
-  const handlePrintComplete = useCallback(() => {
+  const downloadBackup = useCallback(async (backupId: string) => {
+    if (!schoolId || !firestore) return;
+    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+    const backupSnap = await getDoc(backupDocRef);
+
+    if (backupSnap.exists()) {
+        const dataStr = JSON.stringify(backupSnap.data(), null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `reward-arcade-backup-${schoolId}-${backupId}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } else {
+        toast({ variant: 'destructive', title: 'Backup not found' });
+    }
+  }, [schoolId, firestore, toast]);
+
+  const onPrintComplete = useCallback(() => {
     setCouponsToPrint([]);
   }, []);
-
 
   const value = useMemo(
     () => ({
@@ -392,19 +468,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData: updateDb,
+      backups, createBackup, restoreFromBackup, downloadBackup,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
       addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb
+      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, updateDb,
+      backups, createBackup, restoreFromBackup, downloadBackup
     ]
   );
 
   return (
     <AppContext.Provider value={value}>
       {children}
-      <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={handlePrintComplete} />
+      <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={onPrintComplete} />
     </AppContext.Provider>
   );
 }

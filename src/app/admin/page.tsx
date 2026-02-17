@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,7 +111,9 @@ function AdminDashboardSkeleton() {
 
 function AdminDashboard() {
   const { db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
-    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData, isDbLoading } = useAppContext();
+    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
+    createBackup, backups, restoreFromBackup, downloadBackup
+  } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -123,7 +126,7 @@ function AdminDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   const [printTeacher, setPrintTeacher] = useState('Admin');
-  const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
+  const [printCategory, setPrintCategory] = useState('');
   const [printValue, setPrintValue] = useState('10');
   
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
@@ -196,21 +199,21 @@ function AdminDashboard() {
     setCouponsToPrint(coupons);
   };
 
-  const handleBackup = () => {
-    const dataStr = JSON.stringify(db, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reward-arcade-backup-${schoolId}-${Date.now()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast({ title: 'Backup downloading...' });
-  };
+  const handleCreateBackup = async () => {
+    await createBackup();
+    toast({ title: "Backup Created", description: "A new backup has been saved." });
+  }
 
-  const handleRestore = () => {
+  const handleRestoreFromBackup = async (backupId: string) => {
+    await restoreFromBackup(backupId);
+    toast({ title: "Restore Complete", description: "Data has been restored from the backup." });
+  }
+
+  const handleDownloadBackup = async (backupId: string) => {
+    await downloadBackup(backupId);
+  }
+
+  const handleRestoreFromFile = () => {
     if (
       window.confirm(
         'Are you sure? This will permanently overwrite all current data for this school with the data from the backup file.'
@@ -438,27 +441,48 @@ function AdminDashboard() {
             </ul>
           </CardContent>
         </Card>
-
+        
         <Card className="border-t-4 border-chart-4">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="text-chart-4" /> System Data
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-              <Button
-                onClick={handleBackup}
-                variant="outline"
-                className="w-full justify-center gap-2"
-              >
-                <Download /> Backup
-              </Button>
-              <Button
-                onClick={handleRestore}
-                variant="outline"
-                className="w-full justify-center gap-2"
-              >
-                <Upload /> Restore
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Database className="text-chart-4" /> System Backups
+                  </div>
+                  <Button onClick={handleCreateBackup} size="sm">
+                    <Plus className="mr-2 h-4 w-4" /> Create Backup
+                  </Button>
+              </CardTitle>
+              <CardDescription>Create a manual backup. Automated nightly backups are not supported.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
+                {backups.length > 0 ? backups.map(backup => (
+                  <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
+                    <span className="font-code text-sm">{format(new Date(parseInt(backup.id)), "MMM d, yyyy, h:mm a")}</span>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
+                            <AlertDialogDescription>This will overwrite all current data with the data from {format(new Date(parseInt(backup.id)), "MMM d, yyyy")}. This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleRestoreFromBackup(backup.id)}>Restore</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </li>
+                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
+              </ul>
+              <Separator className="my-4" />
+              <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
+                <Upload /> Restore from JSON file
               </Button>
               <input
                 type="file"
@@ -499,7 +523,7 @@ function AdminDashboard() {
             <div className="flex items-center gap-2">
               <Select value={printCategory} onValueChange={setPrintCategory}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a category..."/>
                 </SelectTrigger>
                 <SelectContent>
                   {db.categories.map((c) => (

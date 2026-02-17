@@ -37,27 +37,8 @@ function PrizeDashboard({
 }) {
     const { updateStudent } = useAppContext();
     const { toast } = useToast();
-    const [logoutTimer, setLogoutTimer] = useState(30);
-
-    const resetTimer = useCallback(() => setLogoutTimer(30), []);
-
-    // Auto-logout timer effect
-    useEffect(() => {
-        const handleDone = () => onDone();
-        if (logoutTimer <= 0) {
-        handleDone();
-        return;
-        }
-
-        const intervalId = setInterval(() => {
-        setLogoutTimer((prev) => prev - 1);
-        }, 1000);
-
-        return () => clearInterval(intervalId);
-    }, [logoutTimer, onDone]);
 
     const handleRedeemReward = async (reward: Reward) => {
-        resetTimer();
         if (student.points < reward.points) {
             toast({
                 variant: 'destructive',
@@ -102,10 +83,6 @@ function PrizeDashboard({
                     </div>
                 </CardHeader>
             </Card>
-
-             <div className="text-center text-sm bg-secondary p-2 rounded-md">
-                Auto-logging out in {logoutTimer} seconds...
-             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {rewards.map((reward: Reward) => (

@@ -60,34 +60,31 @@ export default function Header() {
 
       {isInitialized && (
         <div className="flex gap-2 items-center relative z-20">
-          
           {loginState === 'school' && (
-             <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-1 text-xs font-bold text-muted-foreground bg-background/50">
-              {syncStatus === 'synced' && <><Zap className="w-3 h-3 text-green-500" /><span>Live Sync</span></>}
-              {syncStatus === 'syncing' && <><Zap className="w-3 h-3 text-yellow-500 animate-pulse" /><span>Syncing...</span></>}
-              {syncStatus === 'offline' && <><CloudOff className="w-3 h-3 text-slate-500" /><span>Offline</span></>}
-              {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
-            </Button>
+            <>
+              <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-1 text-xs font-bold text-muted-foreground bg-background/50">
+                {syncStatus === 'synced' && <><Zap className="w-3 h-3 text-green-500" /><span>Live Sync</span></>}
+                {syncStatus === 'syncing' && <><Zap className="w-3 h-3 text-yellow-500 animate-pulse" /><span>Syncing...</span></>}
+                {syncStatus === 'offline' && <><CloudOff className="w-3 h-3 text-slate-500" /><span>Offline</span></>}
+                {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
+              </Button>
+              <Button asChild>
+                <Link href="/portal"><Home className="mr-2" /> Portal Home</Link>
+              </Button>
+            </>
           )}
 
-          {loginState !== 'loggedOut' && (
+          {loginState === 'developer' && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="font-bold gap-2">
-                    <User />
-                    {getSubTitle()}
+                  <User />
+                  {getSubTitle()}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>
-                    {loginState === 'school' ? `School: ${schoolId}` : 'Developer Mode'}
-                </DropdownMenuLabel>
+                <DropdownMenuLabel>Developer Mode</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {loginState === 'school' && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/portal"><Home className="mr-2" /> Home</Link>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2" /> Log Out
                 </DropdownMenuItem>
