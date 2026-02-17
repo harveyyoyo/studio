@@ -20,7 +20,7 @@ export interface Student {
   lastName: string;
   nfcId: string;
   points: number;
-  classId: string;
+  classId?: string;
   history: HistoryItem[];
 }
 

@@ -50,7 +50,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setLastName('');
         setPoints('0');
         setNfcId('');
-        setClassId(db.classes?.[0]?.id || '');
+        setClassId('');
       }
     }
   }, [student, isOpen, db.classes]);
@@ -109,8 +109,9 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
           <div className="space-y-1">
             <Label htmlFor="class">Assign to Class</Label>
             <Select value={classId} onValueChange={setClassId}>
-              <SelectTrigger id="class"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="class"><SelectValue placeholder="Select a class..." /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="">Unassigned</SelectItem>
                 {db.classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
