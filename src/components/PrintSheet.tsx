@@ -19,13 +19,14 @@ export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetPro
     if (coupons.length > 0) {
       window.addEventListener('afterprint', handleAfterPrint, { once: true });
       
-      // A small delay to ensure DOM is fully painted with the new content and fonts.
-      const printTimeout = setTimeout(() => {
+      // This is the robust fix:
+      // We wait for the browser to tell us all fonts are loaded and ready.
+      document.fonts.ready.then(() => {
+        // Now that fonts are loaded, we can safely trigger the print dialog.
         window.print();
-      }, 100);
+      });
 
       return () => {
-        clearTimeout(printTimeout);
         window.removeEventListener('afterprint', handleAfterPrint);
       };
     }
@@ -35,12 +36,11 @@ export function PrintSheet({ coupons, schoolId, onPrintComplete }: PrintSheetPro
     return null;
   }
 
-  const couponsToRender = Array.from({ length: 24 }, (_, i) => coupons[i % coupons.length]);
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : 'REWARD ARCADE';
 
   return (
     <div id="print-container">
-      {couponsToRender.map((c, index) => (
+      {coupons.map((c, index) => (
         <div key={`${c.code}-${index}`} className="print-coupon">
             <div className="print-coupon-header">{schoolName}</div>
             <div className="print-coupon-main">
