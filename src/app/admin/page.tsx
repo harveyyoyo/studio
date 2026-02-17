@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Users,
+  FileSpreadsheet, Printer, Settings, Edit, History, Users, User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -111,20 +111,21 @@ function AdminDashboardSkeleton() {
 function AdminDashboard() {
   const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
-    createBackup, backups, restoreFromBackup, downloadBackup
+    createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newClassName, setNewClassName] = useState('');
+  const [newTeacherName, setNewTeacherName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
-  const [printClass, setPrintClass] = useState('Admin');
+  const [printTeacher, setPrintTeacher] = useState('Admin');
   const [printCategory, setPrintCategory] = useState('');
   const [printValue, setPrintValue] = useState('10');
   
@@ -136,6 +137,12 @@ function AdminDashboard() {
       setPrintCategory(db.categories[0]);
     }
   }, [db.categories, printCategory]);
+  
+  useEffect(() => {
+    if (db.teachers?.length > 0 && printTeacher === 'Admin') {
+      setPrintTeacher(db.teachers[0].name);
+    }
+  }, [db.teachers, printTeacher]);
 
   if (isDbLoading) {
       return <AdminDashboardSkeleton />;
@@ -146,6 +153,13 @@ function AdminDashboard() {
     await addClass({ name: newClassName });
     setNewClassName('');
     toast({ title: 'Class Added' });
+  };
+  
+  const handleAddTeacher = async () => {
+    if (!newTeacherName) return;
+    await addTeacher({ name: newTeacherName });
+    setNewTeacherName('');
+    toast({ title: 'Teacher Added' });
   };
 
   const handleAddCategory = async () => {
@@ -189,7 +203,7 @@ function AdminDashboard() {
         code,
         value: value,
         category: printCategory,
-        className: printClass,
+        teacher: printTeacher,
         used: false,
         createdAt: Date.now(),
       };
@@ -263,7 +277,7 @@ function AdminDashboard() {
         </Button>
       </Card>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="border-t-4 border-chart-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -313,6 +327,57 @@ function AdminDashboard() {
             </ul>
           </CardContent>
         </Card>
+        
+        <Card className="border-t-4 border-purple-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="text-purple-500" /> Teachers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2 mb-4">
+              <Input
+                placeholder="Teacher Name"
+                value={newTeacherName}
+                onChange={(e) => setNewTeacherName(e.target.value)}
+              />
+              <Button onClick={handleAddTeacher}>Add</Button>
+            </div>
+            <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
+              {db.teachers?.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex justify-between items-center bg-secondary p-2 rounded border"
+                >
+                  <span className="font-bold text-sm">{t.name}</span>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={async () => {
+                           await deleteTeacher(t.id);
+                           toast({ title: 'Teacher Deleted' });
+                        }}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
 
         <Card className="border-t-4 border-chart-2">
           <CardHeader>
@@ -368,7 +433,7 @@ function AdminDashboard() {
           </CardContent>
         </Card>
         
-        <Card className="border-t-4 border-chart-4">
+        <Card className="border-t-4 border-chart-4 lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -378,7 +443,7 @@ function AdminDashboard() {
                     <Plus className="mr-2 h-4 w-4" /> Create Backup
                   </Button>
               </CardTitle>
-              <CardDescription>Create a manual backup. Automated nightly backups are not supported.</CardDescription>
+              <CardDescription>Create a manual backup of the current database state.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
@@ -429,16 +494,16 @@ function AdminDashboard() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           <div>
-            <Label>Issue For</Label>
-            <Select value={printClass} onValueChange={setPrintClass}>
+            <Label>Issue By</Label>
+            <Select value={printTeacher} onValueChange={setPrintTeacher}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Admin">Admin/General</SelectItem>
-                {db.classes?.map((c) => (
-                  <SelectItem key={c.id} value={c.name}>
-                    {c.name}
+                {db.teachers?.map((t) => (
+                  <SelectItem key={t.id} value={t.name}>
+                    {t.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -588,10 +653,14 @@ function AdminDashboard() {
             <p className="text-sm text-muted-foreground">Classes</p>
           </div>
           <div className="bg-secondary p-4 rounded-lg">
+            <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
+            <p className="text-sm text-muted-foreground">Teachers</p>
+          </div>
+          <div className="bg-secondary p-4 rounded-lg">
             <p className="text-2xl font-bold">{db.coupons.length}</p>
             <p className="text-sm text-muted-foreground">Coupons Created</p>
           </div>
-          <div className="bg-secondary p-4 rounded-lg">
+          <div className="bg-secondary p-4 rounded-lg col-span-2">
             <p className="text-2xl font-bold">{usedCoupons}</p>
             <p className="text-sm text-muted-foreground">Coupons Used</p>
           </div>
@@ -599,7 +668,7 @@ function AdminDashboard() {
             <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground">Total Points Awarded</p>
           </div>
-          <div className="bg-secondary p-4 rounded-lg col-span-2">
+          <div className="bg-secondary p-4 rounded-lg col-span-2 md:col-span-4">
             <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
           </div>

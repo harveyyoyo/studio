@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Class, Coupon, HistoryItem } from '@/lib/types';
+import type { Database, Student, Class, Coupon, HistoryItem, Teacher } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
@@ -55,6 +55,8 @@ interface AppContextType {
   deleteStudent: (studentId: string) => Promise<void>;
   addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
   deleteClass: (classId: string) => Promise<void>;
+  addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
+  deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
@@ -75,6 +77,7 @@ const EMPTY_DB: Database = {
   passcode: '',
   students: [],
   classes: [],
+  teachers: [],
   categories: [],
   coupons: [],
   updatedAt: 0,
@@ -201,8 +204,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBackups(limitedBackups);
       } catch (error) {
         console.error("Error fetching backups:", error);
-        // This might happen if the index is not ready.
-        // We will just show an empty list in this case.
         setBackups([]);
       }
     };
@@ -371,6 +372,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         students: newStudents
     });
   }, [db, updateDb]);
+  
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
+    if (db.teachers?.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
+        toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
+        return;
+    }
+    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+    await updateDb({ teachers: arrayUnion(newTeacher) as any });
+  }, [db.teachers, updateDb, toast]);
+
+  const deleteTeacher = useCallback(async (teacherId: string) => {
+    const teacherToDelete = db.teachers?.find(c => c.id === teacherId);
+    if (!teacherToDelete) return;
+    await updateDb({ 
+        teachers: arrayRemove(teacherToDelete) as any,
+    });
+  }, [db, updateDb]);
 
   const addCategory = useCallback(async (newCategory: string) => {
     if (db.categories.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
@@ -484,22 +502,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [schoolId, firestore, toast]);
 
-  const onPrintComplete = useCallback(() => {
-    setCouponsToPrint([]);
-  }, []);
+  const printTriggered = useRef(false);
+
+  useEffect(() => {
+    if (couponsToPrint.length > 0 && !printTriggered.current) {
+      printTriggered.current = true;
+      const handleAfterPrint = () => {
+        setCouponsToPrint([]);
+        printTriggered.current = false;
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      
+      document.fonts.load('38pt "Libre Barcode 39 Text"').finally(() => {
+          window.print();
+      });
+    }
+  }, [couponsToPrint]);
 
   const value = useMemo(
     () => ({
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getClassName, setCouponsToPrint, addStudent, updateStudent,
-      deleteStudent, addClass, deleteClass, addCategory, deleteCategory,
+      deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
-      addClass, deleteClass, addCategory, deleteCategory, addCoupons,
+      addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup
     ]
@@ -508,7 +540,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={value}>
       {children}
-      {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} onPrintComplete={onPrintComplete} />}
+      {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
     </AppContext.Provider>
   );
 }

@@ -9,6 +9,11 @@ export interface Class {
   name: string;
 }
 
+export interface Teacher {
+  id: string;
+  name: string;
+}
+
 export interface Student {
   id: string;
   firstName: string;
@@ -23,7 +28,7 @@ export interface Coupon {
   code: string;
   value: number;
   category: string;
-  className: string;
+  teacher: string;
   used: boolean;
   createdAt: number;
   description?: string;
@@ -35,6 +40,7 @@ export interface Database {
   passcode: string;
   students: Student[];
   classes: Class[];
+  teachers: Teacher[];
   categories: string[];
   coupons: Coupon[];
   updatedAt: number;

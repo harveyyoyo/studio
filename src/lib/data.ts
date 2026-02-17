@@ -13,8 +13,12 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
     },
   ],
   classes: [
-    { id: 'c1', name: 'Mrs. Johnson' },
-    { id: 'c2', name: 'Mr. Smith' },
+    { id: 'c1', name: 'Grade 5' },
+    { id: 'c2', name: 'Grade 6' },
+  ],
+  teachers: [
+    { id: 't1', name: 'Mrs. Johnson' },
+    { id: 't2', name: 'Mr. Smith' },
   ],
   categories: [
     'Good Behavior',
@@ -28,7 +32,7 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
       code: 'REWARD-500',
       value: 500,
       category: 'Good Behavior',
-      className: 'Mrs. Johnson',
+      teacher: 'Mrs. Johnson',
       used: false,
       createdAt: Date.now(),
       description: 'For an outstanding display of classroom leadership.',

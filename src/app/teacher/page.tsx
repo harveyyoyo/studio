@@ -26,7 +26,7 @@ export default function TeacherPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [printClass, setPrintClass] = useState(db.classes?.[0]?.name || '');
+    const [printTeacher, setPrintTeacher] = useState(db.teachers?.[0]?.name || '');
     const [printCategory, setPrintCategory] = useState(db.categories?.[0] || '');
     const [printValue, setPrintValue] = useState('10');
     
@@ -40,13 +40,13 @@ export default function TeacherPage() {
     }, [isInitialized, loginState, router]);
     
     useEffect(() => {
-        if (db.classes?.length > 0 && !printClass) {
-            setPrintClass(db.classes[0].name);
+        if (db.teachers?.length > 0 && !printTeacher) {
+            setPrintTeacher(db.teachers[0].name);
         }
         if (db.categories?.length > 0 && !printCategory) {
           setPrintCategory(db.categories[0]);
         }
-    }, [db.classes, db.categories, printClass, printCategory]);
+    }, [db.teachers, db.categories, printTeacher, printCategory]);
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName) return;
@@ -59,8 +59,8 @@ export default function TeacherPage() {
 
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
-        if (!printClass) {
-            toast({ variant: 'destructive', title: 'Please select a class.' });
+        if (!printTeacher) {
+            toast({ variant: 'destructive', title: 'Please select a teacher.' });
             return;
         }
         if (!value || value <= 0) {
@@ -77,7 +77,7 @@ export default function TeacherPage() {
             code,
             value: value,
             category: printCategory,
-            className: printClass,
+            teacher: printTeacher,
             used: false,
             createdAt: Date.now(),
           };
@@ -95,8 +95,8 @@ export default function TeacherPage() {
              <Card className="bg-card border-t-4 border-chart-1">
                 <CardHeader className="flex flex-row justify-between items-center">
                     <div>
-                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><Users className="text-chart-1"/>Class Portal</CardTitle>
-                        <CardDescription>Create coupon print sheets for any class.</CardDescription>
+                        <CardTitle className="font-headline text-2xl flex items-center gap-2"><Printer className="text-chart-1"/>Teacher Portal</CardTitle>
+                        <CardDescription>Create coupon print sheets.</CardDescription>
                     </div>
                     <Button asChild variant="outline"><Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal</Link></Button>
                 </CardHeader>
@@ -111,11 +111,11 @@ export default function TeacherPage() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 gap-4 items-end">
                        <div>
-                            <Label>Issue For</Label>
-                            <Select value={printClass} onValueChange={setPrintClass}>
-                              <SelectTrigger><SelectValue placeholder="Select a class..." /></SelectTrigger>
+                            <Label>Issue By</Label>
+                            <Select value={printTeacher} onValueChange={setPrintTeacher}>
+                              <SelectTrigger><SelectValue placeholder="Select a teacher..." /></SelectTrigger>
                               <SelectContent>
-                                {db.classes?.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                {db.teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                         </div>
@@ -123,7 +123,7 @@ export default function TeacherPage() {
                         <Label>Category</Label>
                         <div className="flex items-center gap-2">
                             <Select value={printCategory} onValueChange={setPrintCategory}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
                               <SelectContent>
                                 {db.categories?.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                               </SelectContent>

@@ -29,9 +29,6 @@ export function Coupon({ coupon, isNew = false }: { coupon: Coupon, isNew?: bool
         <div className="font-barcode text-5xl leading-none pt-1 tracking-wider">
           *{coupon.code}*
         </div>
-        <div className="font-code text-xs font-bold tracking-wider">
-          {coupon.code.split('').join(' ')}
-        </div>
       </div>
     </div>
   );
