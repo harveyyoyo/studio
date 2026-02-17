@@ -3,7 +3,8 @@
   "short_name": "Arcade Rewards",
   "description": "A school points and rewards system.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#7986CB"
+  "theme_color": "#13a58d"
 }

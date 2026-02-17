@@ -34,28 +34,59 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA({
-  dest: 'public',
+  dest: "public",
   register: true,
   skipWaiting: true,
-  // Use the underlying workboxOptions for a more direct and robust offline fallback.
-  // This tells the service worker to serve '/offline.html' whenever a page navigation fails.
-  workboxOptions: {
-    navigateFallback: '/offline.html',
-  },
   runtimeCaching: [
+    // Cache pages with a NetworkFirst strategy.
     {
-      // Use a StaleWhileRevalidate strategy for all requests.
-      // This serves content from cache first for speed, and updates it from the network in the background.
-      // It's a robust strategy for both pages and assets like JS, CSS, and images.
-      urlPattern: /.*/i,
-      handler: 'StaleWhileRevalidate',
+      urlPattern: ({ request, url }) => {
+        // Only cache navigation requests.
+        if (request.mode !== 'navigate') {
+          return false;
+        }
+        // Don't cache API routes.
+        if (url.pathname.startsWith('/api/')) {
+          return false;
+        }
+        return true;
+      },
+      handler: 'NetworkFirst',
       options: {
-        cacheName: 'all-content',
+        cacheName: 'pages-cache',
         expiration: {
-          maxEntries: 150,
+          maxEntries: 50,
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
         },
       },
     },
+    // Cache static assets (images, fonts, etc.) with a StaleWhileRevalidate strategy.
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico|woff2?|eot|ttf|otf)$/,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'static-assets-cache',
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        },
+      },
+    },
+    // Cache JS and CSS with a StaleWhileRevalidate strategy.
+    {
+        urlPattern: /\.(?:js|css)$/,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'js-css-cache',
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+          },
+        },
+    },
   ],
+  workboxOptions: {
+    // The ultimate fallback page for when a navigation fails and the page isn't cached.
+    navigateFallback: "/offline.html",
+  }
 })(nextConfig);
