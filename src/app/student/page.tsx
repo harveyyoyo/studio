@@ -16,8 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student } from '@/lib/types';
-import { rewards, Reward } from '@/lib/rewards';
+import type { Student, Prize } from '@/lib/types';
 import {
   Nfc,
   Type,
@@ -30,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-
+import DynamicIcon from '@/components/DynamicIcon';
 
 // Student Dashboard component
 function StudentDashboard({
@@ -40,10 +39,11 @@ function StudentDashboard({
   student: Student;
   onDone: () => void;
 }) {
-  const { redeemCoupon } = useAppContext();
+  const { redeemCoupon, db } = useAppContext();
   const { toast } = useToast();
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
+  const [animatedValue, setAnimatedValue] = useState<number | null>(null);
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -68,11 +68,13 @@ function StudentDashboard({
     resetTimer(); 
     const result = await redeemCoupon(student.id, couponCode);
     
-    if (result.success) {
+    if (result.success && result.value) {
       toast({
         title: 'Coupon Redeemed!',
         description: `You gained ${result.value} points.`,
       });
+      setAnimatedValue(result.value);
+      setTimeout(() => setAnimatedValue(null), 1500);
     } else {
       toast({
         variant: 'destructive',
@@ -83,10 +85,18 @@ function StudentDashboard({
     setCouponCode('');
   };
 
-  const eligibleRewards = rewards.filter(r => student.points >= r.points);
+  const eligibleRewards = db.prizes?.filter(r => student.points >= r.points) || [];
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl">
+    <div className="relative space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl">
+      {animatedValue !== null && (
+        <div key={Date.now()} className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+            <div className="text-8xl font-bold text-green-500 animate-fly-up">
+                +{animatedValue}
+            </div>
+        </div>
+      )}
+
       <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
         <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
             <Gift size={128} strokeWidth={1} />
@@ -141,9 +151,9 @@ function StudentDashboard({
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
-                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
+                <Card key={reward.id} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
                     <div className="p-4 bg-accent rounded-full mb-3 text-primary">
-                      {reward.icon}
+                      <DynamicIcon name={reward.icon} className="w-8 h-8" />
                     </div>
                     <p className="font-bold text-lg">{reward.name}</p>
                     <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>

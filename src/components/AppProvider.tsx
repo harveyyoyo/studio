@@ -10,7 +10,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Class, Coupon, HistoryItem, Teacher } from '@/lib/types';
+import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
@@ -27,20 +27,18 @@ import {
   collection,
   query,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
 
-const REGISTRY_DOC_ID = 'school-registry';
-
 interface AppContextType {
   isInitialized: boolean;
   isDbLoading: boolean;
   loginState: LoginState;
   schoolId: string | null;
-  allSchools: string[];
   db: Database;
   syncStatus: SyncStatus;
   login: (
@@ -69,6 +67,9 @@ interface AppContextType {
   createBackup: () => Promise<void>;
   restoreFromBackup: (backupId: string) => Promise<void>;
   downloadBackup: (backupId: string) => Promise<void>;
+  addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
+  updatePrize: (prize: Prize) => Promise<void>;
+  deletePrize: (prizeId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -80,6 +81,7 @@ const EMPTY_DB: Database = {
   teachers: [],
   categories: [],
   coupons: [],
+  prizes: [],
   updatedAt: 0,
 };
 
@@ -88,7 +90,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isDbLoading, setIsDbLoading] = useState(false);
   const [loginState, setLoginState] = useState<LoginState>('loggedOut');
   const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [allSchools, setAllSchools] = useState<string[]>([]);
   const [db, setDb] = useState<Database>(EMPTY_DB);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
@@ -123,29 +124,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
   }, []);
-
-  // Listen for school list changes in real-time
-  useEffect(() => {
-    if (loginState !== 'developer' || !firestore) {
-      setAllSchools([]);
-      return;
-    }
-
-    const schoolsColRef = collection(firestore, 'schools');
-    
-    const unsubscribe = onSnapshot(schoolsColRef, (querySnapshot) => {
-      const schoolIds = querySnapshot.docs
-        .map(doc => doc.id)
-        .filter(id => id !== REGISTRY_DOC_ID);
-      setAllSchools(schoolIds);
-    }, (error) => {
-      console.error("Error listening to schools collection:", error);
-      toast({ variant: 'destructive', title: "Could not fetch school list."});
-      setAllSchools([]);
-    });
-
-    return () => unsubscribe();
-  }, [loginState, firestore, toast]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -215,8 +193,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     getAndSortBackups();
-    // This is a realtime listener, but we are fetching on first load to avoid a flicker
-    // We should consider if this is really needed or if we can rely on the snapshot listener alone
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const backupList = snapshot.docs.map(doc => ({ id: doc.id }));
         backupList.sort((a, b) => parseInt(b.id) - parseInt(a.id));
@@ -226,7 +202,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error("Error fetching backups:", error);
         setBackups([]);
     });
-
 
     return () => unsubscribe();
   }, [schoolId, firestore]);
@@ -281,7 +256,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLoginState('loggedOut');
     setSchoolId(null);
     setDb(EMPTY_DB);
-    setAllSchools([]);
     router.push('/');
   }, [router]);
   
@@ -293,7 +267,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
     }
     
-    if(allSchools.includes(cleanId)) {
+    const schoolExists = (await getDoc(doc(firestore, 'schools', cleanId))).exists();
+    if(schoolExists) {
       toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
       return null;
     }
@@ -306,16 +281,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     toast({title: `School "${cleanId}" created!`});
     return newPasscode;
-  }, [firestore, allSchools, toast]);
+  }, [firestore, toast]);
   
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!firestore) return;
 
+    // Batch delete subcollections first
     const backupsCollectionRef = collection(firestore, 'schools', schoolId, 'backups');
     const backupsSnapshot = await getDocs(backupsCollectionRef);
-    const deletePromises = backupsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
+    
+    const batch = writeBatch(firestore);
+    backupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
 
+    // Then delete the main document
     const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
     await deleteDoc(schoolToDeleteDocRef);
     
@@ -504,6 +483,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [schoolId, firestore, toast]);
 
+  const addPrize = useCallback(async (prizeData: Omit<Prize, 'id'>) => {
+      const newPrize: Prize = { ...prizeData, id: 'p' + Date.now() };
+      await updateDb({ prizes: arrayUnion(newPrize) as any });
+  }, [updateDb]);
+
+  const updatePrize = useCallback(async (updatedPrize: Prize) => {
+      const newPrizes = db.prizes.map((p) => p.id === updatedPrize.id ? updatedPrize : p);
+      await updateDb({ prizes: newPrizes });
+  }, [db, updateDb]);
+
+  const deletePrize = useCallback(async (prizeId: string) => {
+      const prizeToDelete = db.prizes.find(p => p.id === prizeId);
+      if (!prizeToDelete) return;
+      await updateDb({ prizes: arrayRemove(prizeToDelete) as any });
+  }, [db, updateDb]);
+
   const printTriggered = useRef(false);
 
   useEffect(() => {
@@ -524,18 +519,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, setCouponsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
-      backups, createBackup, restoreFromBackup, downloadBackup,
+      backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
     }),
     [
-      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
-      backups, createBackup, restoreFromBackup, downloadBackup
+      backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize
     ]
   );
 

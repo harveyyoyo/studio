@@ -4,16 +4,17 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Users, User,
+  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Database as DbInfo } from '@/lib/types';
+import type { Student, Prize, Coupon, Database as DbInfo } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
+import { PrizeModal } from '@/components/PrizeModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -37,6 +38,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { StudentActivityModal } from '@/components/StudentActivityModal';
+import DynamicIcon from '@/components/DynamicIcon';
+import { Coupon as CouponPreview } from '@/components/Coupon';
+
 
 function AdminDashboardSkeleton() {
   return (
@@ -111,7 +115,8 @@ function AdminDashboardSkeleton() {
 function AdminDashboard() {
   const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
-    createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher
+    createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher,
+    addPrize, updatePrize, deletePrize,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -121,7 +126,9 @@ function AdminDashboard() {
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
@@ -176,6 +183,11 @@ function AdminDashboard() {
     setEditingStudent(student);
     setIsStudentModalOpen(true);
   };
+
+  const handleOpenPrizeModal = (prize: Prize | null) => {
+    setEditingPrize(prize);
+    setIsPrizeModalOpen(true);
+  }
   
   const handleOpenActivityModal = (student: Student) => {
     setActivityStudent(student);
@@ -257,6 +269,15 @@ function AdminDashboard() {
     .filter((c) => c.used)
     .reduce((sum, c) => sum + c.value, 0);
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
+
+  const previewCoupon: Coupon = {
+      code: 'PREVIEW',
+      value: parseInt(printValue) || 0,
+      category: printCategory,
+      teacher: printTeacher,
+      used: false,
+      createdAt: Date.now(),
+  };
 
   return (
     <div className="space-y-6">
@@ -426,8 +447,64 @@ function AdminDashboard() {
             </ul>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="border-t-4 border-chart-3 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gift className="text-chart-3" /> Manage Prizes
+                  </div>
+                  <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
+                    <Plus className="mr-2 h-4 w-4" /> Add Prize
+                  </Button>
+              </CardTitle>
+              <CardDescription>Add, edit, or delete prizes available in the prize shop.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                {db.prizes?.length > 0 ? db.prizes.map(prize => (
+                  <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
+                    <div className='flex items-center gap-3'>
+                      <DynamicIcon name={prize.icon} className="w-5 h-5 text-primary"/>
+                      <div>
+                        <span className="font-bold text-sm">{prize.name}</span>
+                        <p className="text-xs text-muted-foreground">{prize.points} pts</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-0.5">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
+                        <Edit className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-8 w-8">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete prize "{prize.name}"?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={async () => {
+                              await deletePrize(prize.id);
+                              toast({ title: 'Prize Deleted' });
+                            }}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </li>
+                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No prizes found. Add one to get started!</p>}
+              </ul>
+            </CardContent>
+        </Card>
         
-        <Card className="border-t-4 border-chart-4 lg:col-span-2">
+        <Card className="border-t-4 border-chart-4">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -486,70 +563,78 @@ function AdminDashboard() {
             <Printer className="text-primary" /> Master Coupon Printer
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div>
-            <Label>Issue By</Label>
-            <Select value={printTeacher} onValueChange={setPrintTeacher}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Admin">Admin/General</SelectItem>
-                {db.teachers?.map((t) => (
-                  <SelectItem key={t.id} value={t.name}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Category</Label>
-            <div className="flex items-center gap-2">
-              <Select value={printCategory} onValueChange={setPrintCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category..."/>
-                </SelectTrigger>
-                <SelectContent>
-                  {db.categories?.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                  <DialogTrigger asChild>
-                      <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                      <DialogHeader>
-                          <DialogTitle>Add New Category</DialogTitle>
-                          <DialogDescription>Create a new category for coupons.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                          <Label htmlFor="new-print-category-name">Category Name</Label>
-                          <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
-                      </div>
-                      <DialogFooter>
-                          <Button onClick={handleAddPrintCategory}>Save Category</Button>
-                      </DialogFooter>
-                  </DialogContent>
-              </Dialog>
+        <CardContent className="flex flex-col md:flex-row gap-6">
+            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+              <div>
+                <Label>Issue By</Label>
+                <Select value={printTeacher} onValueChange={setPrintTeacher}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Admin">Admin/General</SelectItem>
+                    {db.teachers?.map((t) => (
+                      <SelectItem key={t.id} value={t.name}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Category</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={printCategory} onValueChange={setPrintCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category..."/>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {db.categories?.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Add New Category</DialogTitle>
+                              <DialogDescription>Create a new category for coupons.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                              <Label htmlFor="new-print-category-name">Category Name</Label>
+                              <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                          </div>
+                          <DialogFooter>
+                              <Button onClick={handleAddPrintCategory}>Save Category</Button>
+                          </DialogFooter>
+                      </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+              <div>
+                <Label>Value</Label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 25"
+                  value={printValue}
+                  onChange={(e) => setPrintValue(e.target.value)}
+                />
+              </div>
+              <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
+                <Printer /> Print Sheet (24)
+              </Button>
             </div>
-          </div>
-          <div>
-            <Label>Value</Label>
-            <Input
-              type="number"
-              placeholder="e.g. 25"
-              value={printValue}
-              onChange={(e) => setPrintValue(e.target.value)}
-            />
-          </div>
-          <Button onClick={handlePrintSheet} className="w-full font-bold gap-2">
-            <Printer /> Print Sheet (24)
-          </Button>
+            <div className="w-full md:w-1/3 flex flex-col items-center">
+                <Label className="font-semibold text-muted-foreground">Live Preview</Label>
+                <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
+                    <CouponPreview coupon={previewCoupon} />
+                </div>
+            </div>
         </CardContent>
       </Card>
 
@@ -673,6 +758,11 @@ function AdminDashboard() {
         isOpen={isStudentModalOpen}
         setIsOpen={setIsStudentModalOpen}
         student={editingStudent}
+      />
+      <PrizeModal
+        isOpen={isPrizeModalOpen}
+        setIsOpen={setIsPrizeModalOpen}
+        prize={editingPrize}
       />
       <StudentActivityModal
         isOpen={!!activityStudent}

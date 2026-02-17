@@ -36,6 +36,13 @@ export interface Coupon {
   usedBy?: string;
 }
 
+export interface Prize {
+  id: string;
+  name: string;
+  points: number;
+  icon: string;
+}
+
 export interface Database {
   passcode: string;
   students: Student[];
@@ -43,5 +50,6 @@ export interface Database {
   teachers: Teacher[];
   categories: string[];
   coupons: Coupon[];
+  prizes: Prize[];
   updatedAt: number;
 }

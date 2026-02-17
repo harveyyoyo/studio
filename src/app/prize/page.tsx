@@ -14,8 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student } from '@/lib/types';
-import { rewards, Reward } from '@/lib/rewards';
+import type { Student, Prize } from '@/lib/types';
 import {
   Nfc,
   Type,
@@ -27,6 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import DynamicIcon from '@/components/DynamicIcon';
 
 function PrizeDashboard({
   student,
@@ -35,35 +35,35 @@ function PrizeDashboard({
   student: Student;
   onDone: () => void;
 }) {
-    const { updateStudent } = useAppContext();
+    const { db, updateStudent } = useAppContext();
     const { toast } = useToast();
 
-    const handleRedeemReward = async (reward: Reward) => {
-        if (student.points < reward.points) {
+    const handleRedeemReward = async (prize: Prize) => {
+        if (student.points < prize.points) {
             toast({
                 variant: 'destructive',
                 title: 'Not enough points',
-                description: `You need ${reward.points} points to redeem this item.`,
+                description: `You need ${prize.points} points to redeem this item.`,
             });
             return;
         }
 
         const newHistoryItem = {
-            desc: `Redeemed: ${reward.name}`,
-            amount: -reward.points,
+            desc: `Redeemed: ${prize.name}`,
+            amount: -prize.points,
             date: Date.now(),
         };
 
         const updatedStudent: Student = {
             ...student,
-            points: student.points - reward.points,
+            points: student.points - prize.points,
             history: [newHistoryItem, ...student.history],
         };
 
         await updateStudent(updatedStudent);
         toast({
             title: 'Reward Redeemed!',
-            description: `You redeemed a ${reward.name} for ${reward.points} points. Your new balance is ${updatedStudent.points}.`,
+            description: `You redeemed a ${prize.name} for ${prize.points} points. Your new balance is ${updatedStudent.points}.`,
         });
     };
 
@@ -85,14 +85,14 @@ function PrizeDashboard({
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {rewards.map((reward: Reward) => (
-                    <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all hover:shadow-xl hover:-translate-y-1">
+                {db.prizes?.map((prize: Prize) => (
+                    <Card key={prize.id} className="p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all hover:shadow-xl hover:-translate-y-1">
                         <div className="p-6 bg-accent rounded-full mb-3 text-primary">
-                            {reward.icon}
+                            <DynamicIcon name={prize.icon} className="w-8 h-8" />
                         </div>
-                        <p className="font-bold text-xl">{reward.name}</p>
-                        <Badge variant="secondary" className="my-3 text-lg font-bold">{reward.points.toLocaleString()} pts</Badge>
-                        <Button onClick={() => handleRedeemReward(reward)} disabled={student.points < reward.points} className="w-full">
+                        <p className="font-bold text-xl">{prize.name}</p>
+                        <Badge variant="secondary" className="my-3 text-lg font-bold">{prize.points.toLocaleString()} pts</Badge>
+                        <Button onClick={() => handleRedeemReward(prize)} disabled={student.points < prize.points} className="w-full">
                             <Gift className="mr-2" /> Redeem
                         </Button>
                     </Card>

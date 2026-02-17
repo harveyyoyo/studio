@@ -20,6 +20,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Coupon as CouponPreview } from '@/components/Coupon';
+
 
 function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
     const { db, addCoupons, setCouponsToPrint, addCategory } = useAppContext();
@@ -74,6 +76,15 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
         await addCoupons(coupons);
         setCouponsToPrint(coupons);
     };
+
+    const previewCoupon: Coupon = {
+      code: 'PREVIEW',
+      value: parseInt(printValue) || 0,
+      category: printCategory,
+      teacher: teacherName,
+      used: false,
+      createdAt: Date.now(),
+    };
     
     return (
         <div className="space-y-6">
@@ -94,54 +105,62 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
             </Card>
 
             <div className="flex justify-center">
-                <Card className="w-full max-w-lg">
+                <Card className="w-full max-w-4xl">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                            <Printer className="text-primary" /> Coupon Printer
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 gap-4 items-end">
-                      <div>
-                        <Label>Category</Label>
-                        <div className="flex items-center gap-2">
-                            <Select value={printCategory} onValueChange={setPrintCategory}>
-                              <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
-                              <SelectContent>
-                                {db.categories?.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                             <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Add New Category</DialogTitle>
-                                        <DialogDescription>Create a new category for coupons.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-4 py-4">
-                                        <Label htmlFor="new-print-category-name">Category Name</Label>
-                                        <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
-                                    </div>
-                                    <DialogFooter>
-                                        <Button onClick={handleAddPrintCategory}>Save Category</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                    <CardContent className="flex flex-col md:flex-row gap-6">
+                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                            <div>
+                                <Label>Category</Label>
+                                <div className="flex items-center gap-2">
+                                    <Select value={printCategory} onValueChange={setPrintCategory}>
+                                    <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {db.categories?.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    </SelectContent>
+                                    </Select>
+                                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Add New Category</DialogTitle>
+                                                <DialogDescription>Create a new category for coupons.</DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid gap-4 py-4">
+                                                <Label htmlFor="new-print-category-name">Category Name</Label>
+                                                <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                                            </div>
+                                            <DialogFooter>
+                                                <Button onClick={handleAddPrintCategory}>Save Category</Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            </div>
+                            <div>
+                                <Label>Value</Label>
+                                <Input
+                                type="number"
+                                placeholder="e.g. 25"
+                                value={printValue}
+                                onChange={(e) => setPrintValue(e.target.value)}
+                                />
+                            </div>
+                            <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2">
+                                <Printer /> Print Sheet (24)
+                            </Button>
                         </div>
-                      </div>
-                      <div>
-                        <Label>Value</Label>
-                        <Input
-                          type="number"
-                          placeholder="e.g. 25"
-                          value={printValue}
-                          onChange={(e) => setPrintValue(e.target.value)}
-                        />
-                      </div>
-                      <Button onClick={handlePrintSheet} className="w-full font-bold gap-2">
-                        <Printer /> Print Sheet (24)
-                      </Button>
+                         <div className="w-full md:w-1/3 flex flex-col items-center flex-shrink-0">
+                            <Label className="font-semibold text-muted-foreground">Live Preview</Label>
+                            <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
+                                <CouponPreview coupon={previewCoupon} />
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
