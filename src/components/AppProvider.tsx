@@ -385,17 +385,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleAfterPrint = () => {
-      setCouponsToPrint([]);
+      // It's safer to wrap this in a timeout to avoid any state update issues
+      // that might happen during the 'afterprint' event itself.
+      setTimeout(() => {
+        setCouponsToPrint([]);
+      }, 0);
     };
 
     if (couponsToPrint.length > 0) {
       window.addEventListener('afterprint', handleAfterPrint, { once: true });
 
-      // Wait for all fonts to be ready, then wait for the next browser paint cycle
-      // to ensure the barcode font is applied before triggering print.
+      // This complex sequence is to ensure the barcode font is loaded and rendered
+      // before the print dialog is triggered, which can be a race condition.
       document.fonts.ready.then(() => {
+        // 'fonts.ready' ensures fonts are downloaded, but not necessarily rendered.
+        // We wait for the next animation frame to let the browser paint the new fonts.
         requestAnimationFrame(() => {
-          window.print();
+          // A final short delay ensures the swap from fallback to barcode font
+          // has visually completed before the print dialog freezes the page.
+          setTimeout(() => {
+            window.print();
+          }, 200); // Increased delay for more reliability
         });
       });
 
