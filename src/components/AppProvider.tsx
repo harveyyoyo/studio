@@ -357,17 +357,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [db, updateDb]);
 
   useEffect(() => {
-    const handlePrint = () => {
-      if (couponsToPrint.length > 0) {
-        document.fonts.ready.then(() => {
-          setTimeout(() => {
-            window.print();
-            setCouponsToPrint([]);
-          }, 2500);
-        });
-      }
+    const handleAfterPrint = () => {
+      setCouponsToPrint([]);
     };
-    handlePrint();
+
+    if (couponsToPrint.length > 0) {
+      window.addEventListener('afterprint', handleAfterPrint, { once: true });
+      
+      document.fonts.ready.then(() => {
+        // This timeout ensures that React has flushed the DOM updates
+        // and the browser has had time to apply the barcode font before printing.
+        setTimeout(() => {
+          window.print();
+        }, 500); 
+      });
+    }
+
+    // Cleanup in case the component unmounts or coupons change before printing.
+    return () => {
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [couponsToPrint]);
 
 
