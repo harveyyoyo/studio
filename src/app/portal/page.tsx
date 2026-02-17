@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowRight, User, UserCog, UserGraduate } from 'lucide-react';
+import { ArrowRight, User, UserCog, GraduationCap } from 'lucide-react';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
@@ -30,7 +30,7 @@ export default function PortalPage() {
                 <Link href="/student" className="group">
                     <Card className="h-full border-t-4 border-emerald-500 hover:shadow-xl hover:border-emerald-600 transition-all transform hover:-translate-y-1">
                         <CardHeader>
-                            <UserGraduate className="w-10 h-10 mb-2 text-emerald-500" />
+                            <GraduationCap className="w-10 h-10 mb-2 text-emerald-500" />
                             <CardTitle>Student Portal</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 Access your points and rewards <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
