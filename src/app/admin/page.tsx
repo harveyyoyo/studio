@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  ArrowLeft, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
+  ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   FileSpreadsheet, Printer, Settings, Edit, History, Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,13 +100,13 @@ function AdminDashboardSkeleton() {
 }
 
 function AdminDashboard() {
-  const { db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
-    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData, isDbLoading } = useAppContext();
+  const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
+    addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newClassName, setNewClassName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -127,11 +127,11 @@ function AdminDashboard() {
       return <AdminDashboardSkeleton />;
   }
 
-  const handleAddTeacher = async () => {
-    if (!newTeacherName) return;
-    await addTeacher({ name: newTeacherName });
-    setNewTeacherName('');
-    toast({ title: 'Teacher Added' });
+  const handleAddClass = async () => {
+    if (!newClassName) return;
+    await addClass({ name: newClassName });
+    setNewClassName('');
+    toast({ title: 'Class Added' });
   };
 
   const handleAddCategory = async () => {
@@ -205,7 +205,7 @@ function AdminDashboard() {
     try {
       const text = await file.text();
       const data = JSON.parse(text) as DbInfo;
-      if (data.students && data.teachers && data.categories && data.coupons) {
+      if (data.students && data.classes && data.categories && data.coupons) {
         await setData(data);
         toast({ title: 'Data restored successfully!' });
       } else {
@@ -266,8 +266,8 @@ function AdminDashboard() {
                 <p className="text-sm text-muted-foreground">Students</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.teachers.length}</p>
-                <p className="text-sm text-muted-foreground">Teachers</p>
+                <p className="text-2xl font-bold">{db.classes.length}</p>
+                <p className="text-sm text-muted-foreground">Classes</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.coupons.length}</p>
@@ -317,25 +317,25 @@ function AdminDashboard() {
         <Card className="border-t-4 border-chart-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserCheck className="text-chart-1" /> Teachers
+              <BookOpen className="text-chart-1" /> Classes
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-4">
               <Input
-                placeholder="Name"
-                value={newTeacherName}
-                onChange={(e) => setNewTeacherName(e.target.value)}
+                placeholder="Class Name"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
               />
-              <Button onClick={handleAddTeacher}>Add</Button>
+              <Button onClick={handleAddClass}>Add</Button>
             </div>
             <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.teachers.map((t) => (
+              {db.classes.map((c) => (
                 <li
-                  key={t.id}
+                  key={c.id}
                   className="flex justify-between items-center bg-secondary p-2 rounded border"
                 >
-                  <span className="font-bold text-sm">{t.name}</span>
+                  <span className="font-bold text-sm">{c.name}</span>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -344,16 +344,16 @@ function AdminDashboard() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action cannot be undone. Students currently assigned to this teacher will become unassigned.
+                          This action cannot be undone. Students in this class will become unassigned.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={async () => {
-                           await deleteTeacher(t.id);
-                           toast({ title: 'Teacher Deleted' });
+                           await deleteClass(c.id);
+                           toast({ title: 'Class Deleted' });
                         }}>Continue</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -465,9 +465,9 @@ function AdminDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Admin">Admin/General</SelectItem>
-                {db.teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.name}>
-                    {t.name}
+                {db.classes.map((c) => (
+                  <SelectItem key={c.id} value={c.name}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -536,7 +536,7 @@ function AdminDashboard() {
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Teacher: {getTeacherName(s.teacherIds)} | NFC: {s.nfcId}
+                      Class: {getClassName(s.classId)} | NFC: {s.nfcId}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">

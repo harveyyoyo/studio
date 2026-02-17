@@ -10,11 +10,11 @@ export interface Student {
   lastName: string;
   nfcId: string;
   points: number;
-  teacherIds: string[];
+  classId: string;
   history: HistoryItem[];
 }
 
-export interface Teacher {
+export interface Class {
   id: string;
   name: string;
 }
@@ -34,7 +34,7 @@ export interface Coupon {
 export interface Database {
   passcode: string;
   students: Student[];
-  teachers: Teacher[];
+  classes: Class[];
   categories: string[];
   coupons: Coupon[];
   updatedAt: number;
