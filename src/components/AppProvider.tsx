@@ -390,11 +390,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (couponsToPrint.length > 0) {
       window.addEventListener('afterprint', handleAfterPrint, { once: true });
-      
+
+      // Wait for all fonts to be ready, then wait for the next browser paint cycle
+      // to ensure the barcode font is applied before triggering print.
       document.fonts.ready.then(() => {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           window.print();
-        }, 500); 
+        });
       });
 
       return () => {

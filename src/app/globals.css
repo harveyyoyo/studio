@@ -195,24 +195,17 @@ body {
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
+        flex-grow: 1;
     }
 
     .print-coupon-barcode .barcode-font {
         font-family: 'Libre Barcode 39 Text', cursive;
-        font-size: 34pt;
-        letter-spacing: 0px;
+        font-size: 42pt;
+        letter-spacing: -1px;
         line-height: 1;
         color: #000;
         margin: 0;
         padding: 0;
-    }
-
-    .print-coupon-barcode .code-text {
-        font-family: 'PT Sans', sans-serif;
-        font-size: 7pt;
-        font-weight: bold;
-        letter-spacing: 1.5px;
-        color: #000;
-        margin-top: -3px;
     }
 }
