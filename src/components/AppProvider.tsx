@@ -33,7 +33,7 @@ import { INITIAL_DATA } from '@/lib/data';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
 
-const REGISTRY_DOC_ID = '__registry__';
+const REGISTRY_DOC_ID = 'school-registry';
 
 interface AppContextType {
   isInitialized: boolean;
