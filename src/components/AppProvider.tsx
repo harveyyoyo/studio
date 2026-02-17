@@ -98,7 +98,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       enableMultiTabIndexedDbPersistence(firestore)
         .then(() => console.log('✨ Offline Cache Active'))
         .catch((err) => {
-          console.error('Firestore persistence failed:', err.code);
+          if (err.code === 'failed-precondition') {
+            console.warn('Firestore persistence failed: another tab is open.');
+          } else {
+            console.error('Firestore persistence failed:', err.code);
+          }
         });
     }
   }, [firestore]);
@@ -171,26 +175,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSyncStatus(snapshot.metadata.fromCache ? 'syncing' : 'synced');
         if (snapshot.exists()) {
           const remoteData = snapshot.data();
-          // Basic conflict resolution: last write wins.
-          // A more robust solution might use versioning or field-level merging.
-          if (remoteData.updatedAt > db.updatedAt) {
+          if (remoteData.updatedAt >= (db.updatedAt || 0)) {
             setDb(remoteData as Database);
           }
         } else {
-          setDoc(schoolDocRef, INITIAL_DATA);
-          setDb(INITIAL_DATA);
+          setDb(EMPTY_DB);
+           if (isInitialized) {
+            toast({
+              variant: 'destructive',
+              title: 'School ID Not Found',
+              description:
+                'This school ID has no data. Create a new database in Developer Mode.',
+            });
+          }
         }
         setIsInitialized(true);
       },
       (error) => {
         console.error("Firestore snapshot error:", error);
         setSyncStatus('error');
-        setIsInitialized(true); // Still initialize to show UI, which can display an error state.
+        setIsInitialized(true);
       }
     );
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schoolDocRef]);
+  }, [schoolDocRef, isInitialized, toast]);
 
 
   const setSchoolId = useCallback(

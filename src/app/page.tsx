@@ -22,8 +22,8 @@ const entryPoints = [
     color: 'indigo',
   },
   {
-    title: 'Admin Portal',
-    description: 'Manage teachers & system data.',
+    title: 'Developer Mode',
+    description: 'Manage system configuration & data.',
     icon: Settings,
     href: '/admin',
     color: 'slate',
