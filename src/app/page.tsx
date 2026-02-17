@@ -1,91 +1,154 @@
 'use client';
-import { Gamepad2, Printer, ShieldCheck } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/components/AppProvider';
-import React, { useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { Building, Code } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-const entryPoints = [
-  {
-    title: 'Student Kiosk',
-    description: 'Scan coupons & buy prizes!',
-    icon: Gamepad2,
-    href: '/student/login',
-    color: 'emerald',
-  },
-  {
-    title: 'Teacher Station',
-    description: 'Print coupons & manage your class.',
-    icon: Printer,
-    href: '/teacher/login',
-    color: 'indigo',
-  },
-  {
-    title: 'Admin Portal',
-    description: 'Manage school data & configuration.',
-    icon: ShieldCheck,
-    href: '/admin',
-    color: 'slate',
-  },
-];
-
-export default function LandingPage() {
+export default function LoginPage() {
+  const [adminSchoolId, setAdminSchoolId] = useState('');
+  const [adminPasscode, setAdminPasscode] = useState('');
+  const [devPasscode, setDevPasscode] = useState('');
+  const { login } = useAppContext();
+  const { toast } = useToast();
   const router = useRouter();
-  const { schoolId, isInitialized, changeSchoolId } = useAppContext();
 
-  useEffect(() => {
-    if (isInitialized && !schoolId) {
-      router.replace('/setup');
+  const handleAdminLogin = async () => {
+    const success = await login('admin', {
+      schoolId: adminSchoolId,
+      passcode: adminPasscode,
+    });
+    if (success) {
+      router.push('/admin');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Invalid School ID or passcode.',
+      });
+      setAdminPasscode('');
     }
-  }, [schoolId, isInitialized, router]);
+  };
 
-  if (!isInitialized || !schoolId) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  const handleDeveloperLogin = async () => {
+    const success = await login('developer', { passcode: devPasscode });
+    if (success) {
+      router.push('/admin');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Incorrect developer passcode.',
+      });
+      setDevPasscode('');
+    }
+  };
 
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {entryPoints.map((point) => (
-          <Card
-            key={point.title}
-            onClick={() => router.push(point.href)}
-            className={`cursor-pointer group bg-white shadow-md hover:shadow-xl transition transform hover:-translate-y-1 border-b-4 border-${point.color}-500`}
-          >
-            <CardHeader className="items-center text-center">
-              <div
-                className={`bg-${point.color}-100 p-6 rounded-full group-hover:bg-${point.color}-200 transition mb-4`}
-              >
-                <point.icon
-                  className={`w-16 h-16 text-${point.color}-600`}
+    <div className="flex flex-col items-center justify-center py-10">
+      <Tabs defaultValue="admin" className="w-full max-w-md">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="admin">
+            <Building className="mr-2 h-4 w-4" /> School Admin
+          </TabsTrigger>
+          <TabsTrigger value="developer">
+            <Code className="mr-2 h-4 w-4" /> Developer
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="admin">
+          <Card className="border-t-4 border-primary shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold font-headline">
+                School Admin Login
+              </CardTitle>
+              <CardDescription>
+                Enter your School ID and passcode to continue.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label
+                  htmlFor="schoolId"
+                  className="block text-sm font-bold text-slate-600 mb-1"
+                >
+                  School ID
+                </Label>
+                <Input
+                  id="schoolId"
+                  placeholder="e.g. lincoln_high"
+                  value={adminSchoolId}
+                  onChange={(e) => setAdminSchoolId(e.target.value.trim())}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
                 />
               </div>
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                {point.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center text-slate-500 text-sm">
-                {point.description}
-              </p>
+              <div>
+                <Label
+                  htmlFor="admin-passcode"
+                  className="block text-sm font-bold text-slate-600 mb-1"
+                >
+                  Passcode
+                </Label>
+                <Input
+                  id="admin-passcode"
+                  type="password"
+                  value={adminPasscode}
+                  onChange={(e) => setAdminPasscode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                />
+              </div>
+              <Button onClick={handleAdminLogin} className="w-full font-bold">
+                Enter Admin Portal
+              </Button>
             </CardContent>
           </Card>
-        ))}
-      </div>
-      <div className="col-span-full text-center mt-6">
-        <Button
-          variant="link"
-          className="text-primary/70 hover:text-primary text-xs"
-          onClick={changeSchoolId}
-        >
-          Switch School ID
-        </Button>
-      </div>
-    </>
+        </TabsContent>
+        <TabsContent value="developer">
+          <Card className="border-t-4 border-slate-500 shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold font-headline">
+                Developer Login
+              </CardTitle>
+              <CardDescription>
+                Enter the developer passcode for system-wide access.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label
+                  htmlFor="dev-passcode"
+                  className="block text-sm font-bold text-slate-600 mb-1"
+                >
+                  Developer Passcode
+                </Label>
+                <Input
+                  id="dev-passcode"
+                  type="password"
+                  value={devPasscode}
+                  onChange={(e) => setDevPasscode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleDeveloperLogin()}
+                />
+              </div>
+              <Button
+                onClick={handleDeveloperLogin}
+                className="w-full font-bold"
+              >
+                Enter Developer Mode
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

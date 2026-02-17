@@ -9,39 +9,37 @@ import React, {
   useMemo,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type {
-  Database,
-  Student,
-  Teacher,
-  Coupon,
-  HistoryItem,
-} from '@/lib/types';
+import type { Database, Student, Teacher, Coupon } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { useFirestore } from '@/firebase';
 import {
   doc,
   setDoc,
+  getDoc,
   onSnapshot,
+  deleteDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
   enableMultiTabIndexedDbPersistence,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
+export type LoginState = 'loggedOut' | 'admin' | 'developer';
 
 interface AppContextType {
   isInitialized: boolean;
+  loginState: LoginState;
   schoolId: string | null;
+  allSchools: string[];
   db: Database;
-  currentUser: Student | null;
-  currentTeacher: Teacher | null;
-  isAdmin: boolean;
   syncStatus: SyncStatus;
-  setSchoolId: (id: string) => void;
-  changeSchoolId: () => void;
-  loginStudent: (student: Student) => void;
-  loginTeacher: (teacher: Teacher) => void;
-  enterAdmin: () => void;
+  login: (
+    type: 'admin' | 'developer',
+    credentials: { schoolId?: string; passcode: string }
+  ) => Promise<boolean>;
   logout: () => void;
   getTeacherName: (id: string) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
@@ -53,13 +51,8 @@ interface AppContextType {
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (
-    couponCode: string
-  ) => Promise<{ success: boolean; message: string }>;
-  buyReward: (
-    itemName: string,
-    cost: number
-  ) => Promise<{ success: boolean; message: string }>;
+  createSchool: (schoolId: string) => Promise<void>;
+  deleteSchool: (schoolId: string) => Promise<void>;
   setData: (data: Database) => Promise<void>;
 }
 
@@ -73,19 +66,15 @@ const EMPTY_DB: Database = {
   updatedAt: 0,
 };
 
+const REGISTRY_DOC_ID = '--registry--';
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
-  const [schoolId, _setSchoolId] = useState<string | null>(null);
+  const [loginState, setLoginState] = useState<LoginState>('loggedOut');
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [allSchools, setAllSchools] = useState<string[]>([]);
   const [db, setDb] = useState<Database>(EMPTY_DB);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [currentTeacherId, setCurrentTeacherId] = useState<string | null>(
-    null
-  );
-  const [currentUser, setCurrentUser] = useState<Student | null>(null);
-  const [currentTeacher, setCurrentTeacher] = useState<Teacher | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
-
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
   const router = useRouter();
@@ -94,18 +83,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (firestore) {
-      // Using the Multi-Tab version prevents the "failed-precondition" error
-      enableMultiTabIndexedDbPersistence(firestore)
-        .then(() => console.log('✨ Offline Cache Active'))
-        .catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.warn('Firestore persistence failed: another tab is open.');
-          } else {
-            console.error('Firestore persistence failed:', err.code);
-          }
-        });
+      enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn('Firestore persistence failed: another tab is open.');
+        } else {
+          console.error('Firestore persistence failed:', err.code);
+        }
+      });
     }
   }, [firestore]);
+
+  const registryDocRef = useMemo(() => firestore ? doc(firestore, 'schools', REGISTRY_DOC_ID) : null, [firestore]);
+
+  const fetchRegistry = useCallback(async () => {
+    if (!registryDocRef) return [];
+    try {
+      const docSnap = await getDoc(registryDocRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAllSchools(data?.ids || []);
+        return data?.ids || [];
+      } else {
+        await setDoc(registryDocRef, { ids: [] });
+        setAllSchools([]);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching school registry:", error);
+      toast({ variant: 'destructive', title: "Could not fetch school list."});
+      return [];
+    }
+  }, [registryDocRef, toast]);
+  
+  // Restore session
+  useEffect(() => {
+    const savedState = sessionStorage.getItem('loginState');
+    const savedSchoolId = sessionStorage.getItem('schoolId');
+    if (savedState) {
+      const state = savedState as LoginState;
+      setLoginState(state);
+      if (state === 'admin' && savedSchoolId) {
+        setSchoolId(savedSchoolId);
+      } else if (state === 'developer') {
+        fetchRegistry();
+      }
+    }
+    setIsInitialized(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -113,23 +138,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (!currentUserId || !db.students) {
-      setCurrentUser(null);
-    } else {
-      setCurrentUser(db.students.find((s) => s.id === currentUserId) ?? null);
+    if (loginState !== 'admin' || !schoolDocRef) {
+      setDb(EMPTY_DB);
+      return;
     }
-  }, [currentUserId, db.students]);
-
-  useEffect(() => {
-    if (!currentTeacherId || !db.teachers) {
-      setCurrentTeacher(null);
-    } else {
-      setCurrentTeacher(
-        db.teachers.find((t) => t.id === currentTeacherId) ?? null
-      );
-    }
-  }, [currentTeacherId, db.teachers]);
-
+    const unsubscribe = onSnapshot(schoolDocRef, (snapshot) => {
+        setSyncStatus(snapshot.metadata.fromCache ? 'syncing' : 'synced');
+        if (snapshot.exists()) {
+          setDb(snapshot.data() as Database);
+        } else {
+          setDb(EMPTY_DB);
+        }
+      }, (error) => {
+        console.error('Firestore snapshot error:', error);
+        setSyncStatus('error');
+      });
+    return () => unsubscribe();
+  }, [loginState, schoolDocRef]);
 
   const updateDb = useCallback(
     async (newDbState: Database) => {
@@ -141,95 +166,130 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await setDoc(schoolDocRef, dbWithTimestamp);
       } catch (e) {
         setSyncStatus('error');
-        toast({
-          variant: 'destructive',
-          title: 'Sync Error',
-          description: 'Could not save changes to the cloud.',
-        });
+        toast({ variant: 'destructive', title: 'Sync Error' });
       }
     },
     [schoolDocRef, toast]
   );
-
-  useEffect(() => {
-    const savedSchoolId = localStorage.getItem('schoolId');
-    if (savedSchoolId) {
-      _setSchoolId(savedSchoolId);
-      const savedUserId = localStorage.getItem('currentUserId');
-      if (savedUserId) setCurrentUserId(savedUserId);
-      const savedTeacherId = localStorage.getItem('currentTeacherId');
-      if (savedTeacherId) setCurrentTeacherId(savedTeacherId);
-      const savedIsAdmin = localStorage.getItem('isAdmin');
-      if (savedIsAdmin) setIsAdmin(JSON.parse(savedIsAdmin));
-    } else {
-      setIsInitialized(true); 
-    }
-  }, []);
   
-  useEffect(() => {
-    if (!schoolDocRef) {
-      return;
-    }
-    const unsubscribe = onSnapshot(schoolDocRef,
-      (snapshot) => {
-        setSyncStatus(snapshot.metadata.fromCache ? 'syncing' : 'synced');
-        if (snapshot.exists()) {
-          const remoteData = snapshot.data();
-          if (remoteData.updatedAt >= (db.updatedAt || 0)) {
-            setDb(remoteData as Database);
-          }
-        } else {
-          setDb(EMPTY_DB);
-           if (isInitialized) {
-            toast({
-              variant: 'destructive',
-              title: 'School ID Not Found',
-              description:
-                'This school ID has no data. Create a new database in Developer Mode.',
-            });
-          }
+  const login = useCallback(
+    async (type: 'admin' | 'developer', credentials: { schoolId?: string; passcode: string }): Promise<boolean> => {
+      if (type === 'developer') {
+        if (credentials.passcode === 'devmode') { // Hardcoded developer pass
+          setLoginState('developer');
+          sessionStorage.setItem('loginState', 'developer');
+          await fetchRegistry();
+          return true;
         }
-        setIsInitialized(true);
-      },
-      (error) => {
-        console.error("Firestore snapshot error:", error);
-        setSyncStatus('error');
-        setIsInitialized(true);
+      } else if (type === 'admin') {
+        if (credentials.passcode === '1234' && credentials.schoolId) {
+           const registryIds = await fetchRegistry();
+           if(registryIds.includes(credentials.schoolId)) {
+               setSchoolId(credentials.schoolId);
+               setLoginState('admin');
+               sessionStorage.setItem('loginState', 'admin');
+               sessionStorage.setItem('schoolId', credentials.schoolId);
+               return true;
+           }
+        }
       }
-    );
-    return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schoolDocRef, isInitialized, toast]);
-
-
-  const setSchoolId = useCallback(
-    (id: string) => {
-      const sanitizedId = id.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      if (sanitizedId.length < 3) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid ID',
-          description: 'School ID must be at least 3 characters long.',
-        });
-        return;
-      }
-      if (sanitizedId !== schoolId) {
-        localStorage.setItem('schoolId', sanitizedId);
-        window.location.assign('/'); // Full reload to ensure clean state
-      }
+      return false;
     },
-    [schoolId, toast]
+    [fetchRegistry]
   );
-
-  const changeSchoolId = useCallback(() => {
-    if (window.confirm('Are you sure? This will log you out.')) {
-      localStorage.removeItem('schoolId');
-      localStorage.removeItem('currentUserId');
-      localStorage.removeItem('currentTeacherId');
-      localStorage.removeItem('isAdmin');
-      window.location.href = '/setup';
+  
+  const logout = useCallback(() => {
+    sessionStorage.clear();
+    setLoginState('loggedOut');
+    setSchoolId(null);
+    setDb(EMPTY_DB);
+    setAllSchools([]);
+    router.push('/');
+  }, [router]);
+  
+  const createSchool = useCallback(async (schoolId: string) => {
+    if (!registryDocRef || !firestore) return;
+    const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if (!cleanId) {
+        toast({variant: 'destructive', title: "Invalid School ID"});
+        return;
     }
-  }, []);
+    
+    await updateDoc(registryDocRef, { ids: arrayUnion(cleanId) });
+    const newSchoolDocRef = doc(firestore, 'schools', cleanId);
+    await setDoc(newSchoolDocRef, INITIAL_DATA);
+    
+    await fetchRegistry();
+    toast({title: `School "${cleanId}" created!`});
+  }, [registryDocRef, firestore, fetchRegistry, toast]);
+  
+  const deleteSchool = useCallback(async (schoolId: string) => {
+    if (!registryDocRef || !firestore) return;
+    if(!window.confirm(`Are you sure you want to permanently delete school "${schoolId}"? This cannot be undone.`)) return;
+
+    await updateDoc(registryDocRef, { ids: arrayRemove(schoolId) });
+    const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
+    await deleteDoc(schoolToDeleteDocRef);
+    
+    await fetchRegistry();
+    toast({title: `School "${schoolId}" deleted!`});
+  }, [registryDocRef, firestore, fetchRegistry, toast]);
+
+  const getTeacherName = useCallback((id: string) => db.teachers.find((t) => t.id === id)?.name || 'Unassigned', [db.teachers]);
+  
+  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
+    const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
+    const updatedDb = { ...db, students: [...db.students, newStudent] };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
+
+  const updateStudent = useCallback(async (updatedStudent: Student) => {
+    const newStudents = db.students.map((s) => s.id === updatedStudent.id ? updatedStudent : s);
+    const updatedDb = { ...db, students: newStudents };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
+
+  const deleteStudent = useCallback(async (studentId: string) => {
+    const newStudents = db.students.filter((s) => s.id !== studentId);
+    const updatedDb = { ...db, students: newStudents };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
+
+  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
+    if (db.teachers.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
+        toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
+        return;
+    }
+    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+    const updatedDb = { ...db, teachers: [...db.teachers, newTeacher] };
+    await updateDb(updatedDb);
+  }, [db, updateDb, toast]);
+
+  const deleteTeacher = useCallback(async (teacherId: string) => {
+    const newTeachers = db.teachers.filter((t) => t.id !== teacherId);
+    const newStudents = db.students.map((s) => s.teacherId === teacherId ? { ...s, teacherId: '' } : s);
+    const updatedDb = { ...db, teachers: newTeachers, students: newStudents };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
+
+  const addCategory = useCallback(async (newCategory: string) => {
+    if (db.categories.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
+        toast({ variant: 'destructive', title: 'Category already exists.' });
+        return;
+    }
+    const updatedDb = { ...db, categories: [...db.categories, newCategory] };
+    await updateDb(updatedDb);
+  }, [db, updateDb, toast]);
+
+  const deleteCategory = useCallback(async (categoryName: string) => {
+    const updatedDb = { ...db, categories: db.categories.filter((c) => c !== categoryName) };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
+
+  const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
+    const updatedDb = { ...db, coupons: [...db.coupons, ...newCoupons] };
+    await updateDb(updatedDb);
+  }, [db, updateDb]);
 
   useEffect(() => {
     const handlePrint = () => {
@@ -245,302 +305,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     handlePrint();
   }, [couponsToPrint]);
 
-  const loginStudent = useCallback(
-    (student: Student) => {
-      setCurrentUserId(student.id);
-      localStorage.setItem('currentUserId', student.id);
-      router.push('/student/kiosk');
-    },
-    [router]
-  );
-
-  const loginTeacher = useCallback(
-    (teacher: Teacher) => {
-      setCurrentTeacherId(teacher.id);
-      localStorage.setItem('currentTeacherId', teacher.id);
-      router.push('/teacher/dashboard');
-    },
-    [router]
-  );
-
-  const enterAdmin = useCallback(() => {
-    setIsAdmin(true);
-    localStorage.setItem('isAdmin', 'true');
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('currentUserId');
-    localStorage.removeItem('currentTeacherId');
-    localStorage.removeItem('isAdmin');
-    window.location.href = '/';
-  }, []);
-
-  const getTeacherName = useCallback(
-    (id: string) => {
-      return db?.teachers?.find((t) => t.id === id)?.name || 'Unassigned';
-    },
-    [db?.teachers]
-  );
-
-  const addStudent = useCallback(
-    async (studentData: Omit<Student, 'id' | 'history'>) => {
-      if (
-        db.students.some(
-          (s) =>
-            s.nfcId &&
-            studentData.nfcId &&
-            s.nfcId.toLowerCase() === studentData.nfcId.toLowerCase()
-        )
-      ) {
-        toast({
-          variant: 'destructive',
-          title: 'Student with this NFC ID already exists.',
-        });
-        return;
-      }
-      const newStudent: Student = {
-        ...studentData,
-        id: 's' + Date.now(),
-        history: [],
-      };
-      await updateDb({ ...db, students: [...db.students, newStudent] });
-    },
-    [db, updateDb, toast]
-  );
-
-  const updateStudent = useCallback(
-    async (updatedStudent: Student) => {
-      const newStudents = db.students.map((s) =>
-        s.id === updatedStudent.id ? updatedStudent : s
-      );
-      await updateDb({ ...db, students: newStudents });
-    },
-    [db, updateDb]
-  );
-
-  const deleteStudent = useCallback(
-    async (studentId: string) => {
-      const newStudents = db.students.filter((s) => s.id !== studentId);
-      await updateDb({ ...db, students: newStudents });
-    },
-    [db, updateDb]
-  );
-
-  const addTeacher = useCallback(
-    async (teacherData: Omit<Teacher, 'id'>) => {
-      if (
-        db.teachers.some(
-          (t) => t.name.toLowerCase() === teacherData.name.toLowerCase()
-        )
-      ) {
-        toast({
-          variant: 'destructive',
-          title: 'Teacher with this name already exists.',
-        });
-        return;
-      }
-      const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
-      await updateDb({ ...db, teachers: [...db.teachers, newTeacher] });
-    },
-    [db, updateDb, toast]
-  );
-
-  const deleteTeacher = useCallback(
-    async (teacherId: string) => {
-      const newTeachers = db.teachers.filter((t) => t.id !== teacherId);
-      const newStudents = db.students.map((s) =>
-        s.teacherId === teacherId ? { ...s, teacherId: '' } : s
-      );
-      await updateDb({ ...db, teachers: newTeachers, students: newStudents });
-    },
-    [db, updateDb]
-  );
-
-  const addCategory = useCallback(
-    async (newCategory: string) => {
-      if (
-        db.categories
-          .map((c) => c.toLowerCase())
-          .includes(newCategory.toLowerCase())
-      ) {
-        toast({ variant: 'destructive', title: 'Category already exists.' });
-        return;
-      }
-      const newCategories = [...db.categories, newCategory];
-      await updateDb({ ...db, categories: newCategories });
-    },
-    [db, updateDb, toast]
-  );
-
-  const deleteCategory = useCallback(
-    async (categoryName: string) => {
-      const newCategories = db.categories.filter((c) => c !== categoryName);
-      await updateDb({ ...db, categories: newCategories });
-    },
-    [db, updateDb]
-  );
-
-  const addCoupons = useCallback(
-    async (newCoupons: Coupon[]) => {
-      const existingCodes = new Set(db.coupons.map((c) => c.code));
-      const uniqueNewCoupons = newCoupons.filter(
-        (c) => !existingCodes.has(c.code)
-      );
-      if (uniqueNewCoupons.length < newCoupons.length) {
-        toast({
-          title: 'Some generated coupon codes already existed and were skipped.',
-        });
-      }
-      if (uniqueNewCoupons.length === 0) return;
-      await updateDb({ ...db, coupons: [...db.coupons, ...uniqueNewCoupons] });
-    },
-    [db, updateDb, toast]
-  );
-
-  const redeemCoupon = useCallback(
-    async (code: string) => {
-      if (!currentUser) return { success: false, message: 'Not authenticated' };
-      const couponIndex = db.coupons.findIndex((c) => c.code === code);
-      if (couponIndex === -1)
-        return { success: false, message: 'Invalid Coupon Code' };
-      const coupon = db.coupons[couponIndex];
-      if (coupon.used)
-        return { success: false, message: 'Coupon already used!' };
-
-      const studentIndex = db.students.findIndex(
-        (s) => s.id === currentUser.id
-      );
-      if (studentIndex === -1)
-        return { success: false, message: 'Current user not found!' };
-
-      const updatedCoupons = [...db.coupons];
-      updatedCoupons[couponIndex] = {
-        ...coupon,
-        used: true,
-        usedAt: Date.now(),
-        usedBy: currentUser.id,
-      };
-
-      const student = db.students[studentIndex];
-      const newHistoryItem: HistoryItem = {
-        desc: `Redeemed coupon (+${coupon.value})`,
-        amount: coupon.value,
-        date: Date.now(),
-      };
-      const updatedStudent = {
-        ...student,
-        points: student.points + coupon.value,
-        history: [newHistoryItem, ...student.history],
-      };
-
-      const updatedStudents = [...db.students];
-      updatedStudents[studentIndex] = updatedStudent;
-
-      await updateDb({
-        ...db,
-        coupons: updatedCoupons,
-        students: updatedStudents,
-      });
-      return { success: true, message: `+${coupon.value} Points Added!` };
-    },
-    [currentUser, db, updateDb]
-  );
-
-  const buyReward = useCallback(
-    async (name: string, cost: number) => {
-      if (!currentUser) return { success: false, message: 'Not authenticated' };
-      if (currentUser.points < cost)
-        return { success: false, message: 'Not enough points!' };
-
-      const studentIndex = db.students.findIndex(
-        (s) => s.id === currentUser.id
-      );
-      if (studentIndex === -1)
-        return { success: false, message: 'Current user not found!' };
-
-      const student = db.students[studentIndex];
-      const newHistoryItem: HistoryItem = {
-        desc: `Bought ${name}`,
-        amount: -cost,
-        date: Date.now(),
-      };
-      const updatedStudent = {
-        ...student,
-        points: student.points - cost,
-        history: [newHistoryItem, ...student.history],
-      };
-
-      const updatedStudents = [...db.students];
-      updatedStudents[studentIndex] = updatedStudent;
-
-      await updateDb({ ...db, students: updatedStudents });
-      return { success: true, message: `${name} redeemed!` };
-    },
-    [currentUser, db, updateDb]
-  );
-
-  const setData = useCallback(
-    async (data: Database) => {
-      await updateDb(data);
-    },
-    [updateDb]
-  );
 
   const value = useMemo(
     () => ({
-      isInitialized,
-      schoolId,
-      db,
-      currentUser,
-      currentTeacher,
-      isAdmin,
-      syncStatus,
-      setSchoolId,
-      changeSchoolId,
-      loginStudent,
-      loginTeacher,
-      enterAdmin,
-      logout,
-      getTeacherName,
-      setCouponsToPrint,
-      addStudent,
-      updateStudent,
-      deleteStudent,
-      addTeacher,
-      deleteTeacher,
-      addCategory,
-      deleteCategory,
-      addCoupons,
-      redeemCoupon,
-      buyReward,
-      setData,
+      isInitialized, loginState, schoolId, allSchools, db, syncStatus,
+      login, logout, getTeacherName, setCouponsToPrint, addStudent, updateStudent,
+      deleteStudent, addTeacher, deleteTeacher, addCategory, deleteCategory,
+      addCoupons, createSchool, deleteSchool, setData: updateDb,
     }),
     [
-      isInitialized,
-      schoolId,
-      db,
-      currentUser,
-      currentTeacher,
-      isAdmin,
-      syncStatus,
-      setSchoolId,
-      changeSchoolId,
-      loginStudent,
-      loginTeacher,
-      enterAdmin,
-      logout,
-      getTeacherName,
-      addStudent,
-      updateStudent,
-      deleteStudent,
-      addTeacher,
-      deleteTeacher,
-      addCategory,
-      deleteCategory,
-      addCoupons,
-      redeemCoupon,
-      buyReward,
-      setData,
+      isInitialized, loginState, schoolId, allSchools, db, syncStatus,
+      login, logout, getTeacherName, addStudent, updateStudent, deleteStudent,
+      addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
+      createSchool, deleteSchool, updateDb
     ]
   );
 

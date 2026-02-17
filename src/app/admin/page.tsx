@@ -1,60 +1,24 @@
 'use client';
-import { useEffect, useState, ChangeEvent, useRef } from 'react';
+import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
-  LogOut,
-  UserCheck,
-  Tag,
-  Database,
-  Plus,
-  Trash2,
-  Upload,
-  Download,
-  FileSpreadsheet,
-  Printer,
-  Settings,
-  Edit,
-  Key,
-  DatabaseZap,
+  LogOut, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
+  FileSpreadsheet, Printer, Settings, Edit, Server,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Teacher, Student, Database as DbInfo } from '@/lib/types';
+import type { Student, Database as DbInfo } from '@/lib/types';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
-import { INITIAL_DATA } from '@/lib/data';
 
-
+// This is the dashboard for a logged-in SCHOOL ADMIN
 function AdminDashboard() {
-  const {
-    logout,
-    db,
-    schoolId,
-    getTeacherName,
-    setCouponsToPrint,
-    deleteStudent,
-    addTeacher,
-    deleteCategory,
-    addCategory,
-    addCoupons,
-    setData,
-  } = useAppContext();
+  const { logout, db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
+    addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData } = useAppContext();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +32,6 @@ function AdminDashboard() {
   const [printValue, setPrintValue] = useState('10');
 
   useEffect(() => {
-    // Set default category when db loads
     if (db.categories.length > 0 && !printCategory) {
       setPrintCategory(db.categories[0]);
     }
@@ -185,34 +148,23 @@ function AdminDashboard() {
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-  
-  const handleInitialize = async () => {
-    if(window.confirm("Are you sure? This will create a new database with sample data for this School ID. This should only be done once for a new school.")){
-        await setData(INITIAL_DATA);
-        toast({title: "Database Initialized", description: "Sample data has been loaded."});
-    }
-  }
 
   const usedCoupons = db.coupons.filter((c) => c.used).length;
   const totalPointsAwarded = db.coupons
     .filter((c) => c.used)
     .reduce((sum, c) => sum + c.value, 0);
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
-  const isDbEmpty = db.students.length === 0 && db.teachers.length === 0 && db.categories.length === 0;
 
   return (
     <div className="space-y-6">
       <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-            <Settings /> Admin Portal
+            <Settings /> Admin Portal: <span className="text-yellow-300">{schoolId}</span>
           </h2>
-          <p className="text-slate-400 text-sm">
-            System Configuration & Data Management
-          </p>
         </div>
         <Button onClick={logout} variant="secondary" size="sm">
-          <LogOut className="mr-2 h-4 w-4" /> Exit Admin Mode
+          <LogOut className="mr-2 h-4 w-4" /> Log Out
         </Button>
       </Card>
 
@@ -333,9 +285,6 @@ function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {isDbEmpty && (
-                <Button onClick={handleInitialize} variant="destructive" className="w-full justify-center gap-2"><DatabaseZap /> Initialize Database</Button>
-            )}
             <div className="flex gap-2">
               <Button
                 onClick={handleBackup}
@@ -424,7 +373,7 @@ function AdminDashboard() {
 
       <Card>
         <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>All Students (Global List)</CardTitle>
+          <CardTitle>All Students</CardTitle>
           <Button onClick={() => handleOpenStudentModal(null)}>
             <Plus className="mr-2 h-4 w-4" /> Add Student
           </Button>
@@ -480,76 +429,88 @@ function AdminDashboard() {
   );
 }
 
+// This is the dashboard for a logged-in DEVELOPER
+function DeveloperDashboard() {
+    const { logout, allSchools, createSchool, deleteSchool } = useAppContext();
+    const [newSchoolId, setNewSchoolId] = useState('');
+    const { toast } = useToast();
+
+    const handleCreateSchool = async () => {
+        if(!newSchoolId) {
+            toast({variant: 'destructive', title: "School ID cannot be empty."});
+            return;
+        }
+        await createSchool(newSchoolId);
+        setNewSchoolId('');
+    };
+
+    return (
+        <div className="space-y-6">
+            <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
+                        <Server /> Developer Mode
+                    </h2>
+                    <p className="text-slate-400 text-sm">Manage all school databases.</p>
+                </div>
+                <Button onClick={logout} variant="secondary" size="sm">
+                    <LogOut className="mr-2 h-4 w-4" /> Log Out
+                </Button>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                        <span>School Instances</span>
+                        <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools.length} total</span>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-2 mb-6">
+                        <Input 
+                            placeholder="New School ID (e.g. 'washington_hs')" 
+                            value={newSchoolId} 
+                            onChange={(e) => setNewSchoolId(e.target.value)}
+                            onKeyPress={e => e.key === 'Enter' && handleCreateSchool()}
+                        />
+                        <Button onClick={handleCreateSchool}><Plus className="mr-2"/>Create School</Button>
+                    </div>
+
+                     <ul className="space-y-2">
+                        {allSchools.map((id) => (
+                            <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
+                                <p className="font-bold font-code">{id}</p>
+                                <Button variant="ghost" size="icon" onClick={() => deleteSchool(id)}>
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                            </li>
+                        ))}
+                        {allSchools.length === 0 && (
+                            <p className="text-center text-muted-foreground italic py-4">No schools found. Create one to begin.</p>
+                        )}
+                    </ul>
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
 export default function AdminPage() {
-  const { isAdmin, enterAdmin, isInitialized, schoolId } = useAppContext();
-  const [passcode, setPasscode] = useState('');
-  const { toast } = useToast();
+  const { loginState, isInitialized } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && !schoolId) {
-      router.replace('/setup');
+    if (isInitialized && loginState === 'loggedOut') {
+      router.replace('/');
     }
-  }, [isInitialized, schoolId, router]);
+  }, [isInitialized, loginState, router]);
 
-  const handleLogin = () => {
-    if (passcode === '1234') {
-      enterAdmin();
-      toast({ title: 'Admin Access Granted' });
-    } else {
-      toast({ variant: 'destructive', title: 'Incorrect Passcode' });
-      setPasscode('');
-    }
-  };
-
-  if (!isInitialized || !schoolId) {
+  if (!isInitialized || loginState === 'loggedOut') {
     return <p>Loading...</p>;
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10">
-        <Card className="w-full max-w-md border-t-4 border-slate-500 shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold font-headline flex items-center justify-center gap-2">
-              <Key /> Admin Access
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Enter passcode to access system configuration.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label
-                  htmlFor="passcode"
-                  className="block text-sm font-bold text-slate-600 mb-1"
-                >
-                  Passcode
-                </Label>
-                <Input
-                  type="password"
-                  id="passcode"
-                  className="w-full p-3 font-code"
-                  placeholder="****"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  onKeyPress={(e) => (e.key === 'Enter' ? handleLogin() : null)}
-                  autoFocus
-                />
-              </div>
-              <Button
-                onClick={handleLogin}
-                className="w-full font-bold shadow-lg"
-                disabled={!passcode}
-              >
-                Enter Admin Mode
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (loginState === 'developer') {
+    return <DeveloperDashboard />;
   }
 
   return <AdminDashboard />;

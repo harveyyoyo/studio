@@ -27,7 +27,7 @@ interface StudentModalProps {
 }
 
 export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
-  const { db, addStudent, updateStudent, currentTeacher } = useAppContext();
+  const { db, addStudent, updateStudent } = useAppContext();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [points, setPoints] = useState('0');
@@ -36,7 +36,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
   const { toast } = useToast();
 
   const isEditing = !!student;
-  const canAssignTeacher = !currentTeacher; // Only admins (who don't have a `currentTeacher`) can assign.
+  const canAssignTeacher = true; // Admin can always assign teachers
 
   useEffect(() => {
     if (isOpen) {
@@ -51,11 +51,10 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setPassword('1234');
         setPoints('0');
         setNfcId('');
-        // If admin, default to first teacher. If teacher, use their ID.
-        setTeacherId(currentTeacher?.id || db.teachers[0]?.id || '');
+        setTeacherId(db.teachers[0]?.id || '');
       }
     }
-  }, [student, isOpen, db.teachers, currentTeacher]);
+  }, [student, isOpen, db.teachers]);
 
   const handleSave = async () => {
     if (!name) {
@@ -67,17 +66,15 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
       return;
     }
 
-    if (isEditing) {
+    if (isEditing && student) {
       const updatedStudent: Student = { ...student, name, password, nfcId, points: parseInt(points) || 0, teacherId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
-      const newStudent: Student = {
-        id: 's' + Date.now(),
+      const newStudent = {
         name, password, nfcId,
         points: parseInt(points) || 0,
-        teacherId: currentTeacher ? currentTeacher.id : teacherId, // Use context teacherId if available
-        history: [],
+        teacherId: teacherId,
       };
       await addStudent(newStudent);
       toast({ title: 'Student added!' });
