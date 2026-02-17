@@ -159,9 +159,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setIsDbLoading(false);
             isInitialSnapshot.current = false;
         }
-        setSyncStatus(snapshot.metadata.hasPendingWrites ? 'syncing' : 'synced');
+        setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
         if (snapshot.exists()) {
-          setDb(snapshot.data() as Database);
+          setDb({ ...EMPTY_DB, ...snapshot.data() });
         } else {
           setDb(EMPTY_DB);
         }
