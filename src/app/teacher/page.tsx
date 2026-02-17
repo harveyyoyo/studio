@@ -121,6 +121,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
     const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
     const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
     const { toast } = useToast();
+    const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
     // State for printing coupons
     const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
@@ -132,7 +133,11 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
         }
       }, [db.categories, printCategory]);
 
-    const myStudents = db.students.filter(s => s.teacherId === teacher.id).sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''));
+    const myStudents = db.students.filter(s => s.teacherId === teacher.id);
+    const filteredStudents = myStudents
+        .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+        .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''));
+
 
     const handleOpenAwardModal = (student: Student) => {
         setAwardingStudent(student);
@@ -186,8 +191,15 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                         <CardTitle>My Students ({myStudents.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
+                        <div className="mb-4">
+                            <Input 
+                            placeholder="Search students..."
+                            value={studentSearchTerm}
+                            onChange={(e) => setStudentSearchTerm(e.target.value)}
+                            />
+                        </div>
                         <ul className="space-y-2 max-h-[30rem] overflow-y-auto pr-2">
-                            {myStudents.map(s => (
+                            {filteredStudents.map(s => (
                                 <li key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border">
                                     <div>
                                         <p className="font-bold">{s.lastName}, {s.firstName}</p>
@@ -196,6 +208,9 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                                     <Button size="sm" onClick={() => handleOpenAwardModal(s)}><Award className="mr-2"/> Award</Button>
                                 </li>
                             ))}
+                             {myStudents.length > 0 && filteredStudents.length === 0 && (
+                                 <p className="text-center text-muted-foreground italic py-4">No matching students found.</p>
+                             )}
                              {myStudents.length === 0 && <p className="text-center text-muted-foreground italic py-4">No students assigned to you.</p>}
                         </ul>
                     </CardContent>

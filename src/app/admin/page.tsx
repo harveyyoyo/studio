@@ -15,6 +15,17 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function AdminDashboardSkeleton() {
   return (
@@ -97,6 +108,7 @@ function AdminDashboard() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   const [printTeacher, setPrintTeacher] = useState('Admin');
   const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
@@ -119,13 +131,6 @@ function AdminDashboard() {
     toast({ title: 'Teacher Added' });
   };
 
-  const handleDeleteTeacher = async (id: string) => {
-    if (window.confirm('Delete this teacher? Students will become unassigned.')) {
-      await deleteTeacher(id);
-      toast({ title: 'Teacher Deleted' });
-    }
-  };
-
   const handleAddCategory = async () => {
     if (!newCategoryName) return;
     await addCategory(newCategoryName);
@@ -133,25 +138,11 @@ function AdminDashboard() {
     toast({ title: 'Category Added' });
   };
 
-  const handleDeleteCategory = async (name: string) => {
-    if (window.confirm('Delete this category?')) {
-      await deleteCategory(name);
-      toast({ title: 'Category Deleted' });
-    }
-  };
-
   const handleOpenStudentModal = (student: Student | null) => {
     setEditingStudent(student);
     setIsStudentModalOpen(true);
   };
-
-  const handleDeleteStudent = async (id: string) => {
-    if (window.confirm('Delete this student permanently?')) {
-      await deleteStudent(id);
-      toast({ title: 'Student Deleted' });
-    }
-  };
-
+  
   const handlePrintSheet = async () => {
     const value = parseInt(printValue);
     if (!value || value <= 0) {
@@ -297,14 +288,28 @@ function AdminDashboard() {
                   className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded border"
                 >
                   <span className="font-bold text-sm">{t.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDeleteTeacher(t.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. Students currently assigned to this teacher will become unassigned.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={async () => {
+                           await deleteTeacher(t.id);
+                           toast({ title: 'Teacher Deleted' });
+                        }}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </li>
               ))}
             </ul>
@@ -338,14 +343,28 @@ function AdminDashboard() {
                   className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-2 rounded border"
                 >
                   <span className="text-sm">{c}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleDeleteCategory(c)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                     <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete category "{c}"?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={async () => {
+                           await deleteCategory(c);
+                           toast({ title: 'Category Deleted' });
+                        }}>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </li>
               ))}
             </ul>
@@ -358,8 +377,7 @@ function AdminDashboard() {
               <Database className="text-yellow-500" /> System Data
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
+          <CardContent className="grid grid-cols-2 gap-2">
               <Button
                 onClick={handleBackup}
                 variant="outline"
@@ -381,13 +399,6 @@ function AdminDashboard() {
                 className="hidden"
                 accept="application/json"
               />
-            </div>
-            <Button
-              variant="outline"
-              className="w-full justify-center gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-            >
-              <FileSpreadsheet /> Import CSV
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -453,8 +464,17 @@ function AdminDashboard() {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-4">
+            <Input 
+              placeholder="Search students by name..."
+              value={studentSearchTerm}
+              onChange={(e) => setStudentSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
           <ul className="space-y-2">
             {db.students
+              .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
               .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
               .map((s) => (
                 <li
@@ -472,7 +492,7 @@ function AdminDashboard() {
                       Teacher: {getTeacherName(s.teacherId)} | NFC: {s.nfcId}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -480,13 +500,28 @@ function AdminDashboard() {
                     >
                       <Edit className="w-4 h-4 text-blue-500" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteStudent(s.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete this student's record.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={async () => {
+                            await deleteStudent(s.id);
+                            toast({ title: 'Student Deleted' });
+                          }}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </li>
               ))}

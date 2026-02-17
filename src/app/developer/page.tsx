@@ -54,10 +54,6 @@ export default function DeveloperPage() {
       setNewSchoolId('');
   };
   
-  const handleDeleteSchool = async (id: string) => {
-    await deleteSchool(id);
-  }
-
   const handleOpenEditModal = (id: string) => {
     setEditingSchoolId(id);
     setNewPasscode('');
@@ -115,7 +111,7 @@ export default function DeveloperPage() {
                       {allSchools.sort().map((id) => (
                           <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
                               <p className="font-bold font-code">{id}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-0.5">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
                                   <Key className="w-4 h-4 text-blue-500" />
                                 </Button>
@@ -134,7 +130,7 @@ export default function DeveloperPage() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteSchool(id)}>Continue</AlertDialogAction>
+                                      <AlertDialogAction onClick={async () => await deleteSchool(id)}>Continue</AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
