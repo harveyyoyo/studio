@@ -10,8 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Class, Coupon } from '@/lib/types';
-import { User, ArrowLeft, Printer, LogIn } from 'lucide-react';
+import { User, ArrowLeft, Printer, LogIn, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
 
 function TeacherDashboardSkeleton() {
     return (
@@ -45,18 +55,31 @@ function TeacherDashboardSkeleton() {
 
 // Teacher Dashboard component
 function TeacherDashboard({ klass }: { klass: Class }) {
-    const { db, addCoupons, setCouponsToPrint, isDbLoading } = useAppContext();
+    const { db, addCoupons, setCouponsToPrint, isDbLoading, addCategory } = useAppContext();
     const { toast } = useToast();
 
     // State for printing coupons
     const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
     const [printValue, setPrintValue] = useState('10');
+    
+    const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
+    const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
+
 
      useEffect(() => {
         if (db.categories.length > 0 && !printCategory) {
           setPrintCategory(db.categories[0]);
         }
       }, [db.categories, printCategory]);
+
+    const handleAddPrintCategory = async () => {
+      if (!newPrintCategoryName) return;
+      await addCategory(newPrintCategoryName);
+      setPrintCategory(newPrintCategoryName);
+      setNewPrintCategoryName('');
+      setIsPrintCategoryDialogOpen(false);
+      toast({ title: 'Category Added' });
+    };
     
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
@@ -113,12 +136,32 @@ function TeacherDashboard({ klass }: { klass: Class }) {
                         </div>
                       <div>
                         <Label>Category</Label>
-                        <Select value={printCategory} onValueChange={setPrintCategory}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {db.categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                            <Select value={printCategory} onValueChange={setPrintCategory}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {db.categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                             <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Add New Category</DialogTitle>
+                                        <DialogDescription>Create a new category for coupons.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4">
+                                        <Label htmlFor="new-print-category-name">Category Name</Label>
+                                        <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button onClick={handleAddPrintCategory}>Save Category</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                       </div>
                       <div>
                         <Label>Value</Label>

@@ -26,6 +26,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { StudentActivityModal } from '@/components/StudentActivityModal';
 import { format } from 'date-fns';
 
@@ -116,6 +125,9 @@ function AdminDashboard() {
   const [printTeacher, setPrintTeacher] = useState('Admin');
   const [printCategory, setPrintCategory] = useState(db.categories[0] || '');
   const [printValue, setPrintValue] = useState('10');
+  
+  const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
+  const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
   useEffect(() => {
     if (db.categories.length > 0 && !printCategory) {
@@ -138,6 +150,15 @@ function AdminDashboard() {
     if (!newCategoryName) return;
     await addCategory(newCategoryName);
     setNewCategoryName('');
+    toast({ title: 'Category Added' });
+  };
+
+  const handleAddPrintCategory = async () => {
+    if (!newPrintCategoryName) return;
+    await addCategory(newPrintCategoryName);
+    setPrintCategory(newPrintCategoryName);
+    setNewPrintCategoryName('');
+    setIsPrintCategoryDialogOpen(false);
     toast({ title: 'Category Added' });
   };
 
@@ -475,18 +496,38 @@ function AdminDashboard() {
           </div>
           <div>
             <Label>Category</Label>
-            <Select value={printCategory} onValueChange={setPrintCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {db.categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={printCategory} onValueChange={setPrintCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {db.categories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                      <DialogHeader>
+                          <DialogTitle>Add New Category</DialogTitle>
+                          <DialogDescription>Create a new category for coupons.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                          <Label htmlFor="new-print-category-name">Category Name</Label>
+                          <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                      </div>
+                      <DialogFooter>
+                          <Button onClick={handleAddPrintCategory}>Save Category</Button>
+                      </DialogFooter>
+                  </DialogContent>
+              </Dialog>
+            </div>
           </div>
           <div>
             <Label>Value</Label>

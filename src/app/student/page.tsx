@@ -17,14 +17,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student } from '@/lib/types';
+import { rewards, Reward } from '@/lib/rewards';
 import {
   Nfc,
   Type,
   ScanLine,
   History,
   Gift,
-  Pencil,
-  FileText,
   LogOut,
   ShoppingBag,
 } from 'lucide-react';
@@ -48,12 +47,6 @@ function StudentDashboard({
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
-  const rewards = [
-    { name: 'Cool Pencil', points: 50, icon: <Pencil className="w-8 h-8" /> },
-    { name: 'Candy Bar', points: 150, icon: <Gift className="w-8 h-8" /> },
-    { name: 'Homework Pass', points: 500, icon: <FileText className="w-8 h-8" /> },
-  ];
-
   // Auto-logout timer effect
   useEffect(() => {
     const handleDone = () => onDone();
@@ -74,7 +67,6 @@ function StudentDashboard({
     if (!couponCode) return;
     resetTimer(); 
     const result = await redeemCoupon(student.id, couponCode);
-    setCouponCode('');
     
     if (result.success) {
       toast({
@@ -88,9 +80,10 @@ function StudentDashboard({
         description: result.message,
       });
     }
+    setCouponCode('');
   };
 
-  const handleRedeemReward = async (reward: { name: string, points: number }) => {
+  const handleRedeemReward = async (reward: Reward) => {
     resetTimer();
     if (student.points < reward.points) {
         toast({
@@ -121,8 +114,8 @@ function StudentDashboard({
 };
 
   return (
-    <div className="space-y-6 animate-in fade-in-50 bg-secondary/50 dark:bg-background p-2 md:p-4 rounded-xl">
-      <Card className="bg-primary text-primary-foreground border-none shadow-lg overflow-hidden">
+    <div className="space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl">
+      <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
         <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
             <Gift size={128} strokeWidth={1} />
         </div>
@@ -176,7 +169,7 @@ function StudentDashboard({
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {rewards.map((reward) => (
-                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all hover:shadow-lg hover:-translate-y-1">
+                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50 transition-all hover:shadow-lg hover:-translate-y-1">
                     <div className="p-4 bg-accent rounded-full mb-3 text-primary">
                       {reward.icon}
                     </div>
