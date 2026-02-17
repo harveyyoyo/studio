@@ -1,6 +1,6 @@
 import type { Database } from './types';
 
-export const INITIAL_DATA: Database = {
+export const INITIAL_DATA: Omit<Database, 'passcode'> = {
   students: [
     {
       id: 's1',

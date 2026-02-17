@@ -17,34 +17,42 @@ import { Building, Code } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [adminSchoolId, setAdminSchoolId] = useState('');
-  const [adminPasscode, setAdminPasscode] = useState('');
+  const [schoolId, setSchoolId] = useState('');
+  const [schoolPasscode, setSchoolPasscode] = useState('');
   const [devPasscode, setDevPasscode] = useState('');
   const { login } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleAdminLogin = async () => {
-    const success = await login('admin', {
-      schoolId: adminSchoolId,
-      passcode: adminPasscode,
+  const handleSchoolLogin = async () => {
+    if (!schoolId || !schoolPasscode) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Please enter a School ID and passcode.',
+      });
+      return;
+    }
+    const success = await login('school', {
+      schoolId: schoolId,
+      passcode: schoolPasscode,
     });
     if (success) {
-      router.push('/admin');
+      router.push('/portal');
     } else {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: 'Invalid School ID or passcode.',
       });
-      setAdminPasscode('');
+      setSchoolPasscode('');
     }
   };
 
   const handleDeveloperLogin = async () => {
     const success = await login('developer', { passcode: devPasscode });
     if (success) {
-      router.push('/admin');
+      router.push('/developer');
     } else {
       toast({
         variant: 'destructive',
@@ -57,20 +65,20 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center py-10">
-      <Tabs defaultValue="admin" className="w-full max-w-md">
+      <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="admin">
-            <Building className="mr-2 h-4 w-4" /> School Admin
+          <TabsTrigger value="school">
+            <Building className="mr-2 h-4 w-4" /> School Login
           </TabsTrigger>
           <TabsTrigger value="developer">
             <Code className="mr-2 h-4 w-4" /> Developer
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="admin">
+        <TabsContent value="school">
           <Card className="border-t-4 border-primary shadow-xl">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold font-headline">
-                School Admin Login
+                School Portal Login
               </CardTitle>
               <CardDescription>
                 Enter your School ID and passcode to continue.
@@ -87,28 +95,28 @@ export default function LoginPage() {
                 <Input
                   id="schoolId"
                   placeholder="e.g. lincoln_high"
-                  value={adminSchoolId}
-                  onChange={(e) => setAdminSchoolId(e.target.value.trim())}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  value={schoolId}
+                  onChange={(e) => setSchoolId(e.target.value.trim())}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSchoolLogin()}
                 />
               </div>
               <div>
                 <Label
-                  htmlFor="admin-passcode"
+                  htmlFor="school-passcode"
                   className="block text-sm font-bold text-slate-600 mb-1"
                 >
-                  Passcode
+                  School Passcode
                 </Label>
                 <Input
-                  id="admin-passcode"
+                  id="school-passcode"
                   type="password"
-                  value={adminPasscode}
-                  onChange={(e) => setAdminPasscode(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  value={schoolPasscode}
+                  onChange={(e) => setSchoolPasscode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSchoolLogin()}
                 />
               </div>
-              <Button onClick={handleAdminLogin} className="w-full font-bold">
-                Enter Admin Portal
+              <Button onClick={handleSchoolLogin} className="w-full font-bold">
+                Enter School Portal
               </Button>
             </CardContent>
           </Card>

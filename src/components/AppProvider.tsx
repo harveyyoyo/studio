@@ -27,7 +27,7 @@ import {
 import { INITIAL_DATA } from '@/lib/data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
-export type LoginState = 'loggedOut' | 'admin' | 'developer';
+export type LoginState = 'loggedOut' | 'school' | 'developer';
 
 interface AppContextType {
   isInitialized: boolean;
@@ -37,7 +37,7 @@ interface AppContextType {
   db: Database;
   syncStatus: SyncStatus;
   login: (
-    type: 'admin' | 'developer',
+    type: 'school' | 'developer',
     credentials: { schoolId?: string; passcode: string }
   ) => Promise<boolean>;
   logout: () => void;
@@ -51,7 +51,7 @@ interface AppContextType {
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  createSchool: (schoolId: string) => Promise<void>;
+  createSchool: (schoolId: string) => Promise<string | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   setData: (data: Database) => Promise<void>;
 }
@@ -59,6 +59,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 const EMPTY_DB: Database = {
+  passcode: '',
   students: [],
   teachers: [],
   categories: [],
@@ -96,22 +97,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const registryDocRef = useMemo(() => firestore ? doc(firestore, 'schools', REGISTRY_DOC_ID) : null, [firestore]);
 
   const fetchRegistry = useCallback(async () => {
-    if (!registryDocRef) return [];
+    if (!registryDocRef) return;
     try {
       const docSnap = await getDoc(registryDocRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
         setAllSchools(data?.ids || []);
-        return data?.ids || [];
       } else {
         await setDoc(registryDocRef, { ids: [] });
         setAllSchools([]);
-        return [];
       }
     } catch (error) {
       console.error("Error fetching school registry:", error);
       toast({ variant: 'destructive', title: "Could not fetch school list."});
-      return [];
     }
   }, [registryDocRef, toast]);
   
@@ -122,9 +120,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (savedState) {
       const state = savedState as LoginState;
       setLoginState(state);
-      if (state === 'admin' && savedSchoolId) {
+      if (state === 'school' && savedSchoolId) {
         setSchoolId(savedSchoolId);
-      } else if (state === 'developer') {
+      }
+      if (state === 'developer') {
         fetchRegistry();
       }
     }
@@ -138,12 +137,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    if (loginState !== 'admin' || !schoolDocRef) {
+    if (loginState !== 'school' || !schoolDocRef) {
       setDb(EMPTY_DB);
       return;
     }
+    setSyncStatus('syncing');
     const unsubscribe = onSnapshot(schoolDocRef, (snapshot) => {
-        setSyncStatus(snapshot.metadata.fromCache ? 'syncing' : 'synced');
+        setSyncStatus(snapshot.metadata.hasPendingWrites ? 'syncing' : 'synced');
         if (snapshot.exists()) {
           setDb(snapshot.data() as Database);
         } else {
@@ -163,7 +163,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setSyncStatus('syncing');
       try {
-        await setDoc(schoolDocRef, dbWithTimestamp);
+        await setDoc(schoolDocRef, dbWithTimestamp, { merge: true });
       } catch (e) {
         setSyncStatus('error');
         toast({ variant: 'destructive', title: 'Sync Error' });
@@ -173,29 +173,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   
   const login = useCallback(
-    async (type: 'admin' | 'developer', credentials: { schoolId?: string; passcode: string }): Promise<boolean> => {
+    async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode: string }): Promise<boolean> => {
       if (type === 'developer') {
-        if (credentials.passcode === 'devmode') { // Hardcoded developer pass
+        if (credentials.passcode === '1234') { 
           setLoginState('developer');
           sessionStorage.setItem('loginState', 'developer');
           await fetchRegistry();
           return true;
         }
-      } else if (type === 'admin') {
-        if (credentials.passcode === '1234' && credentials.schoolId) {
-           const registryIds = await fetchRegistry();
-           if(registryIds.includes(credentials.schoolId)) {
+      } else if (type === 'school' && credentials.schoolId && firestore) {
+          const schoolLoginDocRef = doc(firestore, 'schools', credentials.schoolId);
+          try {
+            const docSnap = await getDoc(schoolLoginDocRef);
+            if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
                setSchoolId(credentials.schoolId);
-               setLoginState('admin');
-               sessionStorage.setItem('loginState', 'admin');
+               setLoginState('school');
+               sessionStorage.setItem('loginState', 'school');
                sessionStorage.setItem('schoolId', credentials.schoolId);
                return true;
-           }
-        }
+            }
+          } catch(e) {
+            console.error("School login error", e);
+            return false;
+          }
       }
       return false;
     },
-    [fetchRegistry]
+    [fetchRegistry, firestore]
   );
   
   const logout = useCallback(() => {
@@ -207,20 +211,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.push('/');
   }, [router]);
   
-  const createSchool = useCallback(async (schoolId: string) => {
-    if (!registryDocRef || !firestore) return;
+  const createSchool = useCallback(async (schoolId: string): Promise<string | null> => {
+    if (!registryDocRef || !firestore) return null;
     const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!cleanId) {
         toast({variant: 'destructive', title: "Invalid School ID"});
-        return;
+        return null;
     }
     
+    // Check if school already exists
+    const currentSchoolsSnap = await getDoc(registryDocRef);
+    if(currentSchoolsSnap.exists() && currentSchoolsSnap.data().ids.includes(cleanId)) {
+      toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
+      return null;
+    }
+    
+    const newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+    const schoolData = { ...INITIAL_DATA, passcode: newPasscode };
+
     await updateDoc(registryDocRef, { ids: arrayUnion(cleanId) });
     const newSchoolDocRef = doc(firestore, 'schools', cleanId);
-    await setDoc(newSchoolDocRef, INITIAL_DATA);
+    await setDoc(newSchoolDocRef, schoolData);
     
     await fetchRegistry();
     toast({title: `School "${cleanId}" created!`});
+    return newPasscode;
   }, [registryDocRef, firestore, fetchRegistry, toast]);
   
   const deleteSchool = useCallback(async (schoolId: string) => {

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   LogOut, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, Server,
+  FileSpreadsheet, Printer, Settings, Edit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 
-// This is the dashboard for a logged-in SCHOOL ADMIN
 function AdminDashboard() {
   const { logout, db, schoolId, getTeacherName, setCouponsToPrint, deleteStudent,
     addTeacher, deleteTeacher, deleteCategory, addCategory, addCoupons, setData } = useAppContext();
@@ -429,88 +428,18 @@ function AdminDashboard() {
   );
 }
 
-// This is the dashboard for a logged-in DEVELOPER
-function DeveloperDashboard() {
-    const { logout, allSchools, createSchool, deleteSchool } = useAppContext();
-    const [newSchoolId, setNewSchoolId] = useState('');
-    const { toast } = useToast();
-
-    const handleCreateSchool = async () => {
-        if(!newSchoolId) {
-            toast({variant: 'destructive', title: "School ID cannot be empty."});
-            return;
-        }
-        await createSchool(newSchoolId);
-        setNewSchoolId('');
-    };
-
-    return (
-        <div className="space-y-6">
-            <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
-                <div>
-                    <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-                        <Server /> Developer Mode
-                    </h2>
-                    <p className="text-slate-400 text-sm">Manage all school databases.</p>
-                </div>
-                <Button onClick={logout} variant="secondary" size="sm">
-                    <LogOut className="mr-2 h-4 w-4" /> Log Out
-                </Button>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                        <span>School Instances</span>
-                        <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools.length} total</span>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex gap-2 mb-6">
-                        <Input 
-                            placeholder="New School ID (e.g. 'washington_hs')" 
-                            value={newSchoolId} 
-                            onChange={(e) => setNewSchoolId(e.target.value)}
-                            onKeyPress={e => e.key === 'Enter' && handleCreateSchool()}
-                        />
-                        <Button onClick={handleCreateSchool}><Plus className="mr-2"/>Create School</Button>
-                    </div>
-
-                     <ul className="space-y-2">
-                        {allSchools.map((id) => (
-                            <li key={id} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border">
-                                <p className="font-bold font-code">{id}</p>
-                                <Button variant="ghost" size="icon" onClick={() => deleteSchool(id)}>
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
-                            </li>
-                        ))}
-                        {allSchools.length === 0 && (
-                            <p className="text-center text-muted-foreground italic py-4">No schools found. Create one to begin.</p>
-                        )}
-                    </ul>
-                </CardContent>
-            </Card>
-        </div>
-    )
-}
-
 export default function AdminPage() {
   const { loginState, isInitialized } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && loginState === 'loggedOut') {
+    if (isInitialized && loginState !== 'school') {
       router.replace('/');
     }
   }, [isInitialized, loginState, router]);
 
-  if (!isInitialized || loginState === 'loggedOut') {
+  if (!isInitialized || loginState !== 'school') {
     return <p>Loading...</p>;
-  }
-
-  if (loginState === 'developer') {
-    return <DeveloperDashboard />;
   }
 
   return <AdminDashboard />;

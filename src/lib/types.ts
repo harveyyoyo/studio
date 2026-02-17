@@ -32,6 +32,7 @@ export interface Coupon {
 }
 
 export interface Database {
+  passcode: string;
   students: Student[];
   teachers: Teacher[];
   categories: string[];
