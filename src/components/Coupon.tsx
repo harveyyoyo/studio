@@ -1,6 +1,9 @@
 import type { Coupon } from '@/lib/types';
 
-export function Coupon({ coupon, isNew = false }: { coupon: Coupon, isNew?: boolean }) {
+export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
+  const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
+  const title = schoolName ? `Arcade Rewards - ${schoolName}` : 'Arcade Rewards';
+  
   return (
     <div className="bg-card/80 p-2 border border-dashed rounded-lg flex flex-col items-center justify-between shadow-sm relative overflow-hidden text-center h-full">
       {isNew && (
@@ -8,8 +11,8 @@ export function Coupon({ coupon, isNew = false }: { coupon: Coupon, isNew?: bool
             NEW
         </div>
       )}
-      <div className="font-bold text-muted-foreground text-xs uppercase tracking-wider">
-        Arcade Rewards
+      <div className="font-bold text-muted-foreground text-[10px] uppercase tracking-wider px-1">
+        {title}
       </div>
       <div className="w-full flex items-center justify-center gap-3 border-y my-1 py-1">
         <div className="font-headline text-3xl font-extrabold flex flex-col items-center leading-none">

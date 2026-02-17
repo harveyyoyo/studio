@@ -40,8 +40,11 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
   ],
   prizes: [
     { id: 'p1', name: 'Cool Pencil', points: 50, icon: 'Pencil' },
-    { id: 'p2', name: 'Candy Bar', points: 150, icon: 'Gift' },
-    { id: 'p3', name: 'Homework Pass', points: 500, icon: 'FileText' },
+    { id: 'p2', name: 'Sticker Pack', points: 100, icon: 'Sticker' },
+    { id: 'p3', name: 'Candy Bar', points: 150, icon: 'Candy' },
+    { id: 'p4', name: 'Free Homework Pass', points: 500, icon: 'FileText' },
+    { id: 'p5', name: 'Ice Cream Coupon', points: 1000, icon: 'IceCream' },
+    { id: 'p6', name: 'Pizza Party Slice', points: 2500, icon: 'Pizza' },
   ],
   updatedAt: Date.now(),
 };

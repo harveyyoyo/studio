@@ -24,7 +24,7 @@ import { Coupon as CouponPreview } from '@/components/Coupon';
 
 
 function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
-    const { db, addCoupons, setCouponsToPrint, addCategory } = useAppContext();
+    const { db, addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
     const { toast } = useToast();
 
     const [printCategory, setPrintCategory] = useState(db.categories?.[0] || '');
@@ -158,7 +158,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                          <div className="w-full md:w-1/3 flex flex-col items-center flex-shrink-0">
                             <Label className="font-semibold text-muted-foreground">Live Preview</Label>
                             <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
-                                <CouponPreview coupon={previewCoupon} />
+                                <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
                             </div>
                         </div>
                     </CardContent>

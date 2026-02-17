@@ -14,13 +14,14 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
     return null;
   }
 
-  const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : 'REWARD ARCADE';
+  const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
+  const title = schoolName ? `Arcade Rewards - ${schoolName}` : 'REWARD ARCADE';
 
   return (
     <div id="print-container">
       {coupons.map((c, index) => (
         <div key={`${c.code}-${index}`} className="print-coupon">
-            <div className="print-coupon-header">{schoolName}</div>
+            <div className="print-coupon-header">{title}</div>
             <div className="print-coupon-main">
                 <div className="print-coupon-value">
                     {c.value}

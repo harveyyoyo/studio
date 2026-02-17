@@ -632,7 +632,7 @@ function AdminDashboard() {
             <div className="w-full md:w-1/3 flex flex-col items-center">
                 <Label className="font-semibold text-muted-foreground">Live Preview</Label>
                 <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
-                    <CouponPreview coupon={previewCoupon} />
+                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
                 </div>
             </div>
         </CardContent>
