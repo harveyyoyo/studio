@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
 export default withPWA({
   dest: 'public',
   cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: false,
+  aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: false,
   fallbacks: {

@@ -1,10 +1,21 @@
 {
   "name": "Arcade Rewards Hub",
-  "short_name": "ArcadeRewards",
-  "description": "A school points and rewards system.",
-  "start_url": "/",
+  "short_name": "Arcade Rewards",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
+  "description": "A school points and rewards system.",
   "theme_color": "#7986CB",
-  "icons": []
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

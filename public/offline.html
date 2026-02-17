@@ -7,37 +7,51 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            background-color: #f1f5f9;
+            color: #1e293b;
             text-align: center;
+            padding: 1rem;
         }
         .container {
-            max-width: 400px;
-            padding: 2rem;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 600px;
         }
         h1 {
-            color: #1c1e21;
-            font-size: 2rem;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #435EBE;
         }
         p {
             font-size: 1.1rem;
-            color: #606770;
+            color: #475569;
+            margin-bottom: 2rem;
+        }
+        .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #435EBE;
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s ease;
+        }
+        .button:hover {
+            background-color: #354a9f;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>You are Offline</h1>
-        <p>It looks like you've lost your internet connection. This page can't be displayed right now.</p>
-        <p>Please check your connection and try again.</p>
+        <h1>You're Currently Offline</h1>
+        <p>It seems you've lost your internet connection. Don't worry, some parts of the app may still be available. Please check your connection and try again.</p>
+        <a href="/" class="button">Try Reloading</a>
     </div>
 </body>
 </html>
