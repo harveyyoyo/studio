@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher, Student, Coupon } from '@/lib/types';
-import { Award, User, ArrowLeft, Printer, LogIn } from 'lucide-react';
+import { Award, User, ArrowLeft, Printer, LogIn, History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StudentActivityModal } from '@/components/StudentActivityModal';
 
 // AwardPointsModal component
 function AwardPointsModal({ student, isOpen, setIsOpen, teacherName }: { student: Student | null, isOpen: boolean, setIsOpen: (isOpen: boolean) => void, teacherName: string }) {
@@ -119,6 +120,7 @@ function TeacherDashboardSkeleton() {
 function TeacherDashboard({ teacher }: { teacher: Teacher }) {
     const { db, addCoupons, setCouponsToPrint, isDbLoading } = useAppContext();
     const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
+    const [activityStudent, setActivityStudent] = useState<Student | null>(null);
     const [isAwardModalOpen, setIsAwardModalOpen] = useState(false);
     const { toast } = useToast();
     const [studentSearchTerm, setStudentSearchTerm] = useState('');
@@ -142,6 +144,10 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
     const handleOpenAwardModal = (student: Student) => {
         setAwardingStudent(student);
         setIsAwardModalOpen(true);
+    };
+
+    const handleOpenActivityModal = (student: Student) => {
+        setActivityStudent(student);
     };
     
     const handlePrintSheet = async () => {
@@ -205,7 +211,12 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
                                         <p className="font-bold">{s.lastName}, {s.firstName}</p>
                                         <p className="text-sm text-muted-foreground">{s.points} points</p>
                                     </div>
-                                    <Button size="sm" onClick={() => handleOpenAwardModal(s)}><Award className="mr-2"/> Award</Button>
+                                    <div className='flex items-center gap-1'>
+                                        <Button variant="outline" size="sm" onClick={() => handleOpenActivityModal(s)}>
+                                          <History className="mr-2 h-4 w-4"/> Activity
+                                        </Button>
+                                        <Button size="sm" onClick={() => handleOpenAwardModal(s)}><Award className="mr-2 h-4 w-4"/> Award</Button>
+                                    </div>
                                 </li>
                             ))}
                              {myStudents.length > 0 && filteredStudents.length === 0 && (
@@ -252,6 +263,7 @@ function TeacherDashboard({ teacher }: { teacher: Teacher }) {
             </div>
             
             <AwardPointsModal student={awardingStudent} isOpen={isAwardModalOpen} setIsOpen={setIsAwardModalOpen} teacherName={teacher.name} />
+            <StudentActivityModal student={activityStudent} isOpen={!!activityStudent} setIsOpen={() => setActivityStudent(null)} />
         </div>
     );
 }

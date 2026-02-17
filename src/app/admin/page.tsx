@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, UserCheck, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit,
+  FileSpreadsheet, Printer, Settings, Edit, History, Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Database as DbInfo } from '@/lib/types';
@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { StudentActivityModal } from '@/components/StudentActivityModal';
+import { format } from 'date-fns';
 
 function AdminDashboardSkeleton() {
   return (
@@ -108,6 +110,7 @@ function AdminDashboard() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   const [printTeacher, setPrintTeacher] = useState('Admin');
@@ -143,6 +146,10 @@ function AdminDashboard() {
     setIsStudentModalOpen(true);
   };
   
+  const handleOpenActivityModal = (student: Student) => {
+    setActivityStudent(student);
+  };
+
   const handlePrintSheet = async () => {
     const value = parseInt(printValue);
     if (!value || value <= 0) {
@@ -220,6 +227,20 @@ function AdminDashboard() {
     .reduce((sum, c) => sum + c.value, 0);
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
 
+  const recentRedemptions = db.students
+    .flatMap(s => 
+        s.history
+            .filter(h => h.desc.startsWith('Redeemed:'))
+            .map(h => ({
+                studentName: `${s.firstName} ${s.lastName}`,
+                description: h.desc,
+                points: h.amount,
+                date: h.date,
+            }))
+    )
+    .sort((a, b) => b.date - a.date)
+    .slice(0, 10);
+
   return (
     <div className="space-y-6">
       <Card className="bg-slate-800 text-white p-6 shadow-lg flex justify-between items-center">
@@ -233,37 +254,64 @@ function AdminDashboard() {
         </Button>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.students.length}</p>
-            <p className="text-sm text-muted-foreground">Students</p>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.teachers.length}</p>
-            <p className="text-sm text-muted-foreground">Teachers</p>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.coupons.length}</p>
-            <p className="text-sm text-muted-foreground">Coupons Created</p>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
-            <p className="text-2xl font-bold">{usedCoupons}</p>
-            <p className="text-sm text-muted-foreground">Coupons Used</p>
-          </div>
-           <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
-            <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Total Points Awarded</p>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
-            <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Database Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.students.length}</p>
+                <p className="text-sm text-muted-foreground">Students</p>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.teachers.length}</p>
+                <p className="text-sm text-muted-foreground">Teachers</p>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.coupons.length}</p>
+                <p className="text-sm text-muted-foreground">Coupons Created</p>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg">
+                <p className="text-2xl font-bold">{usedCoupons}</p>
+                <p className="text-sm text-muted-foreground">Coupons Used</p>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
+                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Points Awarded</p>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-lg col-span-2">
+                <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-1">
+           <Card className="border-t-4 border-teal-500">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Gift className="text-teal-500" /> Recent Prize Redemptions
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                {recentRedemptions.length > 0 ? (
+                    <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        {recentRedemptions.map((item, index) => (
+                            <li key={index} className="text-sm">
+                                <p className="font-medium">{item.studentName} redeemed <span className="font-bold">{item.description.replace('Redeemed: ', '')}</span></p>
+                                <p className="text-xs text-muted-foreground">{format(new Date(item.date), "MMM d, h:mm a")}</p>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-center text-muted-foreground italic py-4">No prizes have been redeemed yet.</p>
+                )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-t-4 border-indigo-500">
@@ -493,6 +541,13 @@ function AdminDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">
+                     <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenActivityModal(s)}
+                    >
+                      <History className="w-4 h-4 text-gray-500" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -533,6 +588,11 @@ function AdminDashboard() {
         isOpen={isStudentModalOpen}
         setIsOpen={setIsStudentModalOpen}
         student={editingStudent}
+      />
+      <StudentActivityModal
+        isOpen={!!activityStudent}
+        setIsOpen={() => setActivityStudent(null)}
+        student={activityStudent}
       />
     </div>
   );

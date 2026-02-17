@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+
 
 // Student Dashboard component
 function StudentDashboard({
@@ -55,8 +57,9 @@ function StudentDashboard({
   // Auto-logout timer effect
   useEffect(() => {
     // This effect handles the countdown and calls onDone when timer reaches 0
+    const handleDone = () => onDone();
     if (logoutTimer <= 0) {
-      onDone();
+      handleDone();
       return; // Stop the interval when we trigger onDone
     }
 
@@ -73,20 +76,19 @@ function StudentDashboard({
     if (!couponCode) return;
     resetTimer(); // Reset timer on any attempt
     const result = await redeemCoupon(student.id, couponCode);
+    setCouponCode('');
     
     if (result.success) {
       toast({
         title: 'Coupon Redeemed!',
         description: `You gained ${result.value} points.`,
       });
-      setCouponCode('');
     } else {
       toast({
         variant: 'destructive',
         title: 'Redemption Failed',
         description: result.message,
       });
-      setCouponCode(''); // Also clear on failure
     }
   };
 
@@ -121,8 +123,11 @@ function StudentDashboard({
 };
 
   return (
-    <div className="space-y-6 animate-in fade-in-50">
-      <Card className="bg-emerald-600 text-white border-none shadow-lg">
+    <div className="space-y-6 animate-in fade-in-50 bg-gradient-to-br from-emerald-50 via-sky-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 p-2 md:p-4 rounded-xl">
+      <Card className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-none shadow-lg overflow-hidden">
+        <div className="absolute -bottom-10 -right-10 w-32 h-32 text-white/20">
+            <Gift size={128} strokeWidth={1} />
+        </div>
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
             <CardDescription className="text-emerald-200">Welcome back,</CardDescription>
@@ -132,9 +137,9 @@ function StudentDashboard({
           </div>
           <div className="text-right">
              <CardDescription className="text-emerald-200">Current Balance</CardDescription>
-             <p className="text-4xl font-bold">
+             <p className="text-5xl font-bold">
               {student.points.toLocaleString()}{' '}
-              <span className="text-2xl font-normal">pts</span>
+              <span className="text-3xl font-normal">pts</span>
             </p>
           </div>
         </CardHeader>
@@ -166,16 +171,19 @@ function StudentDashboard({
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-headline text-2xl">
                 <ShoppingBag /> Rewards Shop
               </CardTitle>
+              <CardDescription>Use your points to get cool stuff!</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {rewards.map((reward) => (
-                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-slate-50 dark:bg-slate-800/50">
-                    <div className="text-muted-foreground mb-2">{reward.icon}</div>
-                    <p className="font-bold">{reward.name}</p>
-                    <p className="text-xs text-primary font-bold mb-2">{reward.points} pts</p>
+                <Card key={reward.name} className="p-4 flex flex-col items-center justify-between text-center bg-slate-100 dark:bg-slate-800/50 transition-all hover:shadow-lg hover:-translate-y-1">
+                    <div className="p-4 bg-white/50 dark:bg-black/20 rounded-full mb-3 text-primary">
+                      {reward.icon}
+                    </div>
+                    <p className="font-bold text-lg">{reward.name}</p>
+                    <Badge variant="secondary" className="mb-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
                     <Button size="sm" className="w-full" onClick={() => handleRedeemReward(reward)} disabled={student.points < reward.points}>Redeem</Button>
                 </Card>
               ))}
@@ -192,7 +200,7 @@ function StudentDashboard({
               </CardTitle>
             </CardHeader>
             <CardContent className="relative">
-              <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+              <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
                 {student.history.length > 0 ? (
                   student.history
                     .sort((a, b) => b.date - a.date)
@@ -226,7 +234,7 @@ function StudentDashboard({
                 )}
               </ul>
               <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onDone}>
-                <LogOut className="mr-2"/> Log Out
+                <LogOut className="mr-2"/> Log Out Now
               </Button>
             </CardContent>
           </Card>
@@ -274,10 +282,10 @@ export default function StudentLoginPage() {
     setNfcId(''); // Clear after submit
   };
 
-  const handleDone = () => {
+  const handleDone = useCallback(() => {
     setActiveStudent(null);
     setNfcId('');
-  };
+  }, []);
 
   if (!isInitialized || loginState !== 'school') {
     return <p>Loading...</p>;
@@ -292,7 +300,7 @@ export default function StudentLoginPage() {
       <Card className="w-full max-w-md border-t-4 border-emerald-500">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold font-headline">
-            Student Login
+            Student Kiosk
           </CardTitle>
         </CardHeader>
         <CardContent>
