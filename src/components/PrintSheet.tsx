@@ -15,7 +15,7 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
   }
 
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `Arcade Rewards - ${schoolName}` : 'REWARD ARCADE';
+  const title = schoolName ? `Arcade Rewards - ${schoolName}` : 'Arcade Rewards';
 
   return (
     <div id="print-container">
