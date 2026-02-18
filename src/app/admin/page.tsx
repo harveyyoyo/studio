@@ -124,7 +124,7 @@ function AdminDashboard() {
   const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
     createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher,
-    addPrize, updatePrize, deletePrize, uploadStudents,
+    addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -683,16 +683,19 @@ function AdminDashboard() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleStudentCsvUpload} variant="outline" className="w-full">
+                  <Button onClick={handleStudentCsvUpload} variant="outline" className="flex-1">
                     <UploadCloud className="mr-2 h-4 w-4" /> Upload CSV
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload a CSV with headers: <span className="font-code">firstName, lastName, nfcId, className</span></p>
+                  <p>Upload a CSV with headers: <span className="font-code">firstName, lastName</span>. `className` is optional.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button onClick={() => handleOpenStudentModal(null)} className="w-full">
+            <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
+                <Printer className="mr-2 h-4 w-4" /> Print ID Cards
+            </Button>
+            <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
               <Plus className="mr-2 h-4 w-4" /> Add Student
             </Button>
             <input
@@ -730,7 +733,7 @@ function AdminDashboard() {
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Class: {getClassName(s.classId)} | NFC: {s.nfcId}
+                      Class: {getClassName(s.classId)} | ID: {s.nfcId}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5">

@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
+import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
 import { useFirestore } from '@/firebase';
 import {
   doc,
@@ -48,6 +49,7 @@ interface AppContextType {
   logout: () => void;
   getClassName: (classId: string) => string;
   setCouponsToPrint: (coupons: Coupon[]) => void;
+  setStudentsToPrint: (students: Student[]) => void;
   addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
@@ -93,6 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [db, setDb] = useState<Database>(EMPTY_DB);
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
+  const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [backups, setBackups] = useState<{ id: string }[]>([]);
 
@@ -514,7 +517,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     
     const header = lines[0].split(',').map(h => h.trim());
-    const requiredHeaders = ['firstName', 'lastName', 'nfcId', 'className'];
+    const requiredHeaders = ['firstName', 'lastName'];
     if (!requiredHeaders.every(h => header.includes(h))) {
         toast({ variant: 'destructive', title: 'Invalid CSV Header', description: `Header must include: ${requiredHeaders.join(', ')}` });
         return {success: 0, failed: 0};
@@ -533,15 +536,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         studentData[h] = values[i];
       });
 
-      if (!studentData.firstName || !studentData.lastName || !studentData.nfcId) {
+      if (!studentData.firstName || !studentData.lastName) {
         failedCount++;
         continue;
       }
       
-      if (existingNfcIds.has(studentData.nfcId)) {
-        failedCount++;
-        continue;
-      }
+      let newNfcId: string;
+      do {
+          newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
+      } while (existingNfcIds.has(newNfcId));
+
 
       const classObj = db.classes.find(c => c.name.toLowerCase() === (studentData.className || '').toLowerCase());
 
@@ -549,7 +553,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
         firstName: studentData.firstName,
         lastName: studentData.lastName,
-        nfcId: studentData.nfcId,
+        nfcId: newNfcId,
         points: 0,
         classId: classObj?.id || '',
         history: [],
@@ -586,10 +590,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [couponsToPrint]);
 
+  const studentPrintTriggered = useRef(false);
+  useEffect(() => {
+    if (studentsToPrint.length > 0 && !studentPrintTriggered.current) {
+      studentPrintTriggered.current = true;
+      const handleAfterPrint = () => {
+        setStudentsToPrint([]);
+        studentPrintTriggered.current = false;
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+      window.addEventListener('afterprint', handleAfterPrint);
+      
+      document.fonts.load('48pt "Libre Barcode 39 Text"').finally(() => {
+          window.print();
+      });
+    }
+  }, [studentsToPrint]);
+
+
   const value = useMemo(
     () => ({
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
-      login, logout, getClassName, setCouponsToPrint, addStudent, updateStudent,
+      login, logout, getClassName, setCouponsToPrint, setStudentsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
@@ -609,6 +631,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={value}>
       {children}
       {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
+      {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} getClassName={getClassName} />}
     </AppContext.Provider>
   );
 }

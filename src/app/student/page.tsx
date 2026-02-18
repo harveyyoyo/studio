@@ -25,6 +25,7 @@ import {
   Gift,
   LogOut,
   ShoppingBag,
+  ArrowLeft,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -295,7 +296,7 @@ export default function StudentLoginPage() {
           <Tabs defaultValue="nfc" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
-                <Nfc className="mr-2 h-4 w-4" /> NFC Card
+                <Nfc className="mr-2 h-4 w-4" /> Card
               </TabsTrigger>
               <TabsTrigger value="manual">
                 <Type className="mr-2 h-4 w-4" /> Manual
@@ -308,7 +309,7 @@ export default function StudentLoginPage() {
                   <Nfc className="w-16 h-16 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">
-                  Tap your card on the reader...
+                  Tap card or scan barcode...
                 </p>
                 <Input
                   ref={nfcInputRef}
@@ -324,13 +325,13 @@ export default function StudentLoginPage() {
             <TabsContent value="manual">
               <div className="space-y-4 py-4">
                 <div>
-                  <Label htmlFor="manual-nfcId">Student NFC ID</Label>
+                  <Label htmlFor="manual-nfcId">Student ID</Label>
                   <Input
                     id="manual-nfcId"
                     value={nfcId}
                     onChange={(e) => setNfcId(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                    placeholder="Enter student NFC ID"
+                    placeholder="Enter student ID"
                   />
                 </div>
                 <Button onClick={handleNfcSubmit} className="w-full">
@@ -345,7 +346,7 @@ export default function StudentLoginPage() {
               Connected to <span className="font-bold">{schoolId}</span>
             </p>
             <Button asChild variant="link" className="text-xs h-auto p-0">
-              <Link href="/portal">Back to Portal Selection</Link>
+              <Link href="/portal"><ArrowLeft className="mr-2 h-4"/> Back to Portal Selection</Link>
             </Button>
           </div>
         </CardContent>

@@ -65,7 +65,7 @@
 }
 
 /* Print Styles */
-#print-container { 
+#print-container, #student-id-print-container { 
   display: none; 
 }
 
@@ -194,6 +194,82 @@
         color: #000;
         margin: 0;
         padding: 0;
+    }
+
+    #student-id-print-container {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        gap: 0;
+        width: 7.5in; 
+        height: 10in; 
+        box-sizing: border-box;
+        page-break-after: always;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .print-id-card {
+        border: 1px dotted #999;
+        padding: 0.1in;
+        text-align: center;
+        height: 2in;
+        width: 3.75in;
+        page-break-inside: avoid;
+        box-sizing: border-box;
+        font-family: 'PT Sans', sans-serif;
+        background: #fff;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-around;
+    }
+
+    .print-id-header {
+        font-size: 8pt;
+        font-weight: bold;
+        color: #333;
+        width: 100%;
+        text-transform: uppercase;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.05in;
+    }
+
+    .print-id-name {
+        font-size: 14pt;
+        font-weight: bold;
+        font-family: 'Playfair Display', serif;
+        margin-top: 0.1in;
+    }
+
+    .print-id-class {
+        font-size: 10pt;
+        color: #555;
+        margin-bottom: 0.1in;
+    }
+
+    .print-id-barcode-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+    }
+
+    .print-id-barcode-container .font-barcode {
+        font-size: 48pt;
+        line-height: 1;
+        color: #000;
+    }
+
+    .print-id-code {
+        font-family: 'Source Code Pro', monospace;
+        font-size: 10pt;
+        letter-spacing: 2px;
+        margin-top: 0.05in;
     }
 }
 

@@ -49,7 +49,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
         setFirstName('');
         setLastName('');
         setPoints('0');
-        setNfcId('');
+        setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
       }
     }
@@ -61,7 +61,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
       return;
     }
     if (!nfcId) {
-      toast({ variant: 'destructive', title: 'NFC ID is required.' });
+      toast({ variant: 'destructive', title: 'Student ID is required.' });
       return;
     }
 
@@ -101,7 +101,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
             </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="nfcId">NFC ID</Label>
+            <Label htmlFor="nfcId">Student ID (for scanning)</Label>
             <Input id="nfcId" value={nfcId} onChange={e => setNfcId(e.target.value)} placeholder="Tap card or enter ID..." />
           </div>
           <div className="space-y-1">
