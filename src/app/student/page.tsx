@@ -31,6 +31,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Student Dashboard component
 function StudentDashboard({
@@ -46,6 +55,9 @@ function StudentDashboard({
   const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
   const animationKey = useRef(0);
+
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [logoutPasscode, setLogoutPasscode] = useState('');
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -86,6 +98,21 @@ function StudentDashboard({
       });
     }
     setCouponCode('');
+  };
+  
+  const handleLogoutConfirm = () => {
+    if (logoutPasscode === '1234') {
+        onDone();
+        toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Incorrect Passcode',
+            description: 'The passcode you entered is incorrect.',
+        });
+    }
+    setLogoutPasscode('');
+    setIsLogoutDialogOpen(false);
   };
 
   const eligibleRewards = db.prizes?.filter(r => r.inStock && student.points >= r.points) || [];
@@ -204,9 +231,39 @@ function StudentDashboard({
                     </p>
                   )}
                 </ul>
-                <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onDone}>
-                  <LogOut className="mr-2"/> Log Out Now
-                </Button>
+                <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600">
+                          <LogOut className="mr-2"/> Log Out Now
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Enter Passcode to Exit</DialogTitle>
+                            <DialogDescription>
+                                To protect student privacy, a passcode is required to exit the student kiosk.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="logout-passcode">Passcode</Label>
+                            <Input
+                                id="logout-passcode"
+                                type="password"
+                                value={logoutPasscode}
+                                onChange={(e) => setLogoutPasscode(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleLogoutConfirm()}
+                                autoFocus
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => {
+                                setIsLogoutDialogOpen(false);
+                                setLogoutPasscode('');
+                            }}>Cancel</Button>
+                            <Button onClick={handleLogoutConfirm}>Confirm & Log Out</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </div>
