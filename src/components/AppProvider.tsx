@@ -529,7 +529,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const delimiter = row.includes(';') ? ';' : ',';
         const values = row.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
 
-        let firstName, lastName, className;
+        let firstName: string = '', lastName: string = '', studentClassName: string = '';
 
         if (values.length >= 4) { // Assumes format like: user, id, first, last
             firstName = values[2];
@@ -537,7 +537,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } else if (values.length >= 2) { // Assumes format like: first, last, [class]
             firstName = values[0];
             lastName = values[1];
-            className = values[2] || '';
+            studentClassName = values[2] || '';
         }
 
         if (!firstName || !lastName || firstName.length === 0 || lastName.length === 0) {
@@ -552,7 +552,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } while (existingNfcIds.has(newNfcId));
 
 
-        const classObj = db.classes.find(c => className && c.name.toLowerCase() === className.toLowerCase());
+        const classObj = db.classes.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
         const newStudent: Student = {
             id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
