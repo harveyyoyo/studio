@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'PT Sans', sans-serif;
-}
-
 @layer base {
   :root {
     --background: 220 20% 96%;
@@ -55,23 +51,13 @@ body {
     --input: 217 33% 17%;
     --ring: 236 34% 65%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
-  }
-  .font-headline {
-    font-family: 'Playfair Display', serif;
-  }
-  .font-barcode {
-    font-family: 'Libre Barcode 39 Text', cursive;
-  }
-  .font-code {
-    font-family: 'Source Code Pro', monospace;
+    font-family: 'PT Sans', sans-serif;
   }
 }
 
