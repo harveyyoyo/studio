@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud,
+  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud, IdCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -688,7 +688,7 @@ function AdminDashboard() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload a CSV with headers: <span className="font-code">firstName, lastName</span>. `className` is optional.</p>
+                  <p>Upload a CSV with columns (no header): <span className="font-code">firstName, lastName, className</span>. Only first and last name are required.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -708,75 +708,87 @@ function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <Input 
-              placeholder="Search students by name..."
-              value={studentSearchTerm}
-              onChange={(e) => setStudentSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-          <ul className="space-y-2">
-            {db.students
-              .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
-              .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
-              .map((s) => (
-                <li
-                  key={s.id}
-                  className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
-                >
-                  <div>
-                    <p className="font-bold">
-                      {s.lastName}, {s.firstName}{' '}
-                      <span className="text-primary font-normal text-xs">
-                        ({s.points} pts)
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Class: {getClassName(s.classId)} | ID: {s.nfcId}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenActivityModal(s)}
-                    >
-                      <History className="w-4 h-4 text-gray-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleOpenStudentModal(s)}
-                    >
-                      <Edit className="w-4 h-4 text-blue-500" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this student's record.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={async () => {
-                            await deleteStudent(s.id);
-                            toast({ title: 'Student Deleted' });
-                          }}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </li>
-              ))}
-          </ul>
+          <TooltipProvider>
+            <div className="mb-4">
+              <Input 
+                placeholder="Search students by name..."
+                value={studentSearchTerm}
+                onChange={(e) => setStudentSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            <ul className="space-y-2">
+              {db.students
+                .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
+                .map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
+                  >
+                    <div>
+                      <p className="font-bold">
+                        {s.lastName}, {s.firstName}{' '}
+                        <span className="text-primary font-normal text-xs">
+                          ({s.points} pts)
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Class: {getClassName(s.classId)} | ID: {s.nfcId}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
+                            <IdCard className="w-4 h-4 text-green-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Print ID Card</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
+                            <History className="w-4 h-4 text-gray-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>View Activity</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
+                            <Edit className="w-4 h-4 text-blue-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Edit Student</p></TooltipContent>
+                      </Tooltip>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete this student's record.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={async () => {
+                              await deleteStudent(s.id);
+                              toast({ title: 'Student Deleted' });
+                            }}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          </TooltipProvider>
         </CardContent>
       </Card>
       
@@ -784,35 +796,31 @@ function AdminDashboard() {
         <CardHeader>
           <CardTitle>Database Summary</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div className="bg-secondary p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.students.length}</p>
-            <p className="text-sm text-muted-foreground">Students</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
-            <p className="text-sm text-muted-foreground">Classes</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
-            <p className="text-sm text-muted-foreground">Teachers</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg">
-            <p className="text-2xl font-bold">{db.coupons.length}</p>
-            <p className="text-sm text-muted-foreground">Coupons Created</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg col-span-2">
-            <p className="text-2xl font-bold">{usedCoupons}</p>
-            <p className="text-sm text-muted-foreground">Coupons Used</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg col-span-2">
-            <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Total Points Awarded</p>
-          </div>
-          <div className="bg-secondary p-4 rounded-lg col-span-2 md:col-span-4">
-            <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
-            <p className="text-sm text-muted-foreground">Total Points on Student Cards</p>
-          </div>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.students.length}</p>
+                <p className="text-sm text-muted-foreground">Students</p>
+            </div>
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
+                <p className="text-sm text-muted-foreground">Classes</p>
+            </div>
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
+                <p className="text-sm text-muted-foreground">Teachers</p>
+            </div>
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{db.coupons.length} / {usedCoupons}</p>
+                <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
+            </div>
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Points Awarded</p>
+            </div>
+            <div className="bg-secondary p-4 rounded-lg">
+                <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Points on Cards</p>
+            </div>
         </CardContent>
       </Card>
 

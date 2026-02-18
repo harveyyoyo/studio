@@ -511,56 +511,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!firestore || !schoolId) return {success: 0, failed: 0};
     
     const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-    if (lines.length < 2) {
-      toast({ variant: 'destructive', title: 'Invalid CSV', description: 'File must contain a header row and at least one student.' });
+    if (lines.length < 1) {
+      toast({ variant: 'destructive', title: 'Invalid CSV', description: 'File must contain at least one student.' });
       return {success: 0, failed: 0};
     }
     
-    const header = lines[0].split(',').map(h => h.trim());
-    const requiredHeaders = ['firstName', 'lastName'];
-    if (!requiredHeaders.every(h => header.includes(h))) {
-        toast({ variant: 'destructive', title: 'Invalid CSV Header', description: `Header must include: ${requiredHeaders.join(', ')}` });
-        return {success: 0, failed: 0};
-    }
-
-    const rows = lines.slice(1);
     const newStudents: Student[] = [];
     const existingNfcIds = new Set(db.students.map(s => s.nfcId));
     let successCount = 0;
     let failedCount = 0;
 
-    for (const row of rows) {
-      const values = row.split(',').map(v => v.trim());
-      const studentData: any = {};
-      header.forEach((h, i) => {
-        studentData[h] = values[i];
-      });
+    for (const row of lines) {
+        const values = row.split(',').map(v => v.trim());
+        const [firstName, lastName, className] = values;
 
-      if (!studentData.firstName || !studentData.lastName) {
-        failedCount++;
-        continue;
-      }
+        if (!firstName || !lastName) {
+            failedCount++;
+            continue;
+        }
       
-      let newNfcId: string;
-      do {
-          newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
-      } while (existingNfcIds.has(newNfcId));
+        let newNfcId: string;
+        do {
+            newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
+        } while (existingNfcIds.has(newNfcId));
 
 
-      const classObj = db.classes.find(c => c.name.toLowerCase() === (studentData.className || '').toLowerCase());
+        const classObj = db.classes.find(c => c.name.toLowerCase() === (className || '').toLowerCase());
 
-      const newStudent: Student = {
-        id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
-        firstName: studentData.firstName,
-        lastName: studentData.lastName,
-        nfcId: newNfcId,
-        points: 0,
-        classId: classObj?.id || '',
-        history: [],
-      };
-      newStudents.push(newStudent);
-      existingNfcIds.add(newStudent.nfcId); // prevent duplicates within the same file
-      successCount++;
+        const newStudent: Student = {
+            id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
+            firstName,
+            lastName,
+            nfcId: newNfcId,
+            points: 0,
+            classId: classObj?.id || '',
+            history: [],
+        };
+        newStudents.push(newStudent);
+        existingNfcIds.add(newStudent.nfcId); // prevent duplicates within the same file
+        successCount++;
     }
 
     if (newStudents.length > 0) {
