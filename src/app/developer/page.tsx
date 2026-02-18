@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import {
   Plus, Trash2, Server, Key,
 } from 'lucide-react';
@@ -46,6 +46,26 @@ export default function DeveloperPage() {
       router.replace('/');
     }
   }, [isInitialized, loginState, router]);
+  
+    // Automatically create the 'yeshiva' sample school once on developer login
+  useEffect(() => {
+    if (loginState !== 'developer' || !firestore || !createSchool) return;
+
+    const createYeshivaIfNeeded = async () => {
+      const yeshivaDocRef = doc(firestore, 'schools', 'yeshiva');
+      try {
+        const docSnap = await getDoc(yeshivaDocRef);
+        if (!docSnap.exists()) {
+          console.log("Creating 'yeshiva' sample school...");
+          await createSchool('yeshiva');
+        }
+      } catch (error) {
+        console.error("Failed to check or create 'yeshiva' school:", error);
+      }
+    };
+    createYeshivaIfNeeded();
+  }, [loginState, firestore, createSchool]);
+
 
   useEffect(() => {
     if (loginState !== 'developer' || !firestore) {
@@ -125,7 +145,7 @@ export default function DeveloperPage() {
                       <Input 
                           placeholder="New School ID (e.g. 'washington_hs')" 
                           value={newSchoolId} 
-                          onChange={(e) => setNewSchoolId(e.target.value)}
+                          onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                           onKeyPress={e => e.key === 'Enter' && handleCreateSchool()}
                       />
                       <Button onClick={handleCreateSchool}><Plus className="mr-2"/>Create School</Button>

@@ -31,6 +31,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
+import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
@@ -264,17 +265,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     const schoolExists = (await getDoc(doc(firestore, 'schools', cleanId))).exists();
     if(schoolExists) {
-      toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
+      if (cleanId !== 'yeshiva') { // Don't show toast for automatic creation
+        toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
+      }
       return null;
     }
     
-    const newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
-    const schoolData = { ...INITIAL_DATA, passcode: newPasscode };
+    let schoolData;
+    let newPasscode;
+
+    if (cleanId === 'yeshiva') {
+      newPasscode = '1234';
+      schoolData = { ...YESHIVA_DATA, passcode: newPasscode };
+    } else {
+      newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+      schoolData = { ...INITIAL_DATA, passcode: newPasscode };
+    }
     
     const newSchoolDocRef = doc(firestore, 'schools', cleanId);
     await setDoc(newSchoolDocRef, schoolData);
     
-    toast({title: `School "${cleanId}" created!`});
+    if (cleanId !== 'yeshiva') { // Don't show toast for automatic creation
+      toast({title: `School "${cleanId}" created!`});
+    }
     return { passcode: newPasscode, cleanId };
   }, [firestore, toast]);
   
