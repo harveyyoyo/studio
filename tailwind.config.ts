@@ -13,7 +13,6 @@ export default {
         body: ['PT Sans', 'sans-serif'],
         headline: ['Playfair Display', 'serif'],
         code: ['Source Code Pro', 'monospace'],
-        barcode: ['Libre Barcode 39 Text', 'cursive'],
       },
       colors: {
         background: 'hsl(var(--background))',

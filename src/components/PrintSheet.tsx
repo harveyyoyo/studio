@@ -33,7 +33,7 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
                 </div>
             </div>
             <div className="print-coupon-barcode">
-                <div className="barcode-font">*{c.code}*</div>
+                <div className="font-barcode">*{c.code}*</div>
             </div>
         </div>
       ))}

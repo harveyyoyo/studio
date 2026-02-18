@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.font-barcode {
+  font-family: 'Libre Barcode 39 Text', cursive;
+}
+
 @layer base {
   :root {
     --background: 220 20% 96%;
@@ -184,8 +188,7 @@
         flex-grow: 1;
     }
 
-    .print-coupon-barcode .barcode-font {
-        font-family: 'Libre Barcode 39 Text', cursive;
+    .print-coupon-barcode .font-barcode {
         font-size: 38pt;
         line-height: 1;
         color: #000;
