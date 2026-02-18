@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift,
+  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,6 +40,14 @@ import {
 import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Coupon as CouponPreview } from '@/components/Coupon';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 
 function AdminDashboardSkeleton() {
@@ -116,11 +124,12 @@ function AdminDashboard() {
   const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
     createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher,
-    addPrize, updatePrize, deletePrize,
+    addPrize, updatePrize, deletePrize, uploadStudents,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
+  const studentCsvInputRef = useRef<HTMLInputElement>(null);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -238,11 +247,11 @@ function AdminDashboard() {
         'Are you sure? This will permanently overwrite all current data for this school with the data from the backup file.'
       )
     ) {
-      fileInputRef.current?.click();
+      backupFileInputRef.current?.click();
     }
   };
 
-  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onBackupFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -261,8 +270,29 @@ function AdminDashboard() {
         description: (err as Error).message,
       });
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (backupFileInputRef.current) backupFileInputRef.current.value = '';
   };
+  
+  const handleStudentCsvUpload = () => {
+    studentCsvInputRef.current?.click();
+  }
+  
+  const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        await uploadStudents(text);
+    } catch (err: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Failed to process CSV file.',
+            description: (err as Error).message,
+        });
+    }
+    if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
+  }
+
 
   const usedCoupons = db.coupons.filter((c) => c.used).length;
   const totalPointsAwarded = db.coupons
@@ -464,12 +494,17 @@ function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                {db.prizes?.length > 0 ? db.prizes.map(prize => (
+                {db.prizes?.length > 0 ? [...db.prizes].sort((a,b) => a.points - b.points).map(prize => (
                   <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
                     <div className='flex items-center gap-3'>
-                      <DynamicIcon name={prize.icon} className="w-5 h-5 text-primary"/>
+                       <Switch 
+                         checked={prize.inStock} 
+                         onCheckedChange={(checked) => updatePrize({...prize, inStock: checked})}
+                         aria-label="In Stock"
+                       />
+                      <DynamicIcon name={prize.icon} className={cn("w-5 h-5 text-primary", !prize.inStock && "opacity-40")}/>
                       <div>
-                        <span className="font-bold text-sm">{prize.name}</span>
+                        <span className={cn("font-bold text-sm", !prize.inStock && "line-through opacity-60")}>{prize.name}</span>
                         <p className="text-xs text-muted-foreground">{prize.points} pts</p>
                       </div>
                     </div>
@@ -548,8 +583,8 @@ function AdminDashboard() {
               </Button>
               <input
                 type="file"
-                ref={fileInputRef}
-                onChange={onFileChange}
+                ref={backupFileInputRef}
+                onChange={onBackupFileChange}
                 className="hidden"
                 accept="application/json"
               />
@@ -639,11 +674,35 @@ function AdminDashboard() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row justify-between items-center">
-          <CardTitle>All Students</CardTitle>
-          <Button onClick={() => handleOpenStudentModal(null)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Student
-          </Button>
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <CardTitle>All Students</CardTitle>
+            <CardDescription>{db.students.length} students in the database.</CardDescription>
+          </div>
+          <div className='flex gap-2 w-full sm:w-auto'>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={handleStudentCsvUpload} variant="outline" className="w-full">
+                    <UploadCloud className="mr-2 h-4 w-4" /> Upload CSV
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Upload a CSV with headers: <span className="font-code">firstName, lastName, nfcId, className</span></p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button onClick={() => handleOpenStudentModal(null)} className="w-full">
+              <Plus className="mr-2 h-4 w-4" /> Add Student
+            </Button>
+            <input
+                type="file"
+                ref={studentCsvInputRef}
+                onChange={onStudentCsvFileChange}
+                className="hidden"
+                accept=".csv"
+              />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -789,5 +848,3 @@ export default function AdminPage() {
 
   return <AdminDashboard />;
 }
-
-    

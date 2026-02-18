@@ -39,12 +39,12 @@ export const INITIAL_DATA: Omit<Database, 'passcode'> = {
     },
   ],
   prizes: [
-    { id: 'p1', name: 'Cool Pencil', points: 50, icon: 'Pencil' },
-    { id: 'p2', name: 'Sticker Pack', points: 100, icon: 'Sticker' },
-    { id: 'p3', name: 'Candy Bar', points: 150, icon: 'Candy' },
-    { id: 'p4', name: 'Free Homework Pass', points: 500, icon: 'FileText' },
-    { id: 'p5', name: 'Ice Cream Coupon', points: 1000, icon: 'IceCream' },
-    { id: 'p6', name: 'Pizza Party Slice', points: 2500, icon: 'Pizza' },
+    { id: 'p1', name: 'Cool Pencil', points: 50, icon: 'Pencil', inStock: true },
+    { id: 'p2', name: 'Sticker Pack', points: 100, icon: 'Sticker', inStock: true },
+    { id: 'p3', name: 'Candy Bar', points: 150, icon: 'Candy', inStock: true },
+    { id: 'p4', name: 'Free Homework Pass', points: 500, icon: 'FileText', inStock: true },
+    { id: 'p5', name: 'Ice Cream Coupon', points: 1000, icon: 'IceCream', inStock: true },
+    { id: 'p6', name: 'Pizza Party Slice', points: 2500, icon: 'Pizza', inStock: true },
   ],
   updatedAt: Date.now(),
 };

@@ -16,6 +16,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Prize } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
+import { Switch } from './ui/switch';
 
 interface PrizeModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
   const [name, setName] = useState('');
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
+  const [inStock, setInStock] = useState(true);
   const { toast } = useToast();
 
   const isEditing = !!prize;
@@ -38,10 +40,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
         setName(prize.name);
         setPoints(prize.points.toString());
         setIcon(prize.icon);
+        setInStock(prize.inStock);
       } else { // Create mode
         setName('');
         setPoints('0');
         setIcon('Gift');
+        setInStock(true);
       }
     }
   }, [prize, isOpen]);
@@ -58,11 +62,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon };
+      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock };
       await updatePrize(updatedPrize);
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon };
+      const newPrize = { name, points: pointsValue, icon, inStock };
       await addPrize(newPrize);
       toast({ title: 'Prize added!' });
     }
@@ -95,6 +99,19 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
                 <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
               </div>
             </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+            <div className="space-y-0.5">
+              <Label htmlFor="in-stock">In Stock</Label>
+              <p className="text-xs text-muted-foreground">
+                Is this prize currently available for redemption?
+              </p>
+            </div>
+            <Switch
+              id="in-stock"
+              checked={inStock}
+              onCheckedChange={setInStock}
+            />
           </div>
         </div>
         <DialogFooter>

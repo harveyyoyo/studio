@@ -44,6 +44,7 @@ function StudentDashboard({
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
+  const animationKey = useRef(0);
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -73,6 +74,7 @@ function StudentDashboard({
         title: 'Coupon Redeemed!',
         description: `You gained ${result.value} points.`,
       });
+      animationKey.current += 1;
       setAnimatedValue(result.value);
       setTimeout(() => setAnimatedValue(null), 1500);
     } else {
@@ -85,7 +87,7 @@ function StudentDashboard({
     setCouponCode('');
   };
 
-  const eligibleRewards = db.prizes?.filter(r => student.points >= r.points) || [];
+  const eligibleRewards = db.prizes?.filter(r => r.inStock && student.points >= r.points) || [];
 
   return (
     <div className="relative animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
@@ -211,7 +213,7 @@ function StudentDashboard({
       </div>
       
       {animatedValue !== null && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+        <div key={animationKey.current} className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
             <div className="text-8xl font-bold text-green-500 animate-fly-up">
                 +{animatedValue}
             </div>
@@ -269,7 +271,15 @@ export default function StudentLoginPage() {
   }
 
   if (activeStudent) {
-    return <StudentDashboard student={activeStudent} onDone={handleDone} />;
+    // Re-fetch the student object from the db context to ensure it's always the latest version
+    const liveStudent = db.students.find(s => s.id === activeStudent.id) || null;
+    if (liveStudent) {
+      return <StudentDashboard student={liveStudent} onDone={handleDone} />;
+    } else {
+      // The student was likely deleted in another session, so log out.
+      handleDone();
+      return <p>Loading...</p>
+    }
   }
 
   return (

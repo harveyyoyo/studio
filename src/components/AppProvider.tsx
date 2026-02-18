@@ -70,6 +70,7 @@ interface AppContextType {
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
+  uploadStudents: (csvContent: string) => Promise<{success: number, failed: number}>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -503,6 +504,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await updateDb({ prizes: arrayRemove(prizeToDelete) as any });
   }, [db, updateDb]);
 
+  const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number}> => {
+    if (!firestore || !schoolId) return {success: 0, failed: 0};
+    
+    const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+      toast({ variant: 'destructive', title: 'Invalid CSV', description: 'File must contain a header row and at least one student.' });
+      return {success: 0, failed: 0};
+    }
+    
+    const header = lines[0].split(',').map(h => h.trim());
+    const requiredHeaders = ['firstName', 'lastName', 'nfcId', 'className'];
+    if (!requiredHeaders.every(h => header.includes(h))) {
+        toast({ variant: 'destructive', title: 'Invalid CSV Header', description: `Header must include: ${requiredHeaders.join(', ')}` });
+        return {success: 0, failed: 0};
+    }
+
+    const rows = lines.slice(1);
+    const newStudents: Student[] = [];
+    const existingNfcIds = new Set(db.students.map(s => s.nfcId));
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const row of rows) {
+      const values = row.split(',').map(v => v.trim());
+      const studentData: any = {};
+      header.forEach((h, i) => {
+        studentData[h] = values[i];
+      });
+
+      if (!studentData.firstName || !studentData.lastName || !studentData.nfcId) {
+        failedCount++;
+        continue;
+      }
+      
+      if (existingNfcIds.has(studentData.nfcId)) {
+        failedCount++;
+        continue;
+      }
+
+      const classObj = db.classes.find(c => c.name.toLowerCase() === (studentData.className || '').toLowerCase());
+
+      const newStudent: Student = {
+        id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
+        firstName: studentData.firstName,
+        lastName: studentData.lastName,
+        nfcId: studentData.nfcId,
+        points: 0,
+        classId: classObj?.id || '',
+        history: [],
+      };
+      newStudents.push(newStudent);
+      existingNfcIds.add(newStudent.nfcId); // prevent duplicates within the same file
+      successCount++;
+    }
+
+    if (newStudents.length > 0) {
+      await updateDb({ students: arrayUnion(...newStudents) as any });
+    }
+
+    toast({ title: 'Upload Complete', description: `${successCount} students added, ${failedCount} records failed.` });
+    return {success: successCount, failed: failedCount};
+}, [db, firestore, schoolId, toast, updateDb]);
+
+
   const printTriggered = useRef(false);
 
   useEffect(() => {
@@ -528,13 +593,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
+      uploadStudents,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
-      backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize
+      backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
+      uploadStudents,
     ]
   );
 

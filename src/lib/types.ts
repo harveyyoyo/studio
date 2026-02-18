@@ -41,6 +41,7 @@ export interface Prize {
   name: string;
   points: number;
   icon: string;
+  inStock: boolean;
 }
 
 export interface Database {

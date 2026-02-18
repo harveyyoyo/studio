@@ -106,12 +106,12 @@ function PrizeDashboard({
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {db.prizes?.map((prize: Prize) => {
+                {db.prizes?.filter(p => p.inStock).map((prize: Prize) => {
                     const canAfford = student.points >= prize.points;
                     return (
                         <Card key={prize.id} className={cn(
                             "p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all",
-                            !canAfford ? "opacity-60 grayscale" : "hover:shadow-xl hover:-translate-y-1"
+                            !canAfford && "opacity-60 grayscale"
                         )}>
                             <div className="p-6 bg-accent rounded-full mb-3 text-primary">
                                 <DynamicIcon name={prize.icon} className="w-8 h-8" />
