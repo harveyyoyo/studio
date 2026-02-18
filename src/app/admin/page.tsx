@@ -688,7 +688,7 @@ function AdminDashboard() {
                   />
                 </div>
                 <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
-                  <Printer /> Print Sheet (24)
+                  <Printer /> Print Sheet (24 Coupons)
                 </Button>
               </div>
               <div className="w-full md:w-1/3 flex flex-col items-center">

@@ -152,7 +152,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                                 />
                             </div>
                             <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2">
-                                <Printer /> Print Sheet (24)
+                                <Printer /> Print Sheet (24 Coupons)
                             </Button>
                         </div>
                          <div className="w-full md:w-1/3 flex flex-col items-center flex-shrink-0">
