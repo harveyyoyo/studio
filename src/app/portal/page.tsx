@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowRight, UserCog, GraduationCap, ShoppingBag, Printer } from 'lucide-react';
+import { ArrowRight, UserCog, GraduationCap, ShoppingBag, Printer, Trophy } from 'lucide-react';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
@@ -26,7 +26,7 @@ export default function PortalPage() {
                 <h1 className="text-4xl font-bold font-headline">Welcome to {schoolId?.replace(/_/g, ' ')}</h1>
                 <p className="text-muted-foreground">Please select your portal to continue.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
                 <Link href="/student" className="group">
                     <Card className="h-full border-t-4 border-primary hover:shadow-xl hover:border-primary/80 transition-all transform hover:-translate-y-1">
                         <CardHeader>
@@ -67,6 +67,17 @@ export default function PortalPage() {
                             <CardTitle>Prize Shop</CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 Redeem your points for awesome prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
+                </Link>
+                <Link href="/halloffame" className="group">
+                    <Card className="h-full border-t-4 border-amber-400 hover:shadow-xl hover:border-amber-400/80 transition-all transform hover:-translate-y-1">
+                        <CardHeader>
+                            <Trophy className="w-10 h-10 mb-2 text-amber-500" />
+                            <CardTitle>Hall of Fame</CardTitle>
+                            <CardDescription className="flex items-center gap-2">
+                                View the top student point earners <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </CardDescription>
                         </CardHeader>
                     </Card>
