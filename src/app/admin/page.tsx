@@ -5,6 +5,7 @@ import { useAppContext } from '@/components/AppProvider';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud, IdCard,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -28,6 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -125,6 +127,7 @@ function AdminDashboard() {
     addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
     createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
+    isBackupOverdue,
   } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
@@ -317,6 +320,21 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {isBackupOverdue && (
+        <Alert variant="destructive" className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Bell className="h-5 w-5 mr-3" />
+            <div>
+              <AlertTitle>Daily Backup Recommended</AlertTitle>
+              <AlertDescription>
+                Your last backup is more than 24 hours old. Please create a new backup to prevent data loss.
+              </AlertDescription>
+            </div>
+          </div>
+          <Button onClick={handleCreateBackup} variant="destructive">Create Backup Now</Button>
+        </Alert>
+      )}
+
       <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
