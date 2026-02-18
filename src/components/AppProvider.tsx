@@ -510,11 +510,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number, errors: string[]}> => {
     if (!firestore || !schoolId) return {success: 0, failed: 0, errors: ["Not logged in."]};
     
-    const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+    const lines = csvContent.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
     const errors: string[] = [];
 
-    if (lines.length < 1) {
-      errors.push('File is empty or does not contain any data.');
+    if (lines.length === 0) {
+      errors.push('File is empty.');
       return {success: 0, failed: 0, errors};
     }
     
@@ -523,15 +523,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let successCount = 0;
     let failedCount = 0;
 
-    lines.forEach((row, index) => {
+    let dataLines = lines;
+    const firstLine = lines[0].toLowerCase();
+    // Simple header detection
+    if (firstLine.includes('first') || firstLine.includes('last') || firstLine.includes('username')) {
+        dataLines = lines.slice(1);
+    }
+    
+    const originalRowCount = dataLines.length;
+
+    dataLines.forEach((row, index) => {
         if (!row.trim()) return;
 
-        const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const [firstName, lastName, className] = values;
+        const delimiter = row.includes(';') ? ';' : ',';
+        const values = row.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
 
-        if (!firstName || !lastName) {
+        let firstName, lastName, className;
+
+        if (values.length >= 4) { // Assumes format like: user, id, first, last
+            firstName = values[2];
+            lastName = values[3];
+        } else if (values.length >= 2) { // Assumes format like: first, last, [class]
+            firstName = values[0];
+            lastName = values[1];
+            className = values[2] || '';
+        }
+
+        if (!firstName || !lastName || firstName.length === 0 || lastName.length === 0) {
             failedCount++;
-            errors.push(`Row ${index + 1}: Missing first or last name. Row content: "${row}"`);
+            errors.push(`Row ${index + (lines.length - originalRowCount) + 1}: Missing first or last name. Row content: "${row}"`);
             return;
         }
       
@@ -541,7 +561,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } while (existingNfcIds.has(newNfcId));
 
 
-        const classObj = db.classes.find(c => c.name.toLowerCase() === (className || '').toLowerCase());
+        const classObj = db.classes.find(c => className && c.name.toLowerCase() === className.toLowerCase());
 
         const newStudent: Student = {
             id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
@@ -580,7 +600,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       window.addEventListener('afterprint', handleAfterPrint);
       
-      document.fonts.load('38pt "Libre Barcode 39 Text"').finally(() => {
+      document.fonts.load('38pt "Libre Barcode 39"').finally(() => {
           window.print();
       });
     }
@@ -597,7 +617,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       window.addEventListener('afterprint', handleAfterPrint);
       
-      document.fonts.load('48pt "Libre Barcode 39 Text"').finally(() => {
+      document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
           window.print();
       });
     }

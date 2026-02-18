@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 .font-barcode {
-  font-family: 'Libre Barcode 39 Text', cursive;
+  font-family: 'Libre Barcode 39', cursive;
 }
 
 @layer base {
@@ -263,13 +263,6 @@
         font-size: 48pt;
         line-height: 1;
         color: #000;
-    }
-
-    .print-id-code {
-        font-family: 'Source Code Pro', monospace;
-        font-size: 10pt;
-        letter-spacing: 2px;
-        margin-top: 0.05in;
     }
 }
 

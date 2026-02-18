@@ -171,7 +171,7 @@ function AdminDashboard() {
     if (!newTeacherName) return;
     await addTeacher({ name: newTeacherName });
     setNewTeacherName('');
-    toast({ title: 'Teacher Added' });
+    toast({ title: 'Teacher / Faculty Added' });
   };
 
   const handleAddCategory = async () => {
@@ -382,13 +382,13 @@ function AdminDashboard() {
         <Card className="border-t-4 border-purple-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="text-purple-500" /> Teachers
+              <User className="text-purple-500" /> Teachers / Faculty
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-4">
               <Input
-                placeholder="Teacher Name"
+                placeholder="Teacher/Faculty Name"
                 value={newTeacherName}
                 onChange={(e) => setNewTeacherName(e.target.value)}
               />
@@ -418,7 +418,7 @@ function AdminDashboard() {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={async () => {
                            await deleteTeacher(t.id);
-                           toast({ title: 'Teacher Deleted' });
+                           toast({ title: 'Teacher / Faculty Deleted' });
                         }}>Continue</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -694,7 +694,7 @@ function AdminDashboard() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload a CSV file with rows containing: <span className="font-code">firstName,lastName,className</span>. No header row needed. Only first and last name are required.</p>
+                  <p>Upload a CSV file with rows containing: <span className="font-code">firstName,lastName</span>. No header row needed. The file can use commas or semicolons as separators.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -813,7 +813,7 @@ function AdminDashboard() {
             </div>
              <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Teachers</p>
+                <p className="text-sm text-muted-foreground">Teachers / Faculty</p>
             </div>
             <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.coupons.length} / {usedCoupons}</p>
