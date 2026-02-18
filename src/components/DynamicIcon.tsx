@@ -1,5 +1,6 @@
 'use client';
 import * as icons from 'lucide-react';
+import React from 'react';
 
 type DynamicIconProps = {
   name: string;
@@ -9,11 +10,14 @@ type DynamicIconProps = {
 const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
   const LucideIcon = icons[name as keyof typeof icons];
 
-  if (!LucideIcon) {
+  // Check if the icon exists and is a valid React component object (lucide icons are objects).
+  // This prevents errors if a non-component export (like a helper function) is passed as the name.
+  if (!LucideIcon || typeof LucideIcon !== 'object') {
     return <icons.Gift {...props} />; // Fallback icon
   }
 
-  return <LucideIcon {...props} />;
+  const Component = LucideIcon as React.ElementType;
+  return <Component {...props} />;
 };
 
 export default DynamicIcon;
