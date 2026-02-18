@@ -336,377 +336,377 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-            <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
-          </h2>
-        </div>
-        <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
-        </Button>
-      </Card>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-t-4 border-chart-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="text-chart-1" /> Classes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 mb-4">
-              <Input
-                placeholder="Class Name"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-              />
-              <Button onClick={handleAddClass}>Add</Button>
-            </div>
-            <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.classes?.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex justify-between items-center bg-secondary p-2 rounded border"
-                >
-                  <span className="font-bold text-sm">{c.name}</span>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. Students in this class will become unassigned.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={async () => {
-                           await deleteClass(c.id);
-                           toast({ title: 'Class Deleted' });
-                        }}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
+              <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
+            </h2>
+          </div>
+          <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
+          </Button>
         </Card>
         
-        <Card className="border-t-4 border-purple-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="text-purple-500" /> Teachers / Faculty
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 mb-4">
-              <Input
-                placeholder="Teacher/Faculty Name"
-                value={newTeacherName}
-                onChange={(e) => setNewTeacherName(e.target.value)}
-              />
-              <Button onClick={handleAddTeacher}>Add</Button>
-            </div>
-            <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.teachers?.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex justify-between items-center bg-secondary p-2 rounded border"
-                >
-                  <span className="font-bold text-sm">{t.name}</span>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={async () => {
-                           await deleteTeacher(t.id);
-                           toast({ title: 'Teacher / Faculty Deleted' });
-                        }}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-
-        <Card className="border-t-4 border-chart-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Tag className="text-chart-2" /> Categories
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 mb-4">
-              <Input
-                placeholder="Category Name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-              />
-              <Button
-                onClick={handleAddCategory}
-              >
-                Add
-              </Button>
-            </div>
-            <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-              {db.categories?.map((c) => (
-                <li
-                  key={c}
-                  className="flex justify-between items-center bg-secondary p-2 rounded border"
-                >
-                  <span className="text-sm">{c}</span>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete category "{c}"?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={async () => {
-                           await deleteCategory(c);
-                           toast({ title: 'Category Deleted' });
-                        }}>Continue</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="border-t-4 border-chart-3 lg:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="border-t-4 border-chart-1">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Gift className="text-chart-3" /> Manage Prizes
-                  </div>
-                  <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
-                    <Plus className="mr-2 h-4 w-4" /> Add Prize
-                  </Button>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="text-chart-1" /> Classes
               </CardTitle>
-              <CardDescription>Add, edit, or delete prizes available in the prize shop.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                {db.prizes?.length > 0 ? [...db.prizes].sort((a,b) => a.points - b.points).map(prize => (
-                  <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <div className='flex items-center gap-3'>
-                       <Switch 
-                         checked={prize.inStock} 
-                         onCheckedChange={(checked) => updatePrize({...prize, inStock: checked})}
-                         aria-label="In Stock"
-                       />
-                      <DynamicIcon name={prize.icon} className={cn("w-5 h-5 text-primary", !prize.inStock && "opacity-40")}/>
-                      <div>
-                        <span className={cn("font-bold text-sm", !prize.inStock && "line-through opacity-60")}>{prize.name}</span>
-                        <p className="text-xs text-muted-foreground">{prize.points} pts</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-0.5">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
-                        <Edit className="h-4 w-4 text-blue-500" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-8 w-8">
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete prize "{prize.name}"?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => {
-                              await deletePrize(prize.id);
-                              toast({ title: 'Prize Deleted' });
-                            }}>Continue</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Class Name"
+                  value={newClassName}
+                  onChange={(e) => setNewClassName(e.target.value)}
+                />
+                <Button onClick={handleAddClass}>Add</Button>
+              </div>
+              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {db.classes?.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex justify-between items-center bg-secondary p-2 rounded border"
+                  >
+                    <span className="font-bold text-sm">{c.name}</span>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. Students in this class will become unassigned.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={async () => {
+                             await deleteClass(c.id);
+                             toast({ title: 'Class Deleted' });
+                          }}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </li>
-                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No prizes found. Add one to get started!</p>}
+                ))}
               </ul>
             </CardContent>
-        </Card>
-        
-        <Card className="border-t-4 border-chart-4">
+          </Card>
+          
+          <Card className="border-t-4 border-purple-500">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Database className="text-chart-4" /> System Backups
-                  </div>
-                  <Button onClick={handleCreateBackup} size="sm">
-                    <Plus className="mr-2 h-4 w-4" /> Create Backup
-                  </Button>
+              <CardTitle className="flex items-center gap-2">
+                <User className="text-purple-500" /> Teachers / Faculty
               </CardTitle>
-              <CardDescription>Create a manual backup of the current database state.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
-                {backups.length > 0 ? backups.map(backup => (
-                  <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <span className="font-code text-sm">{new Date(parseInt(backup.id)).toLocaleString()}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
-                            <AlertDialogDescription>This will overwrite all current data with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleRestoreFromBackup(backup.id)}>Restore</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </li>
-                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
-              </ul>
-              <Separator className="my-4" />
-              <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
-                <Upload /> Restore from JSON file
-              </Button>
-              <input
-                type="file"
-                ref={backupFileInputRef}
-                onChange={onBackupFileChange}
-                className="hidden"
-                accept="application/json"
-              />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-t-4 border-primary">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Printer className="text-primary" /> Master Coupon Printer
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-6">
-            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <Label>Issue By</Label>
-                <Select value={printTeacher} onValueChange={setPrintTeacher}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Admin">Admin/General</SelectItem>
-                    {db.teachers?.map((t) => (
-                      <SelectItem key={t.id} value={t.name}>
-                        {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Teacher/Faculty Name"
+                  value={newTeacherName}
+                  onChange={(e) => setNewTeacherName(e.target.value)}
+                />
+                <Button onClick={handleAddTeacher}>Add</Button>
               </div>
-              <div>
-                <Label>Category</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={printCategory} onValueChange={setPrintCategory}>
+              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {db.teachers?.map((t) => (
+                  <li
+                    key={t.id}
+                    className="flex justify-between items-center bg-secondary p-2 rounded border"
+                  >
+                    <span className="font-bold text-sm">{t.name}</span>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={async () => {
+                             await deleteTeacher(t.id);
+                             toast({ title: 'Teacher / Faculty Deleted' });
+                          }}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+
+          <Card className="border-t-4 border-chart-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="text-chart-2" /> Categories
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 mb-4">
+                <Input
+                  placeholder="Category Name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+                <Button
+                  onClick={handleAddCategory}
+                >
+                  Add
+                </Button>
+              </div>
+              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {db.categories?.map((c) => (
+                  <li
+                    key={c}
+                    className="flex justify-between items-center bg-secondary p-2 rounded border"
+                  >
+                    <span className="text-sm">{c}</span>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                       <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete category "{c}"?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={async () => {
+                             await deleteCategory(c);
+                             toast({ title: 'Category Deleted' });
+                          }}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border-t-4 border-chart-3 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="text-chart-3" /> Manage Prizes
+                    </div>
+                    <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
+                      <Plus className="mr-2 h-4 w-4" /> Add Prize
+                    </Button>
+                </CardTitle>
+                <CardDescription>Add, edit, or delete prizes available in the prize shop.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                  {db.prizes?.length > 0 ? [...db.prizes].sort((a,b) => a.points - b.points).map(prize => (
+                    <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
+                      <div className='flex items-center gap-3'>
+                         <Switch 
+                           checked={prize.inStock} 
+                           onCheckedChange={(checked) => updatePrize({...prize, inStock: checked})}
+                           aria-label="In Stock"
+                         />
+                        <DynamicIcon name={prize.icon} className={cn("w-5 h-5 text-primary", !prize.inStock && "opacity-40")}/>
+                        <div>
+                          <span className={cn("font-bold text-sm", !prize.inStock && "line-through opacity-60")}>{prize.name}</span>
+                          <p className="text-xs text-muted-foreground">{prize.points} pts</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
+                          <Edit className="h-4 w-4 text-blue-500" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete prize "{prize.name}"?</AlertDialogTitle>
+                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={async () => {
+                                await deletePrize(prize.id);
+                                toast({ title: 'Prize Deleted' });
+                              }}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </li>
+                  )) : <p className="text-center text-sm text-muted-foreground italic py-2">No prizes found. Add one to get started!</p>}
+                </ul>
+              </CardContent>
+          </Card>
+          
+          <Card className="border-t-4 border-chart-4">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="text-chart-4" /> System Backups
+                    </div>
+                    <Button onClick={handleCreateBackup} size="sm">
+                      <Plus className="mr-2 h-4 w-4" /> Create Backup
+                    </Button>
+                </CardTitle>
+                <CardDescription>Create a manual backup of the current database state.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
+                  {backups.length > 0 ? backups.map(backup => (
+                    <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
+                      <span className="font-code text-sm">{new Date(parseInt(backup.id)).toLocaleString()}</span>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
+                              <AlertDialogDescription>This will overwrite all current data with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRestoreFromBackup(backup.id)}>Restore</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </li>
+                  )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
+                </ul>
+                <Separator className="my-4" />
+                <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
+                  <Upload /> Restore from JSON file
+                </Button>
+                <input
+                  type="file"
+                  ref={backupFileInputRef}
+                  onChange={onBackupFileChange}
+                  className="hidden"
+                  accept="application/json"
+                />
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-t-4 border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Printer className="text-primary" /> Master Coupon Printer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col md:flex-row gap-6">
+              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label>Issue By</Label>
+                  <Select value={printTeacher} onValueChange={setPrintTeacher}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category..."/>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {db.categories?.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
+                      <SelectItem value="Admin">Admin/General</SelectItem>
+                      {db.teachers?.map((t) => (
+                        <SelectItem key={t.id} value={t.name}>
+                          {t.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                      <DialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                          <DialogHeader>
-                              <DialogTitle>Add New Category</DialogTitle>
-                              <DialogDescription>Create a new category for coupons.</DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                              <Label htmlFor="new-print-category-name">Category Name</Label>
-                              <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
-                          </div>
-                          <DialogFooter>
-                              <Button onClick={handleAddPrintCategory}>Save Category</Button>
-                          </DialogFooter>
-                      </DialogContent>
-                  </Dialog>
                 </div>
-              </div>
-              <div>
-                <Label>Value</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 25"
-                  value={printValue}
-                  onChange={(e) => setPrintValue(e.target.value)}
-                />
-              </div>
-              <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
-                <Printer /> Print Sheet (24)
-              </Button>
-            </div>
-            <div className="w-full md:w-1/3 flex flex-col items-center">
-                <Label className="font-semibold text-muted-foreground">Live Preview</Label>
-                <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
-                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                <div>
+                  <Label>Category</Label>
+                  <div className="flex items-center gap-2">
+                    <Select value={printCategory} onValueChange={setPrintCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category..."/>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {db.categories?.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Add New Category</DialogTitle>
+                                <DialogDescription>Create a new category for coupons.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <Label htmlFor="new-print-category-name">Category Name</Label>
+                                <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={handleAddPrintCategory}>Save Category</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
-            </div>
-        </CardContent>
-      </Card>
+                <div>
+                  <Label>Value</Label>
+                  <Input
+                    type="number"
+                    placeholder="e.g. 25"
+                    value={printValue}
+                    onChange={(e) => setPrintValue(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
+                  <Printer /> Print Sheet (24)
+                </Button>
+              </div>
+              <div className="w-full md:w-1/3 flex flex-col items-center">
+                  <Label className="font-semibold text-muted-foreground">Live Preview</Label>
+                  <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
+                      <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                  </div>
+              </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <CardTitle>All Students</CardTitle>
-            <CardDescription>{db.students.length} students in the database.</CardDescription>
-          </div>
-          <div className='flex gap-2 w-full sm:w-auto'>
-            <TooltipProvider>
+        <Card>
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle>All Students</CardTitle>
+              <CardDescription>{db.students.length} students in the database.</CardDescription>
+            </div>
+            <div className='flex gap-2 w-full sm:w-auto'>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="flex-1">
@@ -717,178 +717,176 @@ function AdminDashboard() {
                   <p>Upload a CSV file with rows containing: <span className="font-code">firstName,lastName</span>. No header row needed. The file can use commas or semicolons as separators.</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-            <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
-                <Printer className="mr-2 h-4 w-4" /> Print ID Cards
-            </Button>
-            <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
-              <Plus className="mr-2 h-4 w-4" /> Add Student
-            </Button>
-            <input
-                type="file"
-                ref={studentCsvInputRef}
-                onChange={onStudentCsvFileChange}
-                className="hidden"
-                accept=".csv"
-              />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TooltipProvider>
-            <div className="mb-4">
-              <Input 
-                placeholder="Search students by name..."
-                value={studentSearchTerm}
-                onChange={(e) => setStudentSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+              <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
+                  <Printer className="mr-2 h-4 w-4" /> Print ID Cards
+              </Button>
+              <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
+                <Plus className="mr-2 h-4 w-4" /> Add Student
+              </Button>
+              <input
+                  type="file"
+                  ref={studentCsvInputRef}
+                  onChange={onStudentCsvFileChange}
+                  className="hidden"
+                  accept=".csv"
+                />
             </div>
-            <ScrollArea className="h-96">
-              <ul className="space-y-2 pr-4">
-                {db.students
-                  .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
-                  .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
-                  .map((s) => (
-                    <li
-                      key={s.id}
-                      className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
-                    >
-                      <div>
-                        <p className="font-bold">
-                          {s.lastName}, {s.firstName}{' '}
-                          <span className="text-primary font-normal text-xs">
-                            ({s.points} pts)
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Class: {getClassName(s.classId)} | ID: {s.nfcId}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-0.5">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                             <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
-                              <IdCard className="w-4 h-4 text-green-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Print ID Card</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
-                              <History className="w-4 h-4 text-gray-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>View Activity</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
-                              <Edit className="w-4 h-4 text-blue-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Edit Student</p></TooltipContent>
-                        </Tooltip>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete this student's record.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={async () => {
-                                await deleteStudent(s.id);
-                                toast({ title: 'Student Deleted' });
-                              }}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-            </ScrollArea>
-          </TooltipProvider>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.students.length}</p>
-                <p className="text-sm text-muted-foreground">Students</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Classes</p>
-            </div>
-             <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Teachers / Faculty</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.coupons.length} / {usedCoupons}</p>
-                <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{db.prizes.length} / {prizesRedeemed}</p>
-                <p className="text-sm text-muted-foreground">Prizes (Types/Redeemed)</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Points Awarded</p>
-            </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+              <div className="mb-4">
+                <Input 
+                  placeholder="Search students by name..."
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <ScrollArea className="h-96">
+                <ul className="space-y-2 pr-4">
+                  {db.students
+                    .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                    .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
+                    .map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
+                      >
+                        <div>
+                          <p className="font-bold">
+                            {s.lastName}, {s.firstName}{' '}
+                            <span className="text-primary font-normal text-xs">
+                              ({s.points} pts)
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Class: {getClassName(s.classId || '')} | ID: {s.nfcId}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                               <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
+                                <IdCard className="w-4 h-4 text-green-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Print ID Card</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
+                                <History className="w-4 h-4 text-gray-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>View Activity</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
+                                <Edit className="w-4 h-4 text-blue-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Edit Student</p></TooltipContent>
+                          </Tooltip>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete this student's record.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={async () => {
+                                  await deleteStudent(s.id);
+                                  toast({ title: 'Student Deleted' });
+                                }}>Continue</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </ScrollArea>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Database Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+              <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{db.students.length}</p>
+                  <p className="text-sm text-muted-foreground">Students</p>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Classes</p>
+              </div>
+               <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Teachers / Faculty</p>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{db.coupons.length} / {usedCoupons}</p>
+                  <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{db.prizes.length} / {prizesRedeemed}</p>
+                  <p className="text-sm text-muted-foreground">Prizes (Types/Redeemed)</p>
+              </div>
+              <div className="bg-secondary p-4 rounded-lg">
+                  <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Points Awarded</p>
+              </div>
+          </CardContent>
+        </Card>
 
-      <StudentModal
-        isOpen={isStudentModalOpen}
-        setIsOpen={setIsStudentModalOpen}
-        student={editingStudent}
-      />
-      <PrizeModal
-        isOpen={isPrizeModalOpen}
-        setIsOpen={setIsPrizeModalOpen}
-        prize={editingPrize}
-      />
-      <StudentActivityModal
-        isOpen={!!activityStudent}
-        setIsOpen={() => setActivityStudent(null)}
-        student={activityStudent}
-      />
-       <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>CSV Upload Report</AlertDialogTitle>
-            <AlertDialogDescription>
-              {uploadReport?.success} students uploaded successfully. {uploadReport?.failed} rows failed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {uploadReport && uploadReport.errors.length > 0 && (
-            <div className="mt-4 max-h-60 overflow-y-auto bg-slate-100 dark:bg-slate-800 p-3 rounded-md text-sm font-code">
-              <p className="font-bold mb-2">Error Details:</p>
-              <ul className="space-y-1">
-                {uploadReport.errors.map((error, i) => <li key={i}>{error}</li>)}
-              </ul>
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setUploadReport(null)}>Close</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <StudentModal
+          isOpen={isStudentModalOpen}
+          setIsOpen={setIsStudentModalOpen}
+          student={editingStudent}
+        />
+        <PrizeModal
+          isOpen={isPrizeModalOpen}
+          setIsOpen={setIsPrizeModalOpen}
+          prize={editingPrize}
+        />
+        <StudentActivityModal
+          isOpen={!!activityStudent}
+          setIsOpen={() => setActivityStudent(null)}
+          student={activityStudent}
+        />
+         <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>CSV Upload Report</AlertDialogTitle>
+              <AlertDialogDescription>
+                {uploadReport?.success} students uploaded successfully. {uploadReport?.failed} rows failed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {uploadReport && uploadReport.errors.length > 0 && (
+              <div className="mt-4 max-h-60 overflow-y-auto bg-slate-100 dark:bg-slate-800 p-3 rounded-md text-sm font-code">
+                <p className="font-bold mb-2">Error Details:</p>
+                <ul className="space-y-1">
+                  {uploadReport.errors.map((error, i) => <li key={i}>{error}</li>)}
+                </ul>
+              </div>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setUploadReport(null)}>Close</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </TooltipProvider>
   );
 }
 
