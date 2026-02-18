@@ -13,7 +13,7 @@ const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
   // A more robust check. A valid ForwardRef component (which lucide-react icons are)
   // is an object that has a 'render' function. This filters out other exports.
   if (LucideIcon && typeof LucideIcon === 'object' && 'render' in LucideIcon) {
-    const Component = LucideIcon as React.ElementType;
+    const Component = LucideIcon as unknown as React.ElementType;
     return <Component {...props} />;
   }
 
