@@ -88,7 +88,128 @@ function StudentDashboard({
   const eligibleRewards = db.prizes?.filter(r => student.points >= r.points) || [];
 
   return (
-    <div className="relative space-y-6 animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
+    <div className="relative animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
+      
+      <div className="space-y-6">
+        <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
+              <Gift size={128} strokeWidth={1} />
+          </div>
+          <CardHeader className="flex flex-row justify-between items-start">
+            <div>
+              <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
+              <CardTitle className="font-headline text-4xl">
+                {student.firstName} {student.lastName}
+              </CardTitle>
+            </div>
+            <div className="text-right">
+               <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
+               <p className="text-5xl font-bold">
+                {student.points.toLocaleString()}{' '}
+                <span className="text-3xl font-normal">pts</span>
+              </p>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="md:col-span-2 space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <ScanLine /> Redeem Coupon Code
+                </CardTitle>
+                 <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
+                  Auto-logout in {logoutTimer}s
+                </div>
+              </CardHeader>
+              <CardContent className="flex gap-2">
+                <Input
+                  placeholder="Scan or type barcode now..."
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                  autoFocus
+                />
+                <Button onClick={handleRedeemCoupon}>Redeem</Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline text-2xl">
+                  <ShoppingBag /> Eligible Rewards
+                </CardTitle>
+                <CardDescription>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
+                  <Card key={reward.id} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
+                      <div className="p-4 bg-accent rounded-full mb-3 text-primary">
+                        <DynamicIcon name={reward.icon} className="w-8 h-8" />
+                      </div>
+                      <p className="font-bold text-lg">{reward.name}</p>
+                      <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
+                  </Card>
+                )) : (
+                  <p className="text-center text-muted-foreground italic md:col-span-3 py-4">Keep earning points to unlock rewards!</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column */}
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History /> Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="relative">
+                <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
+                  {student.history.length > 0 ? (
+                    student.history
+                      .sort((a, b) => b.date - a.date)
+                      .map((item, index) => (
+                        <li
+                          key={index}
+                          className="flex justify-between items-center text-sm"
+                        >
+                          <div>
+                            <p className="font-medium">{item.desc}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(
+                                new Date(item.date),
+                                "MMM d, yyyy, h:mm a"
+                              )}
+                            </p>
+                          </div>
+                          <span
+                            className={`font-bold ${
+                              item.amount > 0 ? 'text-green-500' : 'text-red-500'
+                            }`}
+                          >
+                            {item.amount > 0 ? `+${item.amount}` : item.amount}
+                          </span>
+                        </li>
+                      ))
+                  ) : (
+                    <p className="text-center text-muted-foreground italic py-4">
+                      No transaction history yet.
+                    </p>
+                  )}
+                </ul>
+                <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onDone}>
+                  <LogOut className="mr-2"/> Log Out Now
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+      
       {animatedValue !== null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
             <div className="text-8xl font-bold text-green-500 animate-fly-up">
@@ -96,124 +217,6 @@ function StudentDashboard({
             </div>
         </div>
       )}
-
-      <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
-        <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
-            <Gift size={128} strokeWidth={1} />
-        </div>
-        <CardHeader className="flex flex-row justify-between items-start">
-          <div>
-            <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
-            <CardTitle className="font-headline text-4xl">
-              {student.firstName} {student.lastName}
-            </CardTitle>
-          </div>
-          <div className="text-right">
-             <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
-             <p className="text-5xl font-bold">
-              {student.points.toLocaleString()}{' '}
-              <span className="text-3xl font-normal">pts</span>
-            </p>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <ScanLine /> Redeem Coupon Code
-              </CardTitle>
-               <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
-                Auto-logout in {logoutTimer}s
-              </div>
-            </CardHeader>
-            <CardContent className="flex gap-2">
-              <Input
-                placeholder="Scan or type barcode now..."
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                autoFocus
-              />
-              <Button onClick={handleRedeemCoupon}>Redeem</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline text-2xl">
-                <ShoppingBag /> Eligible Rewards
-              </CardTitle>
-              <CardDescription>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
-                <Card key={reward.id} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
-                    <div className="p-4 bg-accent rounded-full mb-3 text-primary">
-                      <DynamicIcon name={reward.icon} className="w-8 h-8" />
-                    </div>
-                    <p className="font-bold text-lg">{reward.name}</p>
-                    <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
-                </Card>
-              )) : (
-                <p className="text-center text-muted-foreground italic md:col-span-3 py-4">Keep earning points to unlock rewards!</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column */}
-        <div className="md:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History /> Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative">
-              <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
-                {student.history.length > 0 ? (
-                  student.history
-                    .sort((a, b) => b.date - a.date)
-                    .map((item, index) => (
-                      <li
-                        key={index}
-                        className="flex justify-between items-center text-sm"
-                      >
-                        <div>
-                          <p className="font-medium">{item.desc}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(
-                              new Date(item.date),
-                              "MMM d, yyyy, h:mm a"
-                            )}
-                          </p>
-                        </div>
-                        <span
-                          className={`font-bold ${
-                            item.amount > 0 ? 'text-green-500' : 'text-red-500'
-                          }`}
-                        >
-                          {item.amount > 0 ? `+${item.amount}` : item.amount}
-                        </span>
-                      </li>
-                    ))
-                ) : (
-                  <p className="text-center text-muted-foreground italic py-4">
-                    No transaction history yet.
-                  </p>
-                )}
-              </ul>
-              <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={onDone}>
-                <LogOut className="mr-2"/> Log Out Now
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }
