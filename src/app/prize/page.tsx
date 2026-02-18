@@ -27,16 +27,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
+import { cn } from '@/lib/utils';
 
 function PrizeDashboard({
-  student,
+  studentId,
   onDone,
 }: {
-  student: Student;
+  studentId: string;
   onDone: () => void;
 }) {
     const { db, updateStudent } = useAppContext();
     const { toast } = useToast();
+    
+    // Find the student from the live db context to ensure data is always fresh
+    const student = db.students.find(s => s.id === studentId);
+
+    // If student is not found (e.g., deleted in another tab), log out.
+    useEffect(() => {
+        if (!student) {
+            toast({
+                variant: 'destructive',
+                title: 'Student not found',
+                description: 'The student may have been deleted. Logging out.',
+            });
+            onDone();
+        }
+    }, [student, onDone, toast]);
+
+    if (!student) {
+        return null; // Render nothing while logging out
+    }
+
 
     const handleRedeemReward = async (prize: Prize) => {
         if (student.points < prize.points) {
@@ -85,18 +106,24 @@ function PrizeDashboard({
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {db.prizes?.map((prize: Prize) => (
-                    <Card key={prize.id} className="p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all hover:shadow-xl hover:-translate-y-1">
-                        <div className="p-6 bg-accent rounded-full mb-3 text-primary">
-                            <DynamicIcon name={prize.icon} className="w-8 h-8" />
-                        </div>
-                        <p className="font-bold text-xl">{prize.name}</p>
-                        <Badge variant="secondary" className="my-3 text-lg font-bold">{prize.points.toLocaleString()} pts</Badge>
-                        <Button onClick={() => handleRedeemReward(prize)} disabled={student.points < prize.points} className="w-full">
-                            <Gift className="mr-2" /> Redeem
-                        </Button>
-                    </Card>
-                ))}
+                {db.prizes?.map((prize: Prize) => {
+                    const canAfford = student.points >= prize.points;
+                    return (
+                        <Card key={prize.id} className={cn(
+                            "p-4 flex flex-col items-center justify-between text-center bg-background dark:bg-card transition-all",
+                            !canAfford ? "opacity-60 grayscale" : "hover:shadow-xl hover:-translate-y-1"
+                        )}>
+                            <div className="p-6 bg-accent rounded-full mb-3 text-primary">
+                                <DynamicIcon name={prize.icon} className="w-8 h-8" />
+                            </div>
+                            <p className="font-bold text-xl">{prize.name}</p>
+                            <Badge variant="secondary" className="my-3 text-lg font-bold">{prize.points.toLocaleString()} pts</Badge>
+                            <Button onClick={() => handleRedeemReward(prize)} disabled={!canAfford} className="w-full">
+                                <Gift className="mr-2" /> Redeem
+                            </Button>
+                        </Card>
+                    );
+                })}
             </div>
 
              <Button variant="destructive" className="w-full mt-4" onClick={onDone}>
@@ -111,7 +138,7 @@ export default function PrizePage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const [activeStudent, setActiveStudent] = useState<Student | null>(null);
+    const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [nfcId, setNfcId] = useState('');
     const nfcInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,16 +149,16 @@ export default function PrizePage() {
     }, [isInitialized, loginState, router]);
     
     useEffect(() => {
-        if (!activeStudent) {
+        if (!activeStudentId) {
             setTimeout(() => nfcInputRef.current?.focus(), 100);
         }
-    }, [activeStudent]);
+    }, [activeStudentId]);
 
     const handleNfcSubmit = () => {
         if(!nfcId) return;
         const student = db.students.find((s) => s.nfcId === nfcId);
         if (student) {
-        setActiveStudent(student);
+            setActiveStudentId(student.id);
         } else {
         toast({
             variant: 'destructive',
@@ -143,7 +170,7 @@ export default function PrizePage() {
     };
 
     const handleDone = useCallback(() => {
-        setActiveStudent(null);
+        setActiveStudentId(null);
         setNfcId('');
     }, []);
 
@@ -151,8 +178,8 @@ export default function PrizePage() {
         return <p>Loading...</p>;
     }
 
-    if (activeStudent) {
-        return <PrizeDashboard student={activeStudent} onDone={handleDone} />;
+    if (activeStudentId) {
+        return <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />;
     }
 
     return (
