@@ -69,7 +69,7 @@ export default function Header() {
                 {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
               </Button>
               <Button asChild>
-                <Link href="/portal"><Home className="mr-2" /> Portal Home</Link>
+                <Link href="/portal"><Home className="mr-2" /> Home</Link>
               </Button>
             </>
           )}
