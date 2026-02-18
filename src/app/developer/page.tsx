@@ -71,9 +71,9 @@ export default function DeveloperPage() {
           toast({variant: 'destructive', title: "School ID cannot be empty."});
           return;
       }
-      const passcode = await createSchool(newSchoolId);
-      if (passcode) {
-        setCreatedSchoolInfo({ id: newSchoolId, passcode });
+      const result = await createSchool(newSchoolId);
+      if (result) {
+        setCreatedSchoolInfo({ id: result.cleanId, passcode: result.passcode });
       }
       setNewSchoolId('');
   };

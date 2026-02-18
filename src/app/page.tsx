@@ -96,7 +96,7 @@ export default function LoginPage() {
                   id="schoolId"
                   placeholder="e.g. lincoln_high"
                   value={schoolId}
-                  onChange={(e) => setSchoolId(e.target.value.trim())}
+                  onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
                   onKeyPress={(e) => e.key === 'Enter' && handleSchoolLogin()}
                 />
               </div>

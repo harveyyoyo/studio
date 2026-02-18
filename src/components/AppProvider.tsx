@@ -61,7 +61,7 @@ interface AppContextType {
   deleteCategory: (categoryName: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
-  createSchool: (schoolId: string) => Promise<string | null>;
+  createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchoolPasscode: (schoolId: string, passcode: string) => Promise<void>;
   setData: (data: Database) => Promise<void>;
@@ -225,14 +225,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return true;
         }
       } else if (type === 'school' && credentials.schoolId && firestore) {
-          const schoolLoginDocRef = doc(firestore, 'schools', credentials.schoolId);
+          const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+          const schoolLoginDocRef = doc(firestore, 'schools', lowerSchoolId);
           try {
             const docSnap = await getDoc(schoolLoginDocRef);
             if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
-               setSchoolId(credentials.schoolId);
+               setSchoolId(lowerSchoolId);
                setLoginState('school');
                sessionStorage.setItem('loginState', 'school');
-               sessionStorage.setItem('schoolId', credentials.schoolId);
+               sessionStorage.setItem('schoolId', lowerSchoolId);
                return true;
             }
           } catch(e) {
@@ -253,7 +254,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     router.push('/');
   }, [router]);
   
-  const createSchool = useCallback(async (schoolId: string): Promise<string | null> => {
+  const createSchool = useCallback(async (schoolId: string): Promise<{ passcode: string; cleanId: string } | null> => {
     if (!firestore) return null;
     const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (!cleanId) {
@@ -274,7 +275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setDoc(newSchoolDocRef, schoolData);
     
     toast({title: `School "${cleanId}" created!`});
-    return newPasscode;
+    return { passcode: newPasscode, cleanId };
   }, [firestore, toast]);
   
   const deleteSchool = useCallback(async (schoolId: string) => {
