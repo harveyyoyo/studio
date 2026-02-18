@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next';
-import withPWA from '@ducanh2912/next-pwa';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -33,61 +32,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  runtimeCaching: [
-    // Cache pages with a NetworkFirst strategy.
-    {
-      urlPattern: ({ request, url }) => {
-        // Only cache navigation requests.
-        if (request.mode !== 'navigate') {
-          return false;
-        }
-        // Don't cache API routes.
-        if (url.pathname.startsWith('/api/')) {
-          return false;
-        }
-        return true;
-      },
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'pages-cache',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-      },
-    },
-    // Cache static assets (images, fonts, etc.) with a StaleWhileRevalidate strategy.
-    {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico|woff2?|eot|ttf|otf)$/,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'static-assets-cache',
-        expiration: {
-          maxEntries: 200,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-      },
-    },
-    // Cache JS and CSS with a NetworkFirst strategy for freshness.
-    {
-        urlPattern: /\.(?:js|css)$/,
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'js-css-cache',
-          networkTimeoutSeconds: 3, // Fail fast on slow networks
-          expiration: {
-            maxEntries: 100,
-            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-          },
-        },
-    },
-  ],
-  workboxOptions: {
-    // The ultimate fallback page for when a navigation fails and the page isn't cached.
-    navigateFallback: "/offline.html",
-  }
-})(nextConfig);
+export default nextConfig;

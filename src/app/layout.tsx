@@ -11,7 +11,6 @@ import {
 export const metadata: Metadata = {
   title: "Arcade Rewards Hub",
   description: "A school points and rewards system.",
-  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -22,10 +21,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Arcade Rewards" />
-        <meta name="theme-color" content="#7986CB" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
