@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Building, Code } from 'lucide-react';
+import { Building, Code, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -64,7 +64,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-10">
+    <div className="flex flex-col items-center justify-center py-10 space-y-8">
       <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="school">
@@ -157,6 +157,46 @@ export default function LoginPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card className="w-full max-w-4xl">
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline text-2xl"><BookOpen className="w-6 h-6"/> How to Use the App</CardTitle>
+          </CardHeader>
+          <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground space-y-4">
+            <p>Reward Arcade is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.</p>
+            
+            <div>
+              <h3 className="font-bold text-foreground">1. Login</h3>
+              <ul className="list-disc list-inside space-y-1 pl-2">
+                <li><strong className="text-foreground">School Login:</strong> To access any school-specific portal (Student, Teacher, Admin), you'll first need to log in using your school's unique <strong className="text-foreground">School ID</strong> and <strong className="text-foreground">Passcode</strong>.</li>
+                <li><strong className="text-foreground">Developer Login:</strong> This is for system administrators to manage all school instances.</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-foreground">2. Portals</h3>
+              <p>Once you've logged into a school, you can choose from several portals:</p>
+              <ul className="list-disc list-inside space-y-2 pl-2">
+                <li>
+                  <strong className="text-foreground">Student Portal:</strong> Students log in by scanning their ID card. They can view points, redeem coupon codes, see transaction history, and check eligible prizes.
+                </li>
+                <li>
+                  <strong className="text-foreground">Teacher Portal:</strong> Teachers select their name to log in. They can generate and print sheets of reward coupons with custom values.
+                </li>
+                <li>
+                  <strong className="text-foreground">Admin Portal:</strong> This is the control center to manage students, classes, teachers, reward categories, prizes, and print ID cards.
+                </li>
+                <li>
+                  <strong className="text-foreground">Prize Shop:</strong> Students scan their ID to browse and redeem points for available prizes.
+                </li>
+                 <li>
+                  <strong className="text-foreground">Hall of Fame:</strong> View a leaderboard of the top all-time point earners in the school.
+                </li>
+              </ul>
+            </div>
+            <p className="italic pt-4">That's it! It's designed to be simple and intuitive. Enjoy building a positive and rewarding environment at your school!</p>
+          </CardContent>
+      </Card>
     </div>
   );
 }
