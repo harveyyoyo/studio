@@ -148,6 +148,8 @@ function AdminDashboard() {
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
+  const [uploadReport, setUploadReport] = useState<{success: number, failed: number, errors: string[]} | null>(null);
+
   useEffect(() => {
     if (db.categories?.length > 0 && !printCategory) {
       setPrintCategory(db.categories[0]);
@@ -282,7 +284,10 @@ function AdminDashboard() {
     if (!file) return;
     try {
         const text = await file.text();
-        await uploadStudents(text);
+        const report = await uploadStudents(text);
+        if (report.failed > 0) {
+            setUploadReport(report);
+        }
     } catch (err: any) {
         toast({
             variant: 'destructive',
@@ -299,6 +304,7 @@ function AdminDashboard() {
     .filter((c) => c.used)
     .reduce((sum, c) => sum + c.value, 0);
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
+  const prizesRedeemed = db.students.flatMap(s => s.history).filter(h => h.desc.startsWith('Redeemed:')).length;
 
   const previewCoupon: Coupon = {
       code: 'PREVIEW',
@@ -688,7 +694,7 @@ function AdminDashboard() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload a CSV with columns (no header): <span className="font-code">firstName, lastName, className</span>. Only first and last name are required.</p>
+                  <p>Upload a CSV file with rows containing: <span className="font-code">firstName,lastName,className</span>. No header row needed. Only first and last name are required.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -796,7 +802,7 @@ function AdminDashboard() {
         <CardHeader>
           <CardTitle>Database Summary</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+        <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
             <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.students.length}</p>
                 <p className="text-sm text-muted-foreground">Students</p>
@@ -805,7 +811,7 @@ function AdminDashboard() {
                 <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
                 <p className="text-sm text-muted-foreground">Classes</p>
             </div>
-            <div className="bg-secondary p-4 rounded-lg">
+             <div className="bg-secondary p-4 rounded-lg">
                 <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
                 <p className="text-sm text-muted-foreground">Teachers</p>
             </div>
@@ -814,12 +820,12 @@ function AdminDashboard() {
                 <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
             </div>
             <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Points Awarded</p>
+                <p className="text-2xl font-bold">{db.prizes.length} / {prizesRedeemed}</p>
+                <p className="text-sm text-muted-foreground">Prizes (Types/Redeemed)</p>
             </div>
             <div className="bg-secondary p-4 rounded-lg">
-                <p className="text-2xl font-bold">{totalPointsOnCards.toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">Points on Cards</p>
+                <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Points Awarded</p>
             </div>
         </CardContent>
       </Card>
@@ -839,6 +845,27 @@ function AdminDashboard() {
         setIsOpen={() => setActivityStudent(null)}
         student={activityStudent}
       />
+       <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>CSV Upload Report</AlertDialogTitle>
+            <AlertDialogDescription>
+              {uploadReport?.success} students uploaded successfully. {uploadReport?.failed} rows failed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {uploadReport && uploadReport.errors.length > 0 && (
+            <div className="mt-4 max-h-60 overflow-y-auto bg-slate-100 dark:bg-slate-800 p-3 rounded-md text-sm font-code">
+              <p className="font-bold mb-2">Error Details:</p>
+              <ul className="space-y-1">
+                {uploadReport.errors.map((error, i) => <li key={i}>{error}</li>)}
+              </ul>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setUploadReport(null)}>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

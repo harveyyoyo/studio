@@ -72,7 +72,7 @@ interface AppContextType {
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
-  uploadStudents: (csvContent: string) => Promise<{success: number, failed: number}>;
+  uploadStudents: (csvContent: string) => Promise<{success: number, failed: number, errors: string[]}>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -507,13 +507,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await updateDb({ prizes: arrayRemove(prizeToDelete) as any });
   }, [db, updateDb]);
 
-  const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number}> => {
-    if (!firestore || !schoolId) return {success: 0, failed: 0};
+  const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number, errors: string[]}> => {
+    if (!firestore || !schoolId) return {success: 0, failed: 0, errors: ["Not logged in."]};
     
     const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+    const errors: string[] = [];
+
     if (lines.length < 1) {
-      toast({ variant: 'destructive', title: 'Invalid CSV', description: 'File must contain at least one student.' });
-      return {success: 0, failed: 0};
+      errors.push('File is empty or does not contain any data.');
+      return {success: 0, failed: 0, errors};
     }
     
     const newStudents: Student[] = [];
@@ -521,13 +523,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let successCount = 0;
     let failedCount = 0;
 
-    for (const row of lines) {
-        const values = row.split(',').map(v => v.trim());
+    lines.forEach((row, index) => {
+        if (!row.trim()) return;
+
+        const values = row.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         const [firstName, lastName, className] = values;
 
         if (!firstName || !lastName) {
             failedCount++;
-            continue;
+            errors.push(`Row ${index + 1}: Missing first or last name. Row content: "${row}"`);
+            return;
         }
       
         let newNfcId: string;
@@ -550,14 +555,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         newStudents.push(newStudent);
         existingNfcIds.add(newStudent.nfcId); // prevent duplicates within the same file
         successCount++;
-    }
+    });
 
     if (newStudents.length > 0) {
       await updateDb({ students: arrayUnion(...newStudents) as any });
     }
-
-    toast({ title: 'Upload Complete', description: `${successCount} students added, ${failedCount} records failed.` });
-    return {success: successCount, failed: failedCount};
+    
+    const finalMessage = `${successCount} students added, ${failedCount} records failed.`;
+    toast({ title: 'Upload Complete', description: failedCount > 0 ? `${finalMessage} See details for errors.` : finalMessage });
+    
+    return {success: successCount, failed: failedCount, errors};
 }, [db, firestore, schoolId, toast, updateDb]);
 
 

@@ -10,7 +10,6 @@ export function StudentIdCard({ student, schoolId, className }: { student: Stude
         <div className="print-id-class">{className}</div>
         <div className="print-id-barcode-container">
             <div className="font-barcode">*{student.nfcId}*</div>
-            <div className="print-id-code">{student.nfcId}</div>
         </div>
     </div>
   );
