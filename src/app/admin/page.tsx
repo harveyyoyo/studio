@@ -49,6 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 function AdminDashboardSkeleton() {
@@ -131,6 +132,7 @@ function AdminDashboard() {
   const { toast } = useToast();
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
+  const backupTriggeredRef = useRef(false);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -150,6 +152,23 @@ function AdminDashboard() {
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
 
   const [uploadReport, setUploadReport] = useState<{success: number, failed: number, errors: string[]} | null>(null);
+
+  useEffect(() => {
+    if (isDbLoading || backupTriggeredRef.current || !backups) return;
+
+    const lastBackupTime = backups.length > 0 ? parseInt(backups[0].id) : 0;
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    if (Date.now() - lastBackupTime > oneDay) {
+      backupTriggeredRef.current = true;
+      createBackup().then(() => {
+        toast({
+          title: "Automatic Backup Created",
+          description: "A backup was created as the last one was over 24 hours ago."
+        });
+      });
+    }
+  }, [isDbLoading, backups, createBackup, toast]);
 
   useEffect(() => {
     if (db.categories?.length > 0 && !printCategory) {
@@ -724,77 +743,79 @@ function AdminDashboard() {
                 className="max-w-sm"
               />
             </div>
-            <ul className="space-y-2">
-              {db.students
-                .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
-                .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
-                .map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
-                  >
-                    <div>
-                      <p className="font-bold">
-                        {s.lastName}, {s.firstName}{' '}
-                        <span className="text-primary font-normal text-xs">
-                          ({s.points} pts)
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Class: {getClassName(s.classId)} | ID: {s.nfcId}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                           <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
-                            <IdCard className="w-4 h-4 text-green-500" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Print ID Card</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
-                            <History className="w-4 h-4 text-gray-500" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>View Activity</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
-                            <Edit className="w-4 h-4 text-blue-500" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Edit Student</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete this student's record.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => {
-                              await deleteStudent(s.id);
-                              toast({ title: 'Student Deleted' });
-                            }}>Continue</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </li>
-                ))}
-            </ul>
+            <ScrollArea className="h-96">
+              <ul className="space-y-2 pr-4">
+                {db.students
+                  .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                  .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
+                  .map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
+                    >
+                      <div>
+                        <p className="font-bold">
+                          {s.lastName}, {s.firstName}{' '}
+                          <span className="text-primary font-normal text-xs">
+                            ({s.points} pts)
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Class: {getClassName(s.classId)} | ID: {s.nfcId}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                             <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
+                              <IdCard className="w-4 h-4 text-green-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Print ID Card</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
+                              <History className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>View Activity</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
+                              <Edit className="w-4 h-4 text-blue-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Edit Student</p></TooltipContent>
+                        </Tooltip>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete this student's record.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={async () => {
+                                await deleteStudent(s.id);
+                                toast({ title: 'Student Deleted' });
+                              }}>Continue</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </ScrollArea>
           </TooltipProvider>
         </CardContent>
       </Card>

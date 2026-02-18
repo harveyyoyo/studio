@@ -423,11 +423,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { success: true, message: 'Coupon redeemed!', value: coupon.value };
   }, [db, updateDb]);
   
-  const setData = useCallback(async (data: Database) => {
-    if (!schoolDocRef) return;
-    await setDoc(schoolDocRef, data);
-  }, [schoolDocRef]);
-
   const createBackup = useCallback(async () => {
     if (!schoolId || !firestore) return;
     
@@ -439,8 +434,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setDoc(backupDocRef, backupData);
   }, [schoolId, firestore, db]);
 
+  const setData = useCallback(async (data: Database) => {
+    if (!schoolDocRef) return;
+    await createBackup();
+    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved before importing from file." });
+    await setDoc(schoolDocRef, data);
+  }, [schoolDocRef, createBackup, toast]);
+
   const restoreFromBackup = useCallback(async (backupId: string) => {
     if (!schoolId || !firestore || !schoolDocRef) return;
+
+    await createBackup();
+    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
 
     const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
     const backupSnap = await getDoc(backupDocRef);
@@ -454,7 +459,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
         toast({ variant: 'destructive', title: 'Backup not found' });
     }
-  }, [schoolId, firestore, schoolDocRef, db.passcode, toast]);
+  }, [schoolId, firestore, schoolDocRef, db.passcode, toast, createBackup]);
   
   const downloadBackup = useCallback(async (backupId: string) => {
     if (!schoolId || !firestore) return;
@@ -565,13 +570,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (newStudents.length > 0) {
       await updateDb({ students: arrayUnion(...newStudents) as any });
+      await createBackup();
+      toast({ title: "Post-Upload Backup Created", description: "A backup was created after uploading new students." });
     }
     
     const finalMessage = `${successCount} students added, ${failedCount} records failed.`;
     toast({ title: 'Upload Complete', description: failedCount > 0 ? `${finalMessage} See details for errors.` : finalMessage });
     
     return {success: successCount, failed: failedCount, errors};
-}, [db, firestore, schoolId, toast, updateDb]);
+}, [db, firestore, schoolId, toast, updateDb, createBackup]);
 
 
   const printTriggered = useRef(false);
