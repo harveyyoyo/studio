@@ -40,6 +40,7 @@ interface AppContextType {
   isDbLoading: boolean;
   loginState: LoginState;
   schoolId: string | null;
+  allSchools: string[];
   db: Database;
   syncStatus: SyncStatus;
   login: (
@@ -98,6 +99,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [backups, setBackups] = useState<{ id: string }[]>([]);
+  const [allSchools, setAllSchools] = useState<string[]>([]);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -128,6 +130,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setIsInitialized(true);
   }, []);
+  
+  // Fetch all schools for developer mode
+  useEffect(() => {
+    if (loginState !== 'developer' || !firestore) {
+      setAllSchools([]);
+      return;
+    }
+
+    const schoolsColRef = collection(firestore, 'schools');
+    const unsubscribe = onSnapshot(schoolsColRef, (snapshot) => {
+        const schoolIds = snapshot.docs.map(doc => doc.id);
+        setAllSchools(schoolIds);
+    }, (error) => {
+        console.error("Error fetching all schools:", error);
+        toast({variant: 'destructive', title: "Could not fetch school list"});
+        setAllSchools([]);
+    });
+
+    return () => unsubscribe();
+  }, [loginState, firestore, toast]);
 
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
@@ -619,7 +641,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getClassName, setCouponsToPrint, setStudentsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
@@ -627,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       uploadStudents,
     }),
     [
-      isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
+      isInitialized, isDbLoading, loginState, schoolId, allSchools, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
