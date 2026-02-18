@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { useFirestore } from '@/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 import {
   Plus, Trash2, Server, Key,
 } from 'lucide-react';
@@ -24,10 +26,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 
 export default function DeveloperPage() {
-  const { loginState, isInitialized, allSchools, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
+  const { loginState, isInitialized, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
+  const firestore = useFirestore();
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
+  
+  const [allSchools, setAllSchools] = useState<string[]>([]);
   
   // State for showing new school passcode
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{id: string, passcode: string} | null>(null);
@@ -41,6 +46,25 @@ export default function DeveloperPage() {
       router.replace('/');
     }
   }, [isInitialized, loginState, router]);
+
+  useEffect(() => {
+    if (loginState !== 'developer' || !firestore) {
+      setAllSchools([]);
+      return;
+    }
+
+    const schoolsColRef = collection(firestore, 'schools');
+    const unsubscribe = onSnapshot(schoolsColRef, (snapshot) => {
+        const schoolIds = snapshot.docs.map(doc => doc.id);
+        setAllSchools(schoolIds);
+    }, (error) => {
+        console.error("Error fetching all schools:", error);
+        toast({variant: 'destructive', title: "Could not fetch school list"});
+        setAllSchools([]);
+    });
+
+    return () => unsubscribe();
+  }, [loginState, firestore, toast]);
 
   const handleCreateSchool = async () => {
       if(!newSchoolId) {
