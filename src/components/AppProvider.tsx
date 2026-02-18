@@ -265,7 +265,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     const schoolExists = (await getDoc(doc(firestore, 'schools', cleanId))).exists();
     if(schoolExists) {
-      if (cleanId !== 'yeshiva') { // Don't show toast for automatic creation
+      if (cleanId !== 'yeshiva' && cleanId !== 'school') { // Don't show toast for automatic creation
         toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
       }
       return null;
@@ -277,6 +277,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (cleanId === 'yeshiva') {
       newPasscode = '1234';
       schoolData = { ...YESHIVA_DATA, passcode: newPasscode };
+    } else if (cleanId === 'school') {
+      newPasscode = '1234';
+      schoolData = { ...INITIAL_DATA, passcode: newPasscode };
     } else {
       newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
       schoolData = { ...INITIAL_DATA, passcode: newPasscode };
@@ -285,7 +288,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newSchoolDocRef = doc(firestore, 'schools', cleanId);
     await setDoc(newSchoolDocRef, schoolData);
     
-    if (cleanId !== 'yeshiva') { // Don't show toast for automatic creation
+    if (cleanId !== 'yeshiva' && cleanId !== 'school') { // Don't show toast for automatic creation
       toast({title: `School "${cleanId}" created!`});
     }
     return { passcode: newPasscode, cleanId };

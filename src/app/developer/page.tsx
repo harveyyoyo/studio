@@ -47,23 +47,25 @@ export default function DeveloperPage() {
     }
   }, [isInitialized, loginState, router]);
   
-    // Automatically create the 'yeshiva' sample school once on developer login
+  // Automatically create the sample schools once on developer login
   useEffect(() => {
     if (loginState !== 'developer' || !firestore || !createSchool) return;
 
-    const createYeshivaIfNeeded = async () => {
-      const yeshivaDocRef = doc(firestore, 'schools', 'yeshiva');
+    const createSampleSchoolIfNeeded = async (schoolId: string) => {
+      const schoolDocRef = doc(firestore, 'schools', schoolId);
       try {
-        const docSnap = await getDoc(yeshivaDocRef);
+        const docSnap = await getDoc(schoolDocRef);
         if (!docSnap.exists()) {
-          console.log("Creating 'yeshiva' sample school...");
-          await createSchool('yeshiva');
+          console.log(`Creating '${schoolId}' sample school...`);
+          await createSchool(schoolId);
         }
       } catch (error) {
-        console.error("Failed to check or create 'yeshiva' school:", error);
+        console.error(`Failed to check or create '${schoolId}' school:`, error);
       }
     };
-    createYeshivaIfNeeded();
+    
+    createSampleSchoolIfNeeded('yeshiva');
+    createSampleSchoolIfNeeded('school');
   }, [loginState, firestore, createSchool]);
 
 
