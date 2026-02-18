@@ -42,7 +42,6 @@ interface AppContextType {
   schoolId: string | null;
   db: Database;
   syncStatus: SyncStatus;
-  isBackupOverdue: boolean;
   login: (
     type: 'school' | 'developer',
     credentials: { schoolId?: string; passcode: string }
@@ -99,7 +98,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [backups, setBackups] = useState<{ id: string }[]>([]);
-  const [isBackupOverdue, setIsBackupOverdue] = useState(false);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -201,23 +199,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe();
   }, [schoolId, firestore]);
-
-  // Check if backup is overdue
-  useEffect(() => {
-      if (!isInitialized || loginState !== 'school') {
-          setIsBackupOverdue(false);
-          return;
-      }
-
-      if (backups.length > 0) {
-          const latestBackupTimestamp = parseInt(backups[0].id);
-          const oneDay = 24 * 60 * 60 * 1000;
-          setIsBackupOverdue(Date.now() - latestBackupTimestamp > oneDay);
-      } else {
-          // It's overdue if there are no backups.
-          setIsBackupOverdue(true);
-      }
-  }, [backups, isInitialized, loginState]);
 
   const updateDb = useCallback(
     async (newDbState: Partial<Database>) => {
@@ -632,7 +613,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
-      isBackupOverdue,
       login, logout, getClassName, setCouponsToPrint, setStudentsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
       addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
@@ -641,7 +621,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
-      isBackupOverdue,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
       redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
