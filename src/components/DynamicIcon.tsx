@@ -1,24 +1,21 @@
 'use client';
-import * as icons from 'lucide-react';
-import React from 'react';
 
-type DynamicIconProps = {
+import React from 'react';
+import { icons, Gift } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
+
+type DynamicIconProps = LucideProps & {
   name: string;
-  [key: string]: any; 
 };
 
 const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
-  const LucideIcon = icons[name as keyof typeof icons];
+  const Icon = (icons as unknown as Record<string, React.ComponentType<LucideProps>>)[name];
 
-  // A more robust check. A valid ForwardRef component (which lucide-react icons are)
-  // is an object that has a 'render' function. This filters out other exports.
-  if (LucideIcon && typeof LucideIcon === 'object' && 'render' in LucideIcon) {
-    const Component = LucideIcon as unknown as React.ElementType;
-    return <Component {...props} />;
+  if (!Icon) {
+    return <Gift {...props} />;
   }
 
-  // Fallback for any invalid icon name.
-  return <icons.Gift {...props} />; 
+  return <Icon {...props} />;
 };
 
 export default DynamicIcon;
