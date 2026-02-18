@@ -141,7 +141,7 @@ export default function DeveloperPage() {
                   </CardTitle>
               </CardHeader>
               <CardContent>
-                  <div className="flex gap-2 mb-6">
+                  <div className="flex flex-col sm:flex-row gap-2 mb-6">
                       <Input 
                           placeholder="New School ID (e.g. 'washington_hs')" 
                           value={newSchoolId} 
@@ -153,8 +153,8 @@ export default function DeveloperPage() {
 
                    <ul className="space-y-2">
                       {[...allSchools].sort().map((id) => (
-                          <li key={id} className="flex justify-between items-center bg-secondary p-3 rounded-lg border">
-                              <p className="font-bold font-code">{id}</p>
+                          <li key={id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
+                              <p className="font-bold font-code break-all">{id}</p>
                               <div className="flex items-center gap-0.5">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
                                   <Key className="w-4 h-4 text-blue-500" />

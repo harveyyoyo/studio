@@ -89,17 +89,17 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
     return (
         <div className="space-y-6">
              <Card className="bg-card border-t-4 border-chart-1">
-                <CardHeader className="flex flex-row justify-between items-center">
+                <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle className="font-headline text-2xl flex items-center gap-2"><Printer className="text-chart-1"/>Teacher Portal</CardTitle>
                         <CardDescription>Create coupon print sheets.</CardDescription>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+                        <div className="text-left sm:text-right">
                            <p className="text-sm text-muted-foreground">Logged in as</p>
                            <p className="font-bold flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" /> {teacherName}</p>
                         </div>
-                        <Button variant="outline" onClick={onLogout}><LogOut className="mr-2"/> Log Out</Button>
+                        <Button variant="outline" onClick={onLogout} className="w-full sm:w-auto"><LogOut className="mr-2"/> Log Out</Button>
                    </div>
                 </CardHeader>
             </Card>

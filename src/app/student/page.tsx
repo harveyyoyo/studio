@@ -98,18 +98,18 @@ function StudentDashboard({
           <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
               <Gift size={128} strokeWidth={1} />
           </div>
-          <CardHeader className="flex flex-row justify-between items-start">
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
-              <CardTitle className="font-headline text-4xl">
+              <CardTitle className="font-headline text-3xl sm:text-4xl">
                 {student.firstName} {student.lastName}
               </CardTitle>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
                <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
-               <p className="text-5xl font-bold">
+               <p className="text-4xl sm:text-5xl font-bold">
                 {student.points.toLocaleString()}{' '}
-                <span className="text-3xl font-normal">pts</span>
+                <span className="text-2xl sm:text-3xl font-normal">pts</span>
               </p>
             </div>
           </CardHeader>

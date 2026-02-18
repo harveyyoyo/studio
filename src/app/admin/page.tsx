@@ -338,7 +338,7 @@ function AdminDashboard() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
+        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
               <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
@@ -509,7 +509,7 @@ function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-t-4 border-chart-3 lg:col-span-2">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Gift className="text-chart-3" /> Manage Prizes
                     </div>
@@ -568,7 +568,7 @@ function AdminDashboard() {
           
           <Card className="border-t-4 border-chart-4">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Database className="text-chart-4" /> System Backups
                     </div>
@@ -582,7 +582,7 @@ function AdminDashboard() {
                 <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
                   {backups.length > 0 ? backups.map(backup => (
                     <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                      <span className="font-code text-sm">{new Date(parseInt(backup.id)).toLocaleString()}</span>
+                      <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
                       <div className="flex gap-1">
                         <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
                         <AlertDialog>
@@ -706,7 +706,7 @@ function AdminDashboard() {
               <CardTitle>All Students</CardTitle>
               <CardDescription>{db.students.length} students in the database.</CardDescription>
             </div>
-            <div className='flex gap-2 w-full sm:w-auto'>
+            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="flex-1">
@@ -749,7 +749,7 @@ function AdminDashboard() {
                     .map((s) => (
                       <li
                         key={s.id}
-                        className="flex justify-between items-center bg-secondary p-3 rounded-lg border"
+                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-secondary p-3 rounded-lg border gap-2"
                       >
                         <div>
                           <p className="font-bold">
@@ -762,7 +762,7 @@ function AdminDashboard() {
                             Class: {getClassName(s.classId || '')} | ID: {s.nfcId}
                           </p>
                         </div>
-                        <div className="flex items-center gap-0.5">
+                        <div className="flex items-center gap-0.5 self-end sm:self-center">
                           <Tooltip>
                             <TooltipTrigger asChild>
                                <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
