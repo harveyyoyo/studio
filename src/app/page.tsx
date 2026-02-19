@@ -15,6 +15,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import { Building, Code, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -23,9 +24,11 @@ export default function LoginPage() {
   const { login } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
+  const playSound = useArcadeSound();
 
   const handleSchoolLogin = async () => {
     if (!schoolId || !schoolPasscode) {
+      playSound('error');
       toast({
         variant: 'destructive',
         title: 'Login Failed',
@@ -38,8 +41,10 @@ export default function LoginPage() {
       passcode: schoolPasscode,
     });
     if (success) {
+      playSound('login');
       router.push('/portal');
     } else {
+      playSound('error');
       toast({
         variant: 'destructive',
         title: 'Login Failed',
@@ -52,8 +57,10 @@ export default function LoginPage() {
   const handleDeveloperLogin = async () => {
     const success = await login('developer', { passcode: devPasscode });
     if (success) {
+      playSound('login');
       router.push('/developer');
     } else {
+      playSound('error');
       toast({
         variant: 'destructive',
         title: 'Login Failed',
@@ -67,10 +74,10 @@ export default function LoginPage() {
     <div className="flex flex-col items-center justify-center py-10 space-y-8">
       <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="school">
+          <TabsTrigger value="school" onClick={() => playSound('click')}>
             <Building className="mr-2 h-4 w-4" /> School Login
           </TabsTrigger>
-          <TabsTrigger value="developer">
+          <TabsTrigger value="developer" onClick={() => playSound('click')}>
             <Code className="mr-2 h-4 w-4" /> Developer
           </TabsTrigger>
         </TabsList>
