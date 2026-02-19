@@ -14,65 +14,75 @@ const createSynth = () => {
   if (typeof window === 'undefined') return null;
   const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   if (!audioCtx) return null;
+  
+  const playNote = (frequency: number, startTime: number, duration: number, type: OscillatorType = 'triangle', volume: number = 0.1) => {
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gainNode.gain.setValueAtTime(volume, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+  };
 
   const play = (sound: SoundEffect) => {
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
+    const now = audioCtx.currentTime;
+    
     switch (sound) {
       case 'click':
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.1);
+        playNote(800, now, 0.08, 'square', 0.05);
         break;
+
       case 'login':
       case 'success':
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A5
-        oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2); // A6
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.2);
+        playNote(523.25, now, 0.1, 'sine'); // C5
+        playNote(659.25, now + 0.1, 0.1, 'sine'); // E5
+        playNote(783.99, now + 0.2, 0.2, 'sine'); // G5
         break;
+
       case 'error':
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.2);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.2);
+        playNote(164.81, now, 0.15, 'sawtooth', 0.08); // E3
+        playNote(155.56, now + 0.15, 0.25, 'sawtooth', 0.08); // D#3
         break;
+
       case 'swoosh':
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.15);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.15);
+        const noise = audioCtx.createBufferSource();
+        const bufferSize = audioCtx.sampleRate * 0.2; // 0.2 seconds
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        noise.buffer = buffer;
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, now);
+        filter.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+        
+        const noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0.2, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(audioCtx.destination);
+        
+        noise.start(now);
+        noise.stop(now + 0.2);
         break;
+
       case 'redeem':
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-        setTimeout(() => {
-            const o2 = audioCtx.createOscillator();
-            const g2 = audioCtx.createGain();
-            g2.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            o2.connect(g2);
-            g2.connect(audioCtx.destination);
-            o2.type = 'triangle';
-            o2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-            g2.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.3);
-            o2.start(audioCtx.currentTime);
-            o2.stop(audioCtx.currentTime + 0.3);
-        }, 100);
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.3);
+        playNote(587.33, now, 0.1, 'triangle'); // D5
+        playNote(698.46, now + 0.1, 0.1, 'triangle'); // F5
+        playNote(880.00, now + 0.2, 0.1, 'triangle'); // A5
+        playNote(1046.50, now + 0.3, 0.4, 'sine'); // C6
         break;
     }
   };
