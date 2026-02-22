@@ -52,6 +52,11 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: 'ys48', firstName: 'Pinchas', lastName: 'Horowitz', nfcId: 'y148', points: 880, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 880, date: Date.now() - 86400000 * 30 }] },
     { id: 'ys49', firstName: 'Shaya', lastName: 'Fischer', nfcId: 'y149', points: 390, classId: 'yc3', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 390, date: Date.now() - 86400000 * 27 }] },
     { id: 'ys50', firstName: 'Yonoson', lastName: 'Frankel', nfcId: 'y150', points: 1300, classId: 'yc4', history: [{ desc: 'Redeemed: Large Sefer (Artscroll)', amount: -1500, date: Date.now() - 86400000 * 33 }, { desc: 'Redeemed coupon: GEMARA-100 (Gemara B\'iyun)', amount: 2800, date: Date.now() - 86400000 * 55 }] },
+    { id: 'ys51', firstName: 'Refael', lastName: 'Cohen', nfcId: 'y151', points: 150, classId: 'yc1', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 150, date: Date.now() - 86400000 * 3 }] },
+    { id: 'ys52', firstName: 'Shalom', lastName: 'Mizrachi', nfcId: 'y152', points: 250, classId: 'yc2', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 250, date: Date.now() - 86400000 * 1 }] },
+    { id: 'ys53', firstName: 'Ovadia', lastName: 'Yosef', nfcId: 'y153', points: 400, classId: 'yc3', history: [{ desc: 'Redeemed: Pizza Slice', amount: -500, date: Date.now() - 86400000 * 10 }, { desc: 'Redeemed coupon: GEMARA-100 (Gemara B\'iyun)', amount: 900, date: Date.now() - 86400000 * 20 }] },
+    { id: 'ys54', firstName: 'Chacham', lastName: 'Shalom', nfcId: 'y154', points: 120, classId: 'yc1', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 120, date: Date.now() - 86400000 * 2 }] },
+    { id: 'ys55', firstName: 'Ben Ish', lastName: 'Chai', nfcId: 'y155', points: 80, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 80, date: Date.now() - 86400000 * 5 }] },
   ],
   classes: [
     { id: 'yc1', name: 'Shiur Aleph' },
