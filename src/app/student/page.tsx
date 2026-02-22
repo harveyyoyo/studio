@@ -112,49 +112,54 @@ function StudentDashboard({
     setCouponCode('');
   }, [couponCode, resetTimer, redeemCoupon, student.id, toast]);
   
-  useEffect(() => {
+useEffect(() => {
     if (activeTab !== 'camera' || !videoRef.current) {
-        codeReader.reset();
-        return;
+      return;
     }
 
     const videoElement = videoRef.current;
-    
+    let stream: MediaStream | undefined;
+
+    const cleanup = () => {
+      codeReader.stopContinuousDecode();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+
     navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
+        .then(s => {
+            stream = s;
             setHasCameraPermission(true);
             
-            codeReader.decodeFromStream(stream, videoElement, (result, err) => {
-                if (result) {
-                    playSound('redeem');
-                    codeReader.reset(); // Stop scanning
-                    handleRedeemCoupon(result.getText());
-                    setActiveTab('manual'); // Switch back to manual tab
-                }
-                if (err && !(err instanceof NotFoundException)) {
-                    console.error('Zxing Error:', err);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Scanning Error',
-                        description: 'Could not decode the barcode.',
-                    });
-                }
-            });
+            if (videoElement) {
+              videoElement.srcObject = stream;
+              videoElement.play();
+
+              codeReader.decodeContinuously(videoElement, stream, (result, err) => {
+                  if (result) {
+                      playSound('redeem');
+                      handleRedeemCoupon(result.getText());
+                      setActiveTab('manual'); 
+                  }
+                  if (err && !(err instanceof NotFoundException)) {
+                      console.error('Zxing Error:', err);
+                  }
+              });
+            }
         })
         .catch(err => {
             console.error('Camera permission error:', err);
             setHasCameraPermission(false);
             toast({
                 variant: 'destructive',
-                title: 'Camera Permission Denied',
+                title: 'Camera Access Denied',
                 description: 'Please allow camera access in your browser settings.',
             });
             setActiveTab('manual');
         });
 
-    return () => {
-        codeReader.reset();
-    };
+    return cleanup;
 }, [activeTab, codeReader, handleRedeemCoupon, playSound, toast]);
 
 
