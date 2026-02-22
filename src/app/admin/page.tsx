@@ -344,9 +344,16 @@ function AdminDashboard() {
               <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
             </h2>
           </div>
-          <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Return to the main portal selection screen.</p>
+            </TooltipContent>
+          </Tooltip>
         </Card>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -363,7 +370,14 @@ function AdminDashboard() {
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                 />
-                <Button onClick={handleAddClass}>Add</Button>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleAddClass}>Add</Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add a new class to the school.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {db.classes?.map((c) => (
@@ -373,11 +387,16 @@ function AdminDashboard() {
                   >
                     <span className="font-bold text-sm">{c.name}</span>
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </AlertDialogTrigger>
+                       <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Delete Class</p></TooltipContent>
+                        </Tooltip>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
@@ -413,7 +432,14 @@ function AdminDashboard() {
                   value={newTeacherName}
                   onChange={(e) => setNewTeacherName(e.target.value)}
                 />
-                <Button onClick={handleAddTeacher}>Add</Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleAddTeacher}>Add</Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Add a new teacher or faculty member.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {db.teachers?.map((t) => (
@@ -423,11 +449,16 @@ function AdminDashboard() {
                   >
                     <span className="font-bold text-sm">{t.name}</span>
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </AlertDialogTrigger>
+                       <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Delete Teacher</p></TooltipContent>
+                        </Tooltip>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
@@ -464,11 +495,12 @@ function AdminDashboard() {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                 />
-                <Button
-                  onClick={handleAddCategory}
-                >
-                  Add
-                </Button>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                     <Button onClick={handleAddCategory}>Add</Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Add a new reward category.</p></TooltipContent>
+                </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {db.categories?.map((c) => (
@@ -478,11 +510,16 @@ function AdminDashboard() {
                   >
                     <span className="text-sm">{c}</span>
                     <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                       <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </AlertDialogTrigger>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                         <AlertDialogTrigger asChild>
+                           <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Delete Category</p></TooltipContent>
+                      </Tooltip>
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete category "{c}"?</AlertDialogTitle>
@@ -513,9 +550,14 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2">
                       <Gift className="text-chart-3" /> Manage Prizes
                     </div>
-                    <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Add Prize
-                    </Button>
+                     <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
+                            <Plus className="mr-2 h-4 w-4" /> Add Prize
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Add a new prize to the prize shop.</p></TooltipContent>
+                      </Tooltip>
                 </CardTitle>
                 <CardDescription>Add, edit, or delete prizes available in the prize shop.</CardDescription>
               </CardHeader>
@@ -536,15 +578,25 @@ function AdminDashboard() {
                         </div>
                       </div>
                       <div className="flex gap-0.5">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
-                          <Edit className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="icon" variant="ghost" className="h-8 w-8">
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
+                              <Edit className="h-4 w-4 text-blue-500" />
                             </Button>
-                          </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Edit Prize</p></TooltipContent>
+                        </Tooltip>
+                        <AlertDialog>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Delete Prize</p></TooltipContent>
+                          </Tooltip>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete prize "{prize.name}"?</AlertDialogTitle>
@@ -572,9 +624,14 @@ function AdminDashboard() {
                     <div className="flex items-center gap-2">
                       <Database className="text-chart-4" /> System Backups
                     </div>
-                    <Button onClick={handleCreateBackup} size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Create Backup
-                    </Button>
+                     <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button onClick={handleCreateBackup} size="sm">
+                            <Plus className="mr-2 h-4 w-4" /> Create Backup
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Save a snapshot of the current school database.</p></TooltipContent>
+                      </Tooltip>
                 </CardTitle>
                 <CardDescription>Create a manual backup of the current database state.</CardDescription>
               </CardHeader>
@@ -584,11 +641,21 @@ function AdminDashboard() {
                     <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
                       <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                               <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Download this backup as a JSON file.</p></TooltipContent>
+                          </Tooltip>
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Restore the database to this state.</p></TooltipContent>
+                          </Tooltip>
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
@@ -605,9 +672,14 @@ function AdminDashboard() {
                   )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
                 </ul>
                 <Separator className="my-4" />
-                <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
-                  <Upload /> Restore from JSON file
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
+                      <Upload /> Restore from JSON file
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Overwrite the current database with data from a local JSON backup file.</p></TooltipContent>
+                </Tooltip>
                 <input
                   type="file"
                   ref={backupFileInputRef}
@@ -659,9 +731,14 @@ function AdminDashboard() {
                       </SelectContent>
                     </Select>
                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                        </DialogTrigger>
+                        <Tooltip>
+                           <TooltipTrigger asChild>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
+                            </DialogTrigger>
+                           </TooltipTrigger>
+                           <TooltipContent><p>Add a new category on the fly.</p></TooltipContent>
+                        </Tooltip>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>Add New Category</DialogTitle>
@@ -687,9 +764,14 @@ function AdminDashboard() {
                     onChange={(e) => setPrintValue(e.target.value)}
                   />
                 </div>
-                <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
-                  <Printer /> Print Sheet (24 Coupons)
-                </Button>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
+                      <Printer /> Print Sheet (24 Coupons)
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Generate and print a full sheet of 24 coupons with these settings.</p></TooltipContent>
+                </Tooltip>
               </div>
               <div className="w-full md:w-1/3 flex flex-col items-center">
                   <Label className="font-semibold text-muted-foreground">Live Preview</Label>
@@ -714,15 +796,25 @@ function AdminDashboard() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Upload a CSV file with rows containing: <span className="font-code">firstName,lastName</span>. No header row needed. The file can use commas or semicolons as separators.</p>
+                  <p>Bulk upload students from a CSV file. <br/>Format: `firstName,lastName` or `firstName,lastName,className`. No header row needed.</p>
                 </TooltipContent>
               </Tooltip>
-              <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
-                  <Printer className="mr-2 h-4 w-4" /> Print ID Cards
-              </Button>
-              <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
-                <Plus className="mr-2 h-4 w-4" /> Add Student
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
+                      <Printer className="mr-2 h-4 w-4" /> Print ID Cards
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Print physical ID cards for all students in the database.</p></TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                   <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
+                    <Plus className="mr-2 h-4 w-4" /> Add Student
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Manually add a new student to the database.</p></TooltipContent>
+              </Tooltip>
               <input
                   type="file"
                   ref={studentCsvInputRef}
@@ -787,12 +879,17 @@ function AdminDashboard() {
                             </TooltipTrigger>
                             <TooltipContent><p>Edit Student</p></TooltipContent>
                           </Tooltip>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
-                            </AlertDialogTrigger>
+                           <AlertDialog>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Delete Student</p></TooltipContent>
+                            </Tooltip>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>

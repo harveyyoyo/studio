@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DeveloperPage() {
   const { loginState, isInitialized, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
@@ -125,6 +126,7 @@ export default function DeveloperPage() {
   }
   
   return (
+    <TooltipProvider>
       <div className="space-y-6">
           <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
               <div>
@@ -150,7 +152,14 @@ export default function DeveloperPage() {
                           onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                           onKeyPress={e => e.key === 'Enter' && handleCreateSchool()}
                       />
-                      <Button onClick={handleCreateSchool}><Plus className="mr-2"/>Create School</Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button onClick={handleCreateSchool}><Plus className="mr-2"/>Create School</Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Create a new, empty school database instance. <br /> Use a simple, lowercase ID with underscores instead of spaces.</p>
+                        </TooltipContent>
+                      </Tooltip>
                   </div>
 
                    <ul className="space-y-2">
@@ -158,15 +167,29 @@ export default function DeveloperPage() {
                           <li key={id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
                               <p className="font-bold font-code break-all">{id}</p>
                               <div className="flex items-center gap-0.5">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
-                                  <Key className="w-4 h-4 text-blue-500" />
-                                </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
+                                      <Key className="w-4 h-4 text-blue-500" />
                                     </Button>
-                                  </AlertDialogTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Change the passcode for this school.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <AlertDialog>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <Trash2 className="w-4 h-4 text-red-500" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Permanently delete this school and all its data.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -233,5 +256,6 @@ export default function DeveloperPage() {
             </DialogContent>
           </Dialog>
       </div>
+    </TooltipProvider>
   )
 }

@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -124,37 +125,6 @@ export default function LoginPage() {
         </DialogContent>
       </Dialog>
       
-       <Card className="w-full max-w-sm bg-green-50 dark:bg-green-900/20 border-green-500">
-        <CardHeader className="p-4">
-          <CardTitle className="flex items-center gap-2 text-base"><Info className="w-5 h-5 text-green-700"/> Try It Out!</CardTitle>
-          <CardDescription className="text-xs">
-            Use a sample account to explore the app.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-2 text-xs font-code">
-          <div className="flex justify-between items-center bg-green-100/50 dark:bg-green-900/30 p-2 rounded">
-            <div>
-              <div className="text-xs text-muted-foreground">School ID</div>
-              <div className="font-bold">school</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Passcode</div>
-              <div className="font-bold">1234</div>
-            </div>
-          </div>
-           <div className="flex justify-between items-center bg-green-100/50 dark:bg-green-900/30 p-2 rounded">
-            <div>
-              <div className="text-xs text-muted-foreground">School ID</div>
-              <div className="font-bold">yeshiva</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Passcode</div>
-              <div className="font-bold">1234</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="school" onClick={() => playSound('click')}>
@@ -175,6 +145,15 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <Alert className="bg-green-50 dark:bg-green-900/20 border-green-500 text-green-900 dark:text-green-200 [&>svg]:text-green-700 dark:[&>svg]:text-green-300">
+                <Info className="h-4 w-4" />
+                <AlertTitle className="font-bold">Try It Out!</AlertTitle>
+                <AlertDescription className="font-code text-xs">
+                  <div className="flex justify-between"><span>ID: school</span><span>Pass: 1234</span></div>
+                  <div className="flex justify-between"><span>ID: yeshiva</span><span>Pass: 1234</span></div>
+                </AlertDescription>
+              </Alert>
+
               <div>
                 <Label
                   htmlFor="schoolId"

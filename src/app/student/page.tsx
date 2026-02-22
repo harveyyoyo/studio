@@ -40,6 +40,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Student Dashboard component
 function StudentDashboard({
@@ -118,166 +119,182 @@ function StudentDashboard({
   const eligibleRewards = db.prizes?.filter(r => r.inStock && student.points >= r.points) || [];
 
   return (
-    <div className="relative animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
-      
-      <div className="space-y-6">
-        <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
-          <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
-              <Gift size={128} strokeWidth={1} />
-          </div>
-          <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-4">
-            <div>
-              <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
-              <CardTitle className="font-headline text-3xl sm:text-4xl">
-                {student.firstName} {student.lastName}
-              </CardTitle>
+    <TooltipProvider>
+      <div className="relative animate-in fade-in-50 bg-gradient-to-br from-primary/10 via-background to-accent/20 dark:from-primary/20 dark:via-background dark:to-accent/30 p-2 md:p-4 rounded-xl overflow-hidden">
+        
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-none shadow-lg overflow-hidden">
+            <div className="absolute -bottom-10 -right-10 w-32 h-32 text-primary-foreground/20">
+                <Gift size={128} strokeWidth={1} />
             </div>
-            <div className="text-left sm:text-right">
-               <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
-               <p className="text-4xl sm:text-5xl font-bold">
-                {student.points.toLocaleString()}{' '}
-                <span className="text-2xl sm:text-3xl font-normal">pts</span>
-              </p>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <ScanLine /> Redeem Coupon Code
+            <CardHeader className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div>
+                <CardDescription className="text-primary-foreground/80">Welcome back,</CardDescription>
+                <CardTitle className="font-headline text-3xl sm:text-4xl">
+                  {student.firstName} {student.lastName}
                 </CardTitle>
-                 <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
-                  Auto-logout in {logoutTimer}s
-                </div>
-              </CardHeader>
-              <CardContent className="flex gap-2">
-                <Input
-                  placeholder="Scan or type barcode now..."
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                  autoFocus
-                />
-                <Button onClick={handleRedeemCoupon}>Redeem</Button>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="text-left sm:text-right">
+                 <CardDescription className="text-primary-foreground/80">Current Balance</CardDescription>
+                 <p className="text-4xl sm:text-5xl font-bold">
+                  {student.points.toLocaleString()}{' '}
+                  <span className="text-2xl sm:text-3xl font-normal">pts</span>
+                </p>
+              </div>
+            </CardHeader>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline text-2xl">
-                  <ShoppingBag /> Eligible Rewards
-                </CardTitle>
-                <CardDescription>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
-                  <Card key={reward.id} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
-                      <div className="p-4 bg-accent rounded-full mb-3 text-primary">
-                        <DynamicIcon name={reward.icon} className="w-8 h-8" />
-                      </div>
-                      <p className="font-bold text-lg">{reward.name}</p>
-                      <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
-                  </Card>
-                )) : (
-                  <p className="text-center text-muted-foreground italic md:col-span-3 py-4">Keep earning points to unlock rewards!</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Left Column */}
+            <div className="md:col-span-2 space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <ScanLine /> Redeem Coupon Code
+                  </CardTitle>
+                   <div className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md">
+                    Auto-logout in {logoutTimer}s
+                  </div>
+                </CardHeader>
+                <CardContent className="flex gap-2">
+                  <Input
+                    placeholder="Scan or type barcode now..."
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                    autoFocus
+                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button onClick={handleRedeemCoupon}>Redeem</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Submit a coupon code to add points to your account.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </CardContent>
+              </Card>
 
-          {/* Right Column */}
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <History /> Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="relative">
-                <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
-                  {student.history.length > 0 ? (
-                    student.history
-                      .sort((a, b) => b.date - a.date)
-                      .map((item, index) => (
-                        <li
-                          key={index}
-                          className="flex justify-between items-center text-sm"
-                        >
-                          <div>
-                            <p className="font-medium">{item.desc}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(
-                                new Date(item.date),
-                                "MMM d, yyyy, h:mm a"
-                              )}
-                            </p>
-                          </div>
-                          <span
-                            className={`font-bold ${
-                              item.amount > 0 ? 'text-green-500' : 'text-red-500'
-                            }`}
-                          >
-                            {item.amount > 0 ? `+${item.amount}` : item.amount}
-                          </span>
-                        </li>
-                      ))
-                  ) : (
-                    <p className="text-center text-muted-foreground italic py-4">
-                      No transaction history yet.
-                    </p>
-                  )}
-                </ul>
-                <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600">
-                          <LogOut className="mr-2"/> Log Out Now
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Enter Passcode to Exit</DialogTitle>
-                            <DialogDescription>
-                                To protect student privacy, a passcode is required to exit the student kiosk.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                            <Label htmlFor="logout-passcode">Passcode</Label>
-                            <Input
-                                id="logout-passcode"
-                                type="password"
-                                value={logoutPasscode}
-                                onChange={(e) => setLogoutPasscode(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleLogoutConfirm()}
-                                autoFocus
-                            />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-headline text-2xl">
+                    <ShoppingBag /> Eligible Rewards
+                  </CardTitle>
+                  <CardDescription>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {eligibleRewards.length > 0 ? eligibleRewards.map((reward) => (
+                    <Card key={reward.id} className="p-4 flex flex-col items-center justify-between text-center bg-background/50 dark:bg-card/50">
+                        <div className="p-4 bg-accent rounded-full mb-3 text-primary">
+                          <DynamicIcon name={reward.icon} className="w-8 h-8" />
                         </div>
-                        <DialogFooter>
-                            <Button variant="secondary" onClick={() => {
-                                setIsLogoutDialogOpen(false);
-                                setLogoutPasscode('');
-                            }}>Cancel</Button>
-                            <Button onClick={handleLogoutConfirm}>Confirm & Log Out</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
+                        <p className="font-bold text-lg">{reward.name}</p>
+                        <Badge variant="secondary" className="mt-3 text-base font-bold">{reward.points.toLocaleString()} pts</Badge>
+                    </Card>
+                  )) : (
+                    <p className="text-center text-muted-foreground italic md:col-span-3 py-4">Keep earning points to unlock rewards!</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column */}
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History /> Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="relative">
+                  <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
+                    {student.history.length > 0 ? (
+                      student.history
+                        .sort((a, b) => b.date - a.date)
+                        .map((item, index) => (
+                          <li
+                            key={index}
+                            className="flex justify-between items-center text-sm"
+                          >
+                            <div>
+                              <p className="font-medium">{item.desc}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {format(
+                                  new Date(item.date),
+                                  "MMM d, yyyy, h:mm a"
+                                )}
+                              </p>
+                            </div>
+                            <span
+                              className={`font-bold ${
+                                item.amount > 0 ? 'text-green-500' : 'text-red-500'
+                              }`}
+                            >
+                              {item.amount > 0 ? `+${item.amount}` : item.amount}
+                            </span>
+                          </li>
+                        ))
+                    ) : (
+                      <p className="text-center text-muted-foreground italic py-4">
+                        No transaction history yet.
+                      </p>
+                    )}
+                  </ul>
+                  <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <DialogTrigger asChild>
+                              <Button variant="ghost" className="w-full mt-4 text-red-500 hover:bg-red-50 hover:text-red-600">
+                                <LogOut className="mr-2"/> Log Out Now
+                              </Button>
+                          </DialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Exit the student kiosk. A passcode is required.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Enter Passcode to Exit</DialogTitle>
+                              <DialogDescription>
+                                  To protect student privacy, a passcode is required to exit the student kiosk.
+                              </DialogDescription>
+                          </DialogHeader>
+                          <div className="py-4">
+                              <Label htmlFor="logout-passcode">Passcode</Label>
+                              <Input
+                                  id="logout-passcode"
+                                  type="password"
+                                  value={logoutPasscode}
+                                  onChange={(e) => setLogoutPasscode(e.target.value)}
+                                  onKeyPress={(e) => e.key === 'Enter' && handleLogoutConfirm()}
+                                  autoFocus
+                              />
+                          </div>
+                          <DialogFooter>
+                              <Button variant="secondary" onClick={() => {
+                                  setIsLogoutDialogOpen(false);
+                                  setLogoutPasscode('');
+                              }}>Cancel</Button>
+                              <Button onClick={handleLogoutConfirm}>Confirm & Log Out</Button>
+                          </DialogFooter>
+                      </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
+        
+        {animatedValue !== null && (
+          <div key={animationKey.current} className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+              <div className="text-8xl font-bold text-green-500 animate-fly-up">
+                  +{animatedValue}
+              </div>
+          </div>
+        )}
       </div>
-      
-      {animatedValue !== null && (
-        <div key={animationKey.current} className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-            <div className="text-8xl font-bold text-green-500 animate-fly-up">
-                +{animatedValue}
-            </div>
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   );
 }
 
@@ -341,73 +358,89 @@ export default function StudentLoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-10">
-      <Card className="w-full max-w-md border-t-4 border-primary">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold font-headline">
-            Student Kiosk
-          </CardTitle>
-          <CardDescription>Check your points and redeem coupons.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="nfc" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
-                <Nfc className="mr-2 h-4 w-4" /> Card
-              </TabsTrigger>
-              <TabsTrigger value="manual">
-                <Type className="mr-2 h-4 w-4" /> Manual
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="nfc" className="text-center">
-              <div className="py-8 space-y-4">
-                <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-primary/50 dark:border-primary/40 animate-pulse"></div>
-                  <Nfc className="w-16 h-16 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground">
-                  Tap card or scan barcode...
-                </p>
-                <Input
-                  ref={nfcInputRef}
-                  type="text"
-                  className="absolute -top-[9999px] -left-[9999px]" // Visually hide but keep focusable
-                  value={nfcId}
-                  onChange={(e) => setNfcId(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                  autoFocus
-                />
-              </div>
-            </TabsContent>
-            <TabsContent value="manual">
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="manual-nfcId">Student ID</Label>
+    <TooltipProvider>
+      <div className="flex flex-col items-center justify-center py-10">
+        <Card className="w-full max-w-md border-t-4 border-primary">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold font-headline">
+              Student Kiosk
+            </CardTitle>
+            <CardDescription>Check your points and redeem coupons.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="nfc" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
+                  <Nfc className="mr-2 h-4 w-4" /> Card
+                </TabsTrigger>
+                <TabsTrigger value="manual">
+                  <Type className="mr-2 h-4 w-4" /> Manual
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="nfc" className="text-center">
+                <div className="py-8 space-y-4">
+                  <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
+                    <div className="absolute inset-0 rounded-full border-2 border-dashed border-primary/50 dark:border-primary/40 animate-pulse"></div>
+                    <Nfc className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">
+                    Tap card or scan barcode...
+                  </p>
                   <Input
-                    id="manual-nfcId"
+                    ref={nfcInputRef}
+                    type="text"
+                    className="absolute -top-[9999px] -left-[9999px]" // Visually hide but keep focusable
                     value={nfcId}
                     onChange={(e) => setNfcId(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                    placeholder="Enter student ID"
+                    autoFocus
                   />
                 </div>
-                <Button onClick={handleNfcSubmit} className="w-full">
-                  Login
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+              <TabsContent value="manual">
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label htmlFor="manual-nfcId">Student ID</Label>
+                    <Input
+                      id="manual-nfcId"
+                      value={nfcId}
+                      onChange={(e) => setNfcId(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
+                      placeholder="Enter student ID"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button onClick={handleNfcSubmit} className="w-full">
+                        Login
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Log in with the student ID to view your dashboard.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TabsContent>
+            </Tabs>
 
-          <div className="text-center mt-6">
-            <p className="text-xs text-muted-foreground">
-              Connected to <span className="font-bold">{schoolId}</span>
-            </p>
-            <Button asChild variant="link" className="text-xs h-auto p-0">
-              <Link href="/portal"><ArrowLeft className="mr-2 h-4"/> Back to Portal Selection</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="text-center mt-6">
+              <p className="text-xs text-muted-foreground">
+                Connected to <span className="font-bold">{schoolId}</span>
+              </p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="link" className="text-xs h-auto p-0">
+                    <Link href="/portal"><ArrowLeft className="mr-2 h-4"/> Back to Portal Selection</Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Return to the main portal selection screen.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </TooltipProvider>
   );
 }
