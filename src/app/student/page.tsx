@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
 import {
@@ -26,6 +28,7 @@ import {
   LogOut,
   ShoppingBag,
   ArrowLeft,
+  Camera,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -40,6 +43,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Student Dashboard component
@@ -56,9 +60,16 @@ function StudentDashboard({
   const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
   const animationKey = useRef(0);
+  const playSound = useArcadeSound();
 
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
+  
+  const [activeTab, setActiveTab] = useState('manual');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
+
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -76,13 +87,13 @@ function StudentDashboard({
 
     return () => clearInterval(intervalId);
   }, [logoutTimer, onDone]);
+  
+  const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
+    const code = (codeToRedeem || couponCode).toUpperCase();
+    if (!code) return;
+    resetTimer();
+    const result = await redeemCoupon(student.id, code);
 
-
-  const handleRedeemCoupon = async () => {
-    if (!couponCode) return;
-    resetTimer(); 
-    const result = await redeemCoupon(student.id, couponCode);
-    
     if (result.success && result.value) {
       toast({
         title: 'Coupon Redeemed!',
@@ -99,7 +110,54 @@ function StudentDashboard({
       });
     }
     setCouponCode('');
-  };
+  }, [couponCode, resetTimer, redeemCoupon, student.id, toast]);
+  
+  useEffect(() => {
+    if (activeTab !== 'camera' || !videoRef.current) {
+        codeReader.reset();
+        return;
+    }
+
+    const videoElement = videoRef.current;
+    
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            setHasCameraPermission(true);
+            
+            codeReader.decodeFromStream(stream, videoElement, (result, err) => {
+                if (result) {
+                    playSound('redeem');
+                    codeReader.reset(); // Stop scanning
+                    handleRedeemCoupon(result.getText());
+                    setActiveTab('manual'); // Switch back to manual tab
+                }
+                if (err && !(err instanceof NotFoundException)) {
+                    console.error('Zxing Error:', err);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Scanning Error',
+                        description: 'Could not decode the barcode.',
+                    });
+                }
+            });
+        })
+        .catch(err => {
+            console.error('Camera permission error:', err);
+            setHasCameraPermission(false);
+            toast({
+                variant: 'destructive',
+                title: 'Camera Permission Denied',
+                description: 'Please allow camera access in your browser settings.',
+            });
+            setActiveTab('manual');
+        });
+
+    return () => {
+        codeReader.reset();
+    };
+}, [activeTab, codeReader, handleRedeemCoupon, playSound, toast]);
+
+
   
   const handleLogoutConfirm = () => {
     if (logoutPasscode === '1234') {
@@ -156,22 +214,53 @@ function StudentDashboard({
                     Auto-logout in {logoutTimer}s
                   </div>
                 </CardHeader>
-                <CardContent className="flex gap-2">
-                  <Input
-                    placeholder="Scan or type barcode now..."
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                    autoFocus
-                  />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button onClick={handleRedeemCoupon}>Redeem</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Submit a coupon code to add points to your account.</p>
-                    </TooltipContent>
-                  </Tooltip>
+                <CardContent>
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="manual">
+                            <Type className="mr-2 h-4 w-4" /> Manual / USB
+                        </TabsTrigger>
+                        <TabsTrigger value="camera">
+                            <Camera className="mr-2 h-4 w-4" /> Webcam Scan
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="manual" className="pt-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Scan or type barcode now..."
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          onKeyPress={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                          autoFocus
+                        />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={() => handleRedeemCoupon()}>Redeem</Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Submit a coupon code to add points to your account.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="camera" className="pt-4 space-y-4">
+                        <div className="relative">
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
+                            </div>
+                        </div>
+                        {hasCameraPermission === false && (
+                            <Alert variant="destructive">
+                                <AlertTitle>Camera Access Required</AlertTitle>
+                                <AlertDescription>
+                                    Please allow camera access in your browser to use this feature.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        <p className="text-sm text-muted-foreground text-center">Position the coupon's barcode inside the red box.</p>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
 
