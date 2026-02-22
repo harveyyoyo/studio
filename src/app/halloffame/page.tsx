@@ -1,16 +1,49 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { Student } from '@/lib/types';
+
+
+interface StudentWithPoints extends Student {
+    lifetimePoints: number;
+    pointsByCategory: { [category: string]: number };
+}
+
+const CategoryBreakdown = ({ student }: { student: StudentWithPoints }) => {
+    const topCategories = Object.entries(student.pointsByCategory)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3);
+
+    if (topCategories.length === 0) return null;
+
+    return (
+        <div className="mt-3 text-xs text-left w-full">
+            <p className="font-bold text-muted-foreground mb-1">Top Categories:</p>
+            <ul className="space-y-0.5">
+                {topCategories.map(([category, points]) => (
+                    <li key={category} className="flex justify-between items-center">
+                        <span className="text-muted-foreground">{category}</span>
+                        <span className="font-bold text-primary/80">{points.toLocaleString()} pts</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    )
+}
 
 export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId, db, getClassName } = useAppContext();
     const router = useRouter();
+    const [categoryFilter, setCategoryFilter] = useState('all');
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -22,15 +55,36 @@ export default function HallOfFamePage() {
         return <p>Loading...</p>;
     }
 
-    const studentsWithLifetimePoints = db.students.map(student => {
+    const studentsWithPoints: StudentWithPoints[] = db.students.map(student => {
+        const pointsByCategory: { [category: string]: number } = {};
+        
+        student.history
+            .filter(h => h.amount > 0)
+            .forEach(h => {
+                const match = h.desc.match(/\(([^)]+)\)$/);
+                const category = match && match[1] ? match[1] : 'General Reward';
+                if (!pointsByCategory[category]) {
+                    pointsByCategory[category] = 0;
+                }
+                pointsByCategory[category] += h.amount;
+            });
+        
         const pointsSpent = student.history
             .filter(h => h.amount < 0)
             .reduce((sum, h) => sum + Math.abs(h.amount), 0);
         const lifetimePoints = student.points + pointsSpent;
-        return { ...student, lifetimePoints };
+
+        return { ...student, lifetimePoints, pointsByCategory };
     });
 
-    const topStudents = studentsWithLifetimePoints.sort((a, b) => b.lifetimePoints - a.lifetimePoints);
+    const getPointsForFilter = (student: StudentWithPoints) => {
+        if (categoryFilter === 'all') {
+            return student.lifetimePoints;
+        }
+        return student.pointsByCategory[categoryFilter] || 0;
+    }
+
+    const topStudents = studentsWithPoints.sort((a, b) => getPointsForFilter(b) - getPointsForFilter(a));
 
     const podium = topStudents.slice(0, 3);
     const others = topStudents.slice(3);
@@ -47,15 +101,27 @@ export default function HallOfFamePage() {
                         <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
                             <Trophy className="text-amber-500" /> Hall of Fame
                         </h2>
-                        <CardDescription>Top all-time point earners at {schoolId?.replace(/_/g, ' ')}</CardDescription>
+                        <CardDescription>Top point earners at {schoolId?.replace(/_/g, ' ')}</CardDescription>
                     </div>
                     <Button asChild variant="secondary" size="sm">
                        <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal</Link>
                     </Button>
                 </div>
+                 <div className="mt-4 pt-4 border-t">
+                    <Label>Filter by Category</Label>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="max-w-xs">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Time Points</SelectItem>
+                            {db.categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                 </div>
             </Card>
             
-            {podium.length > 0 && (
+            {podium.length > 0 && getPointsForFilter(podium[0]) > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center items-end pt-8">
                      {/* 1st Place */}
                     <div className="md:order-2">
@@ -66,12 +132,13 @@ export default function HallOfFamePage() {
                             </Avatar>
                             <p className="font-bold text-xl md:text-2xl truncate">{podium[0].firstName} {podium[0].lastName}</p>
                             <p className="text-muted-foreground">{getClassName(podium[0].classId || '')}</p>
-                            <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{podium[0].lifetimePoints.toLocaleString()} pts</p>
+                            <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{getPointsForFilter(podium[0]).toLocaleString()} pts</p>
+                            <CategoryBreakdown student={podium[0]} />
                         </Card>
                     </div>
 
                     {/* 2nd Place */}
-                    {podium.length > 1 && (
+                    {podium.length > 1 && getPointsForFilter(podium[1]) > 0 && (
                         <div className="md:order-1">
                             <Card className="relative p-6 border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-300 dark:bg-slate-600 text-white font-bold rounded-full w-12 h-12 flex items-center justify-center text-xl">2</div>
@@ -80,13 +147,14 @@ export default function HallOfFamePage() {
                                 </Avatar>
                                 <p className="font-bold text-xl truncate">{podium[1].firstName} {podium[1].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[1].classId || '')}</p>
-                                <p className="text-2xl font-bold text-primary mt-2">{podium[1].lifetimePoints.toLocaleString()} pts</p>
+                                <p className="text-2xl font-bold text-primary mt-2">{getPointsForFilter(podium[1]).toLocaleString()} pts</p>
+                                <CategoryBreakdown student={podium[1]} />
                             </Card>
                         </div>
                     )}
                     
                     {/* 3rd Place */}
-                     {podium.length > 2 && (
+                     {podium.length > 2 && getPointsForFilter(podium[2]) > 0 && (
                         <div className="md:order-3">
                             <Card className="relative p-4 border-2 border-orange-400/50 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
                                 <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-orange-400/80 dark:bg-orange-700 text-white font-bold rounded-full w-10 h-10 flex items-center justify-center text-lg">3</div>
@@ -95,7 +163,8 @@ export default function HallOfFamePage() {
                                 </Avatar>
                                 <p className="font-bold text-lg truncate">{podium[2].firstName} {podium[2].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[2].classId || '')}</p>
-                                <p className="text-xl font-bold text-primary mt-2">{podium[2].lifetimePoints.toLocaleString()} pts</p>
+                                <p className="text-xl font-bold text-primary mt-2">{getPointsForFilter(podium[2]).toLocaleString()} pts</p>
+                                <CategoryBreakdown student={podium[2]} />
                             </Card>
                         </div>
                     )}
@@ -110,7 +179,10 @@ export default function HallOfFamePage() {
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-2">
-                            {others.map((student, index) => (
+                            {others.map((student, index) => {
+                                const points = getPointsForFilter(student);
+                                if (points <= 0) return null;
+                                return (
                                 <li key={student.id} className="flex items-center justify-between p-3 rounded-md bg-secondary border">
                                     <div className="flex items-center gap-4">
                                         <div className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 4}</div>
@@ -122,18 +194,18 @@ export default function HallOfFamePage() {
                                             <p className="text-xs text-muted-foreground">{getClassName(student.classId || '')}</p>
                                         </div>
                                     </div>
-                                    <div className="text-lg font-bold text-primary">{student.lifetimePoints.toLocaleString()} pts</div>
+                                    <div className="text-lg font-bold text-primary">{points.toLocaleString()} pts</div>
                                 </li>
-                            ))}
+                            )})}
                         </ul>
                     </CardContent>
                 </Card>
             )}
 
-            {topStudents.length === 0 && (
+            {topStudents.length === 0 || topStudents.every(s => getPointsForFilter(s) === 0) && (
                  <Card>
                     <CardContent className="p-10 text-center text-muted-foreground">
-                        No students have earned points yet.
+                        No students have earned points yet for this category.
                     </CardContent>
                 </Card>
             )}
