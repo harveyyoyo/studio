@@ -13,9 +13,16 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Building, Code, BookOpen } from 'lucide-react';
+import { Building, Code, BookOpen, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -72,6 +79,37 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center py-10 space-y-8">
+       <Card className="w-full max-w-md bg-green-50 dark:bg-green-900/20 border-green-500 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg"><Info className="w-5 h-5 text-green-700"/> Try It Out!</CardTitle>
+          <CardDescription>
+            Use one of the sample school accounts to explore the app.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm font-code">
+          <div className="flex justify-between items-center bg-green-100/50 dark:bg-green-900/30 p-2 rounded">
+            <div>
+              <div className="text-xs text-muted-foreground">School ID</div>
+              <div className="font-bold">school</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Passcode</div>
+              <div className="font-bold">1234</div>
+            </div>
+          </div>
+           <div className="flex justify-between items-center bg-green-100/50 dark:bg-green-900/30 p-2 rounded">
+            <div>
+              <div className="text-xs text-muted-foreground">School ID</div>
+              <div className="font-bold">yeshiva</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Passcode</div>
+              <div className="font-bold">1234</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="school" onClick={() => playSound('click')}>
@@ -165,11 +203,15 @@ export default function LoginPage() {
         </TabsContent>
       </Tabs>
 
-      <Card className="w-full max-w-4xl">
-          <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline text-2xl"><BookOpen className="w-6 h-6"/> How to Use the App</CardTitle>
-          </CardHeader>
-          <CardContent className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground space-y-4">
+      <Dialog>
+        <DialogTrigger asChild>
+           <Button variant="outline"><BookOpen className="mr-2 h-4 w-4" /> How to Use This App</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-4xl">
+           <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-headline text-2xl"><BookOpen className="w-6 h-6"/> How to Use the App</DialogTitle>
+          </DialogHeader>
+          <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground space-y-4 max-h-[70vh] overflow-y-auto pr-6">
             <p>Reward Arcade is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.</p>
             
             <div>
@@ -202,8 +244,9 @@ export default function LoginPage() {
               </ul>
             </div>
             <p className="italic pt-4">That's it! It's designed to be simple and intuitive. Enjoy building a positive and rewarding environment at your school!</p>
-          </CardContent>
-      </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
