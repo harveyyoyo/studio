@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import {
-  ClientProvider,
+  FirebaseProvider,
 } from '@/firebase';
 
 
@@ -34,7 +34,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <ClientProvider>
+        <FirebaseProvider>
           <AppProvider>
             <div
               id="screen-view"
@@ -47,7 +47,7 @@ export default function RootLayout({
             </div>
             <Toaster />
           </AppProvider>
-        </ClientProvider>
+        </FirebaseProvider>
       </body>
     </html>
   );
