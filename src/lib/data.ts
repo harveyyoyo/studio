@@ -2,7 +2,6 @@ import type { Database } from './types';
 
 export const INITIAL_DATA: Omit<Database, 'passcode'> = {
   students: [
-    // Existing
     { id: 's1', firstName: 'Alice', lastName: 'Johnson', nfcId: '100', points: 150, classId: 'c1', history: [{ desc: 'Redeemed: Cool Pencil', amount: -50, date: Date.now() - 86400000 * 5 }, { desc: 'Redeemed coupon: GOOD-100 (Good Behavior)', amount: 200, date: Date.now() - 86400000 * 10 }] },
     { id: 's2', firstName: 'Bob', lastName: 'Williams', nfcId: '101', points: 275, classId: 'c1', history: [{ desc: 'Redeemed coupon: ACAD-100 (Academic Achievement)', amount: 100, date: Date.now() - 86400000 * 3 }, { desc: 'Redeemed coupon: HELP-25 (Helping Others)', amount: 25, date: Date.now() - 86400000 * 9 }, { desc: 'Redeemed coupon: GEN-50 (General Reward)', amount: 50, date: Date.now() - 86400000 * 12 }, { desc: 'Redeemed coupon: REWARD-500 (Good Behavior)', amount: 500, date: Date.now() - 86400000 * 20 }] },
     { id: 's3', firstName: 'Charlie', lastName: 'Brown', nfcId: '102', points: 80, classId: 'c2', history: [{ desc: 'Redeemed coupon: GEN-50 (General Reward)', amount: 100, date: Date.now() - 86400000 * 1 }] },

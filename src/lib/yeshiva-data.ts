@@ -2,7 +2,6 @@ import type { Database } from './types';
 
 export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
   students: [
-    // Existing
     { id: 'ys1', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: 'y101', points: 120, classId: 'yc1', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 120, date: Date.now() - 86400000 * 2 }] },
     { id: 'ys2', firstName: 'Avi', lastName: 'Schwartz', nfcId: 'y102', points: 80, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 80, date: Date.now() - 86400000 * 5 }] },
     { id: 'ys3', firstName: 'Yosef', lastName: 'Cohen', nfcId: 'y103', points: 250, classId: 'yc1', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 250, date: Date.now() - 86400000 * 1 }] },
@@ -33,6 +32,26 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: 'ys28', firstName: 'Noach', lastName: 'Singer', nfcId: 'y128', points: 85, classId: 'yc3', history: [{ desc: 'Redeemed coupon: MISHNA-75 (Mishna Mastery)', amount: 85, date: Date.now() - 86400000 * 6 }] },
     { id: 'ys29', firstName: 'Reuven', lastName: 'Farkas', nfcId: 'y129', points: 110, classId: 'yc4', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 110, date: Date.now() - 86400000 * 4 }] },
     { id: 'ys30', firstName: 'Simcha', lastName: 'Teitelbaum', nfcId: 'y130', points: 2200, classId: 'yc1', history: [{ desc: 'Redeemed: Seforim Gift Card', amount: -2000, date: Date.now() - 86400000 * 28 }, { desc: 'Redeemed coupon: AVOSUBANIM-100 (Avos Ubanim)', amount: 4200, date: Date.now() - 86400000 * 50 }] },
+    { id: 'ys31', firstName: 'Yitzchak', lastName: 'Fishman', nfcId: 'y131', points: 50, classId: 'yc1', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 50, date: Date.now() - 86400000 * 1 }] },
+    { id: 'ys32', firstName: 'Shraga', lastName: 'Meisels', nfcId: 'y132', points: 95, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 95, date: Date.now() - 86400000 * 8 }] },
+    { id: 'ys33', firstName: 'Naftali', lastName: 'Glick', nfcId: 'y133', points: 320, classId: 'yc3', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 320, date: Date.now() - 86400000 * 16 }] },
+    { id: 'ys34', firstName: 'Benyamin', lastName: 'Schumer', nfcId: 'y134', points: 480, classId: 'yc4', history: [{ desc: 'Redeemed coupon: GEMARA-100 (Gemara B\'iyun)', amount: 480, date: Date.now() - 86400000 * 24 }] },
+    { id: 'ys35', firstName: 'Eitan', lastName: 'Weissman', nfcId: 'y135', points: 160, classId: 'yc1', history: [{ desc: 'Redeemed coupon: MISHNA-75 (Mishna Mastery)', amount: 160, date: Date.now() - 86400000 * 10 }] },
+    { id: 'ys36', firstName: 'Ilan', lastName: 'Rothman', nfcId: 'y136', points: 290, classId: 'yc2', history: [{ desc: 'Redeemed coupon: CHESED-150 (Chesed)', amount: 290, date: Date.now() - 86400000 * 17 }] },
+    { id: 'ys37', firstName: 'Meir', lastName: 'Silber', nfcId: 'y137', points: 65, classId: 'yc3', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 65, date: Date.now() - 86400000 * 3 }] },
+    { id: 'ys38', firstName: 'Shimon', lastName: 'Neuman', nfcId: 'y138', points: 520, classId: 'yc4', history: [{ desc: 'Redeemed coupon: AVOSUBANIM-100 (Avos Ubanim)', amount: 520, date: Date.now() - 86400000 * 26 }] },
+    { id: 'ys39', firstName: 'Yechiel', lastName: 'Landau', nfcId: 'y139', points: 170, classId: 'yc1', history: [{ desc: 'Redeemed coupon: CHAVRUSA-50 (Chavrusa Learning)', amount: 170, date: Date.now() - 86400000 * 12 }] },
+    { id: 'ys40', firstName: 'Zalman', lastName: 'Goldberg', nfcId: 'y140', points: 950, classId: 'yc2', history: [{ desc: 'Redeemed: Pizza Slice', amount: -500, date: Date.now() - 86400000 * 20 }, { desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 1450, date: Date.now() - 86400000 * 45 }] },
+    { id: 'ys41', firstName: 'Asher', lastName: 'Kornbluth', nfcId: 'y141', points: 210, classId: 'yc3', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 210, date: Date.now() - 86400000 * 19 }] },
+    { id: 'ys42', firstName: 'Binyamin', lastName: 'Zimmerman', nfcId: 'y142', points: 430, classId: 'yc4', history: [{ desc: 'Redeemed coupon: GEMARA-100 (Gemara B\'iyun)', amount: 430, date: Date.now() - 86400000 * 28 }] },
+    { id: 'ys43', firstName: 'Eliyahu', lastName: 'Wolfson', nfcId: 'y143', points: 140, classId: 'yc1', history: [{ desc: 'Redeemed coupon: MISHNA-75 (Mishna Mastery)', amount: 140, date: Date.now() - 86400000 * 11 }] },
+    { id: 'ys44', firstName: 'Gershon', lastName: 'Braun', nfcId: 'y144', points: 30, classId: 'yc2', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 30, date: Date.now() - 86400000 * 2 }] },
+    { id: 'ys45', firstName: 'Isser', lastName: 'Werner', nfcId: 'y145', points: 680, classId: 'yc3', history: [{ desc: 'Redeemed coupon: CHESED-150 (Chesed)', amount: 680, date: Date.now() - 86400000 * 21 }] },
+    { id: 'ys46', firstName: 'Mendel', lastName: 'Perlman', nfcId: 'y146', points: 260, classId: 'yc4', history: [{ desc: 'Redeemed coupon: AVOSUBANIM-100 (Avos Ubanim)', amount: 260, date: Date.now() - 86400000 * 23 }] },
+    { id: 'ys47', firstName: 'Nechemia', lastName: 'Moskowitz', nfcId: 'y147', points: 180, classId: 'yc1', history: [{ desc: 'Redeemed coupon: CHAVRUSA-50 (Chavrusa Learning)', amount: 180, date: Date.now() - 86400000 * 14 }] },
+    { id: 'ys48', firstName: 'Pinchas', lastName: 'Horowitz', nfcId: 'y148', points: 880, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 880, date: Date.now() - 86400000 * 30 }] },
+    { id: 'ys49', firstName: 'Shaya', lastName: 'Fischer', nfcId: 'y149', points: 390, classId: 'yc3', history: [{ desc: 'Redeemed coupon: MIDDOS-200 (Middos Tovos)', amount: 390, date: Date.now() - 86400000 * 27 }] },
+    { id: 'ys50', firstName: 'Yonoson', lastName: 'Frankel', nfcId: 'y150', points: 1300, classId: 'yc4', history: [{ desc: 'Redeemed: Large Sefer (Artscroll)', amount: -1500, date: Date.now() - 86400000 * 33 }, { desc: 'Redeemed coupon: GEMARA-100 (Gemara B\'iyun)', amount: 2800, date: Date.now() - 86400000 * 55 }] },
   ],
   classes: [
     { id: 'yc1', name: 'Shiur Aleph' },
