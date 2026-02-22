@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 import { INITIAL_DATA } from '@/lib/data';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
+import { SCHOOL_DATA } from '@/lib/school-data';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -284,7 +285,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       schoolData = { ...YESHIVA_DATA, passcode: newPasscode };
     } else if (cleanId === 'school') {
       newPasscode = '1234';
-      schoolData = { ...INITIAL_DATA, passcode: newPasscode };
+      schoolData = { ...SCHOOL_DATA, passcode: newPasscode };
     } else {
       newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
       schoolData = { ...INITIAL_DATA, passcode: newPasscode };
