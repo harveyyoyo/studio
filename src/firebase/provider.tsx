@@ -1,16 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { firebaseConfig } from './config';
-
-// Initialize Firebase once when the module is loaded.
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const firestore = getFirestore(app);
-
 
 interface FirebaseContextValue {
   firebaseApp: FirebaseApp;
@@ -25,8 +19,13 @@ export function FirebaseProvider({
 }: {
   children: ReactNode;
 }) {
-  // The value is stable because it's created once at the module level.
-  const value = { firebaseApp: app, auth, firestore };
+  const value = useMemo(() => {
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+    return { firebaseApp: app, auth, firestore };
+  }, []);
+
   return (
     <FirebaseContext.Provider value={value}>
       {children}
