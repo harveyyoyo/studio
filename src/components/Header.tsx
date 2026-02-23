@@ -30,21 +30,21 @@ export default function Header() {
   }
 
   const getSubTitle = () => {
-    switch(loginState) {
-        case 'developer':
-            return <span className="font-code text-destructive">Developer Mode</span>;
-        case 'school':
-             return <span className="font-code text-primary/80">{schoolId}</span>;
-        default:
-            return 'School Points System';
+    switch (loginState) {
+      case 'developer':
+        return <span className="font-code text-destructive">Developer Mode</span>;
+      case 'school':
+        return <span className="font-code text-primary/80">{schoolId}</span>;
+      default:
+        return 'School Points System';
     }
   }
 
   return (
     <header className="no-print w-full max-w-6xl bg-card rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center border-b-4 border-primary shadow-lg relative overflow-hidden">
-      
+
       <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-slate-200 dark:text-slate-800 uppercase tracking-widest italic select-none hidden sm:block">
-          {getTitle()}
+        {getTitle()}
       </div>
 
       <Link href="/" className="flex items-center gap-3 relative z-10 group">
@@ -93,6 +93,9 @@ export default function Header() {
           )}
         </div>
       )}
+      <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/30 font-mono select-none pointer-events-none">
+        v1.0.4 - 2026-02-23 16:30
+      </div>
     </header>
   );
 }
