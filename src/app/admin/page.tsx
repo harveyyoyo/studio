@@ -374,7 +374,7 @@ function AdminDashboard() {
     if (!file) return;
     try {
         const text = await file.text();
-        const report = await uploadStudents(text, students || [], classes || []);
+        const report = await uploadStudents(text);
         if (report.failed > 0) {
             setUploadReport(report);
         }
@@ -480,7 +480,7 @@ function AdminDashboard() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteClass(c.id, students || [])}>Continue</AlertDialogAction>
+                          <AlertDialogAction onClick={() => deleteClass(c.id)}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

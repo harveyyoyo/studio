@@ -21,12 +21,14 @@ export interface Category {
 }
 
 export interface Student {
-  id: string; // This is the student's unique scannable ID
+  id: string;
   firstName: string;
   lastName: string;
   points: number;
-  lifetimePoints: number;
+  lifetimePoints?: number;
   classId?: string;
+  nfcId: string;
+  history: HistoryItem[];
 }
 
 export interface Coupon {
@@ -61,4 +63,9 @@ export interface Database {
   coupons?: Coupon[];
   prizes?: Prize[];
   updatedAt: number;
+  hasMigratedStudents?: boolean;
+  hasMigratedClasses?: boolean;
+  hasMigratedTeachers?: boolean;
+  hasMigratedPrizes?: boolean;
+  hasMigratedCoupons?: boolean;
 }

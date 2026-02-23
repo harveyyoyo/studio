@@ -4,12 +4,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 
 import {
   Card,
@@ -156,15 +156,23 @@ function StudentDashboard({
     if (!code) return;
     resetTimer();
     
-    const value = await redeemCoupon(student.id, code);
+    const result = await redeemCoupon(student.id, code);
 
-    toast({
-        title: 'Coupon Redeemed!',
-        description: `You gained ${value} points.`,
-    });
-    animationKey.current += 1;
-    setAnimatedValue(value);
-    setTimeout(() => setAnimatedValue(null), 1500);
+    if (result.success) {
+        toast({
+            title: 'Coupon Redeemed!',
+            description: `You gained ${result.value} points.`,
+        });
+        animationKey.current += 1;
+        setAnimatedValue(result.value || null);
+        setTimeout(() => setAnimatedValue(null), 1500);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Redemption Failed',
+            description: result.message,
+        });
+    }
 
     setCouponCode('');
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
@@ -176,33 +184,46 @@ useEffect(() => {
 
     const videoElement = videoRef.current;
     let stream: MediaStream | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let controls: any;
+    let cancelled = false;
 
     const cleanup = () => {
-      codeReader.stopContinuousDecode();
+      cancelled = true;
+      if (controls) {
+          controls.stop();
+      }
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
 
     navigator.mediaDevices.getUserMedia({ video: true })
-        .then(s => {
+        .then(async (s) => {
+            if (cancelled) {
+                s.getTracks().forEach(t => t.stop());
+                return;
+            }
             stream = s;
             setHasCameraPermission(true);
             
             if (videoElement) {
-              videoElement.srcObject = stream;
-              videoElement.play();
-
-              codeReader.decodeContinuously(videoElement, stream, (result, err) => {
-                  if (result) {
-                      playSound('redeem');
-                      handleRedeemCoupon(result.getText());
-                      setActiveTab('manual'); 
-                  }
-                  if (err && !(err instanceof NotFoundException)) {
-                      console.error('Zxing Error:', err);
-                  }
-              });
+              // videoElement.srcObject = stream; // decodeFromStream handles this
+              
+              try {
+                  controls = await codeReader.decodeFromStream(stream, videoElement, (result, err) => {
+                      if (result) {
+                          playSound('redeem');
+                          handleRedeemCoupon(result.getText());
+                          setActiveTab('manual'); 
+                      }
+                      if (err && err.name !== 'NotFoundException') {
+                          console.error('Zxing Error:', err);
+                      }
+                  });
+              } catch (error) {
+                  console.error("Decode error", error);
+              }
             }
         })
         .catch(err => {

@@ -14,7 +14,7 @@ import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } fr
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { auth, firestore, functions } from '@/firebase';
+import { useAuth, useFirestore, useFunctions } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -65,6 +65,7 @@ interface AppContextType {
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
+  redeemPrize: (studentId: string, prize: Prize) => Promise<void>;
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
@@ -121,6 +122,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [backups, setBackups] = useState<{ id: string }[]>([]);
   const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
+
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const functions = useFunctions();
 
   const router = useRouter();
   const { toast } = useToast();
@@ -180,7 +185,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
         const setupListener = (collectionName: keyof Database, flag: keyof Database) => {
           if (schoolData[flag]) {
-            baseData[collectionName] = db[collectionName] || [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (baseData as any)[collectionName] = (db as any)[collectionName] || [];
             const collectionRef = collection(firestore, 'schools', schoolId, collectionName as string);
             const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
               const data = snapshot.docs.map(doc => doc.data());
@@ -343,7 +349,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
     }
-  }, [schoolId, toast, playSound]);
+  }, [schoolId, toast, playSound, functions]);
 
   const devCreateBackup = useCallback(async (schoolId: string) => {
     const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
@@ -354,7 +360,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
     }
-  }, [toast, playSound]);
+  }, [toast, playSound, functions]);
 
   const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
     if (!firestore) return;
@@ -444,7 +450,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, playSound, toast]);
 
   const getClassName = useCallback((classId: string) => {
-    return db.classes?.find((c) => c.id === classId)?.name || 'Unassigned';
+    return (db.classes || []).find((c) => c.id === classId)?.name || 'Unassigned';
   }, [db.classes]);
 
   const safeUpdate = useCallback(async (update: Record<string, any>) => {
@@ -476,9 +482,9 @@ const updateStudent = useCallback(async (updatedStudent: Student) => {
     if (!schoolId || !firestore) return;
     try {
       if (db.hasMigratedStudents) {
-          await updateDoc(doc(firestore, 'schools', schoolId, 'students', updatedStudent.id), updatedStudent);
+          await setDoc(doc(firestore, 'schools', schoolId, 'students', updatedStudent.id), updatedStudent);
       } else {
-          const newStudents = db.students.map((s) => s.id === updatedStudent.id ? updatedStudent : s);
+          const newStudents = (db.students || []).map((s) => s.id === updatedStudent.id ? updatedStudent : s);
           await updateDb({ students: newStudents });
       }
       playSound('success');
@@ -490,7 +496,7 @@ const updateStudent = useCallback(async (updatedStudent: Student) => {
 const deleteStudent = useCallback(async (studentId: string) => {
     if (!schoolId || !firestore) return;
     try {
-      const studentToDelete = db.students.find(s => s.id === studentId);
+      const studentToDelete = (db.students || []).find(s => s.id === studentId);
       if (!studentToDelete) throw new Error("Student not found");
       if (db.hasMigratedStudents) {
           await deleteDoc(doc(firestore, 'schools', schoolId, 'students', studentId));
@@ -506,7 +512,7 @@ const deleteStudent = useCallback(async (studentId: string) => {
 
 
 const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
-    if (db.classes?.some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
+    if ((db.classes || []).some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
         toast({variant: 'destructive', title: 'Class with this name already exists.'});
         return;
     }
@@ -524,7 +530,7 @@ const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
 const deleteClass = useCallback(async (classId: string) => {
     if (!schoolId || !firestore || !schoolDocRef) return;
     try {
-      const classToDelete = db.classes?.find(c => c.id === classId);
+      const classToDelete = (db.classes || []).find(c => c.id === classId);
       if (!classToDelete) throw new Error("Class not found");
 
       if (db.hasMigratedClasses) {
@@ -536,7 +542,7 @@ const deleteClass = useCallback(async (classId: string) => {
           await batch.commit();
           toast({ title: 'Class deleted' });
       } else {
-          const newStudents = db.students.map((s) => s.classId === classId ? { ...s, classId: '' } : s);
+          const newStudents = (db.students || []).map((s) => s.classId === classId ? { ...s, classId: '' } : s);
           await updateDb({ classes: arrayRemove(classToDelete) as any, students: newStudents });
       }
       playSound('success');
@@ -547,7 +553,7 @@ const deleteClass = useCallback(async (classId: string) => {
 
   
 const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
-    if (db.teachers?.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
+    if ((db.teachers || []).some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
         toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
         return;
     }
@@ -564,7 +570,7 @@ const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
 
 const deleteTeacher = useCallback(async (teacherId: string) => {
     try {
-      const teacherToDelete = db.teachers?.find(t => t.id === teacherId);
+      const teacherToDelete = (db.teachers || []).find(t => t.id === teacherId);
       if (!teacherToDelete) throw new Error("Teacher not found");
 
       if (db.hasMigratedTeachers) {
@@ -581,7 +587,7 @@ const deleteTeacher = useCallback(async (teacherId: string) => {
 }, [db.teachers, db.hasMigratedTeachers, safeUpdate, schoolId, firestore, toast]);
 
   const addCategory = useCallback(async (categoryData: { name: string; points: number }) => {
-    if (db.categories?.map((c) => c.name.toLowerCase()).includes(categoryData.name.toLowerCase())) {
+    if ((db.categories || []).map((c) => c.name.toLowerCase()).includes(categoryData.name.toLowerCase())) {
         toast({ variant: 'destructive', title: 'Category already exists.' });
         return;
     }
@@ -599,7 +605,7 @@ const deleteTeacher = useCallback(async (teacherId: string) => {
 
   const deleteCategory = useCallback(async (categoryId: string) => {
     try {
-      const categoryToDelete = db.categories?.find(c => c.id === categoryId);
+      const categoryToDelete = (db.categories || []).find(c => c.id === categoryId);
       if (!categoryToDelete) throw new Error("Category not found");
       
       if (schoolId && firestore) {
@@ -630,11 +636,11 @@ const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
 const redeemCoupon = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
     if (!schoolId || !firestore) return { success: false, message: 'Not logged in.' };
     try {
-      const coupon = db.coupons.find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
+      const coupon = (db.coupons || []).find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
       if (!coupon) throw new Error('Coupon code not found.');
       if (coupon.used) throw new Error('This coupon has already been used.');
 
-      const student = db.students.find((s) => s.id === studentId);
+      const student = (db.students || []).find((s) => s.id === studentId);
       if (!student) throw new Error('Student not found.');
 
       const newHistoryItem: HistoryItem = {
@@ -654,16 +660,16 @@ const redeemCoupon = useCallback(async (studentId: string, couponCode: string): 
       };
       
       if (db.hasMigratedStudents) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'students', studentId), updatedStudent);
+        await setDoc(doc(firestore, 'schools', schoolId, 'students', studentId), updatedStudent);
       } else {
-        const newStudents = db.students.map(s => s.id === studentId ? updatedStudent : s);
+        const newStudents = (db.students || []).map(s => s.id === studentId ? updatedStudent : s);
         await updateDb({ students: newStudents });
       }
 
       if (db.hasMigratedCoupons) {
-          await updateDoc(doc(firestore, 'schools', schoolId, 'coupons', coupon.id), updatedCoupon);
+          await setDoc(doc(firestore, 'schools', schoolId, 'coupons', coupon.id), updatedCoupon);
       } else {
-          const newCoupons = db.coupons.map((c) => c.code === coupon.code ? updatedCoupon : c);
+          const newCoupons = (db.coupons || []).map((c) => c.code === coupon.code ? updatedCoupon : c);
           await updateDb({ coupons: newCoupons });
       }
 
@@ -672,6 +678,48 @@ const redeemCoupon = useCallback(async (studentId: string, couponCode: string): 
     } catch (e) {
       playSound('error');
       return { success: false, message: (e as Error).message };
+    }
+}, [schoolId, firestore, db, updateDb, playSound]);
+
+const redeemPrize = useCallback(async (studentId: string, prize: Prize) => {
+    if (!schoolId || !firestore) return;
+    try {
+      const student = (db.students || []).find((s) => s.id === studentId);
+      if (!student && !db.hasMigratedStudents) throw new Error('Student not found.');
+      
+      let currentStudent = student;
+      if (db.hasMigratedStudents) {
+          const snap = await getDoc(doc(firestore, 'schools', schoolId, 'students', studentId));
+          if (!snap.exists()) throw new Error('Student not found.');
+          currentStudent = snap.data() as Student;
+      }
+      
+      if (!currentStudent) throw new Error("Student not found");
+
+      if (currentStudent.points < prize.points) throw new Error("Insufficient points.");
+
+      const newHistoryItem: HistoryItem = {
+          desc: `Redeemed Prize: ${prize.name}`,
+          amount: -prize.points,
+          date: Date.now(),
+      };
+
+      const updatedStudent: Student = {
+          ...currentStudent,
+          points: currentStudent.points - prize.points,
+          history: [newHistoryItem, ...currentStudent.history],
+      };
+
+      if (db.hasMigratedStudents) {
+          await setDoc(doc(firestore, 'schools', schoolId, 'students', studentId), updatedStudent);
+      } else {
+          const newStudents = (db.students || []).map(s => s.id === studentId ? updatedStudent : s);
+          await updateDb({ students: newStudents });
+      }
+      playSound('redeem'); 
+    } catch (e) {
+      playSound('error');
+      throw e;
     }
 }, [schoolId, firestore, db, updateDb, playSound]);
 
@@ -784,9 +832,9 @@ const updatePrize = useCallback(async (updatedPrize: Prize) => {
     if (!schoolId || !firestore) return;
     try {
       if (db.hasMigratedPrizes) {
-          await updateDoc(doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id), updatedPrize);
+          await setDoc(doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id), updatedPrize);
       } else {
-          const newPrizes = db.prizes.map((p) => p.id === updatedPrize.id ? updatedPrize : p);
+          const newPrizes = (db.prizes || []).map((p) => p.id === updatedPrize.id ? updatedPrize : p);
           await updateDb({ prizes: newPrizes });
       }
       playSound('success');
@@ -797,7 +845,7 @@ const updatePrize = useCallback(async (updatedPrize: Prize) => {
 
 const deletePrize = useCallback(async (prizeId: string) => {
   try {
-    const prizeToDelete = db.prizes.find(p => p.id === prizeId);
+    const prizeToDelete = (db.prizes || []).find(p => p.id === prizeId);
     if (!prizeToDelete) throw new Error("Prize not found");
 
     if (db.hasMigratedPrizes) {
@@ -823,7 +871,7 @@ const uploadStudents = useCallback(async (csvContent: string): Promise<{success:
         return {success: 0, failed: 0, errors:['File is empty.']};
     }
 
-    const existingNfcIds = new Set(db.students.map(s => s.nfcId));
+    const existingNfcIds = new Set((db.students || []).map(s => s.nfcId));
     let successCount = 0;
     const newStudents: Student[] = [];
 
@@ -848,7 +896,7 @@ const uploadStudents = useCallback(async (csvContent: string): Promise<{success:
             newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
         } while (existingNfcIds.has(newNfcId));
 
-        const classObj = db.classes.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
+        const classObj = (db.classes || []).find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
         const newStudent: Student = {
             id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
@@ -896,7 +944,7 @@ const migrateFunction = useCallback(async (schoolId: string, functionName: strin
       console.error(error);
       toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
     }
-  }, [toast]);
+  }, [toast, functions]);
 
 const migrateStudents = (schoolId: string) => migrateFunction(schoolId, 'migrateStudentsToSubcollection');
 const migrateClasses = (schoolId: string) => migrateFunction(schoolId, 'migrateClassesToSubcollection');
@@ -905,7 +953,7 @@ const migratePrizes = (schoolId: string) => migrateFunction(schoolId, 'migratePr
 const migrateCoupons = (schoolId: string) => migrateFunction(schoolId, 'migrateCouponsToSubcollection');
 
 const getStudentPointsByCategory = useCallback((studentId: string): Record<string, number> => {
-  const student = db.students.find(s => s.id === studentId);
+  const student = (db.students || []).find(s => s.id === studentId);
   if (!student) return {};
 
   return student.history.reduce((acc, item) => {
@@ -955,7 +1003,7 @@ const getStudentPointsByCategory = useCallback((studentId: string): Record<strin
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, setCouponsToPrint, setStudentsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
-      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchool, setData,
+      addCoupons, redeemCoupon, redeemPrize, createSchool, deleteSchool, updateSchool, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
       uploadStudents,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
@@ -967,7 +1015,7 @@ const getStudentPointsByCategory = useCallback((studentId: string): Record<strin
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      redeemCoupon, createSchool, deleteSchool, updateSchool, setData,
+      redeemCoupon, redeemPrize, createSchool, deleteSchool, updateSchool, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
       uploadStudents,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
@@ -981,7 +1029,7 @@ const getStudentPointsByCategory = useCallback((studentId: string): Record<strin
     <AppContext.Provider value={value}>
       {children}
       {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
-      {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} getClassName={getClassName} />}
+      {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} />}
     </AppContext.Provider>
   );
 }

@@ -26,6 +26,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface SchoolInfo {
   id: string;
@@ -34,6 +36,110 @@ interface SchoolInfo {
 
 interface BackupInfo {
     id: string;
+}
+
+interface SchoolStats {
+  students: number;
+  classes: number;
+  teachers: number;
+  categories: number;
+  prizes: number;
+  coupons: number;
+  usedCoupons: number;
+  totalPointsAwarded: number;
+}
+
+
+function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+    const [stats, setStats] = useState<SchoolStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const firestore = useFirestore();
+
+    useEffect(() => {
+        if (!isOpen || !school || !firestore) return;
+
+        const fetchStats = async () => {
+            setLoading(true);
+            try {
+                const collections = ['students', 'classes', 'teachers', 'categories', 'prizes', 'coupons'];
+                const promises = collections.map(col => getDocs(collection(firestore, 'schools', school.id, col)));
+                const snapshots = await Promise.all(promises);
+
+                const couponsSnapshot = snapshots[5];
+                const usedCoupons = couponsSnapshot.docs.filter(doc => doc.data().used).length;
+                
+                const totalPointsAwarded = couponsSnapshot.docs
+                    .filter((c) => c.data().used)
+                    .reduce((sum, c) => sum + c.data().value, 0) || 0;
+
+
+                setStats({
+                    students: snapshots[0].size,
+                    classes: snapshots[1].size,
+                    teachers: snapshots[2].size,
+                    categories: snapshots[3].size,
+                    prizes: snapshots[4].size,
+                    coupons: snapshots[5].size,
+                    usedCoupons: usedCoupons,
+                    totalPointsAwarded: totalPointsAwarded
+                });
+            } catch (error) {
+                console.error("Error fetching school stats:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, [isOpen, school, firestore]);
+
+    if (!school) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Database Stats for <span className="font-code">{school.id}</span></DialogTitle>
+                    <DialogDescription>{school.name}</DialogDescription>
+                </DialogHeader>
+                {loading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 text-center">
+                      {Array.from({length: 6}).map((_, i) => <Skeleton key={i} className="h-24" />)}
+                    </div>
+                ) : stats && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 text-center">
+                        <div className="bg-secondary p-4 rounded-lg">
+                            <p className="text-2xl font-bold">{stats.students}</p>
+                            <p className="text-sm text-muted-foreground">Students</p>
+                        </div>
+                        <div className="bg-secondary p-4 rounded-lg">
+                            <p className="text-2xl font-bold">{stats.classes}</p>
+                            <p className="text-sm text-muted-foreground">Classes</p>
+                        </div>
+                        <div className="bg-secondary p-4 rounded-lg">
+                            <p className="text-2xl font-bold">{stats.teachers}</p>
+                            <p className="text-sm text-muted-foreground">Teachers</p>
+                        </div>
+                        <div className="bg-secondary p-4 rounded-lg">
+                            <p className="text-2xl font-bold">{stats.coupons} / {stats.usedCoupons}</p>
+                            <p className="text-sm text-muted-foreground">Coupons (Used)</p>
+                        </div>
+                        <div className="bg-secondary p-4 rounded-lg">
+                            <p className="text-2xl font-bold">{stats.prizes}</p>
+                            <p className="text-sm text-muted-foreground">Prize Types</p>
+                        </div>
+                         <div className="bg-secondary p-4 rounded-lg">
+                             <p className="text-2xl font-bold">{stats.totalPointsAwarded.toLocaleString()}</p>
+                             <p className="text-sm text-muted-foreground">Points Awarded</p>
+                         </div>
+                    </div>
+                )}
+                 <DialogFooter>
+                    <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 export default function DeveloperPage() {
@@ -53,6 +159,7 @@ export default function DeveloperPage() {
   const [newPasscode, setNewPasscode] = useState('');
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
+  const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
 
   const schoolsQuery = useMemoFirebase(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
@@ -254,7 +361,7 @@ export default function DeveloperPage() {
                    <ul className="space-y-2">
                       {allSchools && [...allSchools].sort((a,b) => a.id.localeCompare(b.id)).map((school) => (
                           <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
-                              <div>
+                              <div onClick={() => setStatsSchool(school)} className="flex-grow cursor-pointer rounded -m-2 p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
                                 <p className="font-bold font-code break-all">{school.id}</p>
                                 <p className="text-sm text-muted-foreground">{school.name}</p>
                               </div>
@@ -315,6 +422,12 @@ export default function DeveloperPage() {
                   )}
               </CardContent>
           </Card>
+          
+          <SchoolStatsModal 
+            school={statsSchool}
+            isOpen={!!statsSchool}
+            onOpenChange={(open) => !open && setStatsSchool(null)}
+          />
           
           <AlertDialog open={!!createdSchoolInfo} onOpenChange={() => setCreatedSchoolInfo(null)}>
             <AlertDialogContent>

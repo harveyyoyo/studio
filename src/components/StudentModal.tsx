@@ -36,7 +36,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
-  const [id, setId] = useState('');
+  const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
   const { toast } = useToast();
 
@@ -48,13 +48,13 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setFirstName(student.firstName);
         setLastName(student.lastName);
         setPoints(student.points.toString());
-        setId(student.id);
+        setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
       } else { // Create mode
         setFirstName('');
         setLastName('');
         setPoints('0');
-        setId(Math.floor(10000000 + Math.random() * 90000000).toString());
+        setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
       }
     }
@@ -65,7 +65,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
-    if (!id) {
+    if (!nfcId) {
       toast({ variant: 'destructive', title: 'Student ID is required.' });
       return;
     }
@@ -74,28 +74,15 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       return;
     }
 
-
-    const studentDocRef = doc(firestore, 'schools', schoolId, 'students', id);
-    const docSnap = await getDoc(studentDocRef);
-
-    if (docSnap.exists() && (!isEditing || docSnap.id !== student?.id)) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Student ID',
-            description: `Student ID "${id}" is already assigned to another student.`,
-        });
-        return;
-    }
-
     const finalClassId = classId === 'none' ? '' : classId;
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, points: parseInt(points) || 0, classId: finalClassId };
+      const updatedStudent: Student = { ...student, firstName, lastName, points: parseInt(points) || 0, classId: finalClassId, nfcId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
-        id,
+        nfcId,
         firstName, 
         lastName,
         points: parseInt(points) || 0,
@@ -126,7 +113,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           </div>
           <div className="space-y-1">
             <Label htmlFor="student-id">Student ID (for scanning)</Label>
-            <Input id="student-id" value={id} onChange={e => setId(e.target.value)} placeholder="Tap card or enter ID..." disabled={isEditing} />
+            <Input id="student-id" value={nfcId} onChange={e => setNfcId(e.target.value)} placeholder="Tap card or enter ID..." />
           </div>
           <div className="space-y-1">
             <Label htmlFor="points">Points</Label>

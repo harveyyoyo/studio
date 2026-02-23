@@ -128,7 +128,7 @@ export default function HallOfFamePage() {
                             </Avatar>
                             <p className="font-bold text-xl md:text-2xl truncate">{podium[0].firstName} {podium[0].lastName}</p>
                             <p className="text-muted-foreground">{getClassName(podium[0].classId)}</p>
-                            <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{podium[0].lifetimePoints.toLocaleString()} pts</p>
+                            <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{(podium[0].lifetimePoints || 0).toLocaleString()} pts</p>
                         </Card>
                     </div>
 
@@ -142,7 +142,7 @@ export default function HallOfFamePage() {
                                 </Avatar>
                                 <p className="font-bold text-xl truncate">{podium[1].firstName} {podium[1].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[1].classId)}</p>
-                                <p className="text-2xl font-bold text-primary mt-2">{podium[1].lifetimePoints.toLocaleString()} pts</p>
+                                <p className="text-2xl font-bold text-primary mt-2">{(podium[1].lifetimePoints || 0).toLocaleString()} pts</p>
                             </Card>
                         </div>
                     )}
@@ -157,7 +157,7 @@ export default function HallOfFamePage() {
                                 </Avatar>
                                 <p className="font-bold text-lg truncate">{podium[2].firstName} {podium[2].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[2].classId)}</p>
-                                <p className="text-xl font-bold text-primary mt-2">{podium[2].lifetimePoints.toLocaleString()} pts</p>
+                                <p className="text-xl font-bold text-primary mt-2">{(podium[2].lifetimePoints || 0).toLocaleString()} pts</p>
                             </Card>
                         </div>
                     )}
@@ -183,7 +183,7 @@ export default function HallOfFamePage() {
                                             <p className="text-xs text-muted-foreground">{getClassName(student.classId)}</p>
                                         </div>
                                     </div>
-                                    <div className="text-lg font-bold text-primary">{student.lifetimePoints.toLocaleString()} pts</div>
+                                    <div className="text-lg font-bold text-primary">{(student.lifetimePoints || 0).toLocaleString()} pts</div>
                                 </li>
                             ))}
                         </ul>

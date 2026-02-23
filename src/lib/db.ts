@@ -393,11 +393,13 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
 
         const newStudent: Student = {
             id: newStudentId,
+            nfcId: newStudentId,
             firstName,
             lastName,
             points: 0,
             lifetimePoints: 0,
             classId: classObj?.id || '',
+            history: []
         };
         
         const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);

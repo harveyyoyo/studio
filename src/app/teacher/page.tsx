@@ -43,7 +43,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
     useEffect(() => {
-        if (categories?.length > 0 && !printCategoryId) {
+        if (categories && categories.length > 0 && !printCategoryId) {
           setPrintCategoryId(categories[0].id);
         }
     }, [categories, printCategoryId]);
