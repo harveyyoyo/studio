@@ -130,21 +130,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Restore session & settings
   useEffect(() => {
+    if (!auth) return; // Wait for firebase to be initialized
+
     const savedState = sessionStorage.getItem('loginState');
     const savedSchoolId = sessionStorage.getItem('schoolId');
-    if (savedState) {
-      const state = savedState as LoginState;
-      setLoginState(state);
-      if (state === 'school' && savedSchoolId) {
-        setSchoolId(savedSchoolId);
+
+    const initializeSession = async () => {
+      if (savedState && savedState !== 'loggedOut') {
+        // We have a stored app session, ensure we have a Firebase session too.
+        try {
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+          // Now that Firebase auth is confirmed, set the app's state from session storage
+          setLoginState(savedState as LoginState);
+          if (savedState === 'school' && savedSchoolId) {
+            setSchoolId(savedSchoolId);
+          }
+        } catch (error) {
+          console.error("Failed to restore Firebase session on page load:", error);
+          // If we can't sign in, clear the app session to force a fresh login.
+          sessionStorage.clear();
+          setLoginState('loggedOut');
+        }
       }
-    }
+      setIsInitialized(true);
+    };
+
+    initializeSession();
+    
+    // Also load user preference for auto-backup
     const storedPref = localStorage.getItem('autoBackupEnabled');
     if (storedPref) {
         setIsAutoBackupEnabled(JSON.parse(storedPref));
     }
-    setIsInitialized(true);
-  }, []);
+
+  }, [auth]); // This hook runs once when the auth object is ready.
   
   const schoolDocRef = useMemo(
     () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
