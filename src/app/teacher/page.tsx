@@ -102,6 +102,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
         const coupons: Coupon[] = Array.from({ length: 24 }, () => {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           return {
+            id: code,
             code,
             value: value,
             category: selectedCategory.name,
@@ -116,6 +117,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
 
     const selectedCategoryForPreview = db.categories.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
+      id: 'PREVIEW',
       code: 'PREVIEW',
       value: parseInt(printValue) || 0,
       category: selectedCategoryForPreview?.name || 'Category',

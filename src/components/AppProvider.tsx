@@ -105,11 +105,6 @@ const EMPTY_DB: Database = {
   coupons: [],
   prizes: [],
   updatedAt: 0,
-  hasMigratedStudents: false,
-  hasMigratedClasses: false,
-  hasMigratedTeachers: false,
-  hasMigratedPrizes: false,
-  hasMigratedCoupons: false,
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -567,7 +562,7 @@ const addClass = useCallback((classData: Omit<Class, 'id'>) => {
         toast({variant: 'destructive', title: 'Class with this name already exists.'});
         return;
     }
-    const newClass: Class = { ...classData, id: 'c' + Date.now() };
+    const newClass: Class = { ...classData, id: 'c' + Date.now() + Math.random().toString(36).substring(2, 8) };
     if (db.hasMigratedClasses) {
         if (!schoolId || !firestore) return;
         const classDocRef = doc(firestore, 'schools', schoolId, 'classes', newClass.id);
@@ -617,7 +612,7 @@ const addTeacher = useCallback((teacherData: Omit<Teacher, 'id'>) => {
         toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
         return;
     }
-    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() + Math.random().toString(36).substring(2, 8) };
     if (db.hasMigratedTeachers) {
       if (!schoolId || !firestore) return;
       const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', newTeacher.id);
@@ -655,12 +650,12 @@ const deleteTeacher = useCallback(async (teacherId: string) => {
     }
 }, [db.teachers, db.hasMigratedTeachers, safeUpdate, schoolId, firestore, toast]);
 
-  const addCategory = useCallback(async (categoryData: { name: string; points: number }): Promise<Category | null> => {
+  const addCategory = useCallback(async (categoryData: { name: string; points: number; }): Promise<Category | null> => {
     if (db.categories?.some((c) => c.name.toLowerCase() === categoryData.name.toLowerCase())) {
         toast({variant: 'destructive', title: 'Category with this name already exists.'});
         return null;
     }
-    const newCategory: Category = { ...categoryData, id: 'cat' + Date.now() };
+    const newCategory: Category = { ...categoryData, id: 'cat' + Date.now() + Math.random().toString(36).substring(2, 8) };
     try {
       await safeUpdate({ categories: arrayUnion(newCategory) });
       return newCategory;
@@ -839,7 +834,7 @@ const redeemCoupon = useCallback(async (studentId: string, couponCode: string): 
 
 const addPrize = useCallback(async (prizeData: Omit<Prize, 'id'>) => {
   try {
-    const newPrize: Prize = { ...prizeData, id: 'p' + Date.now() };
+    const newPrize: Prize = { ...prizeData, id: 'p' + Date.now() + Math.random().toString(36).substring(2, 8) };
     if (db.hasMigratedPrizes) {
       if (!schoolId || !firestore) return;
       await setDoc(doc(firestore, 'schools', schoolId, 'prizes', newPrize.id), newPrize);
