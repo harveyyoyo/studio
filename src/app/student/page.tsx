@@ -131,10 +131,7 @@ function StudentDashboard({
   
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
-  const streamRef = useRef<MediaStream | null>(null);
-
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -182,45 +179,53 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    if (activeTab === 'camera' && videoRef.current) {
-      const startCamera = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          streamRef.current = stream;
-          setHasCameraPermission(true);
-
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
-              if (result) {
-                handleRedeemCoupon(result.getText());
-              }
-              if (err && err.name !== 'NotFoundException') {
-                // This error is expected when no barcode is found, so we can ignore it.
-              }
-            });
-          }
-        } catch (err) {
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please allow camera access in your browser settings to use this feature.',
-          });
-          setActiveTab('manual');
-        }
-      };
-      startCamera();
+    if (activeTab !== 'camera') {
+      return;
     }
+    
+    const codeReader = new BrowserMultiFormatReader();
+    let stream: MediaStream | null = null;
 
-    return () => {
-      if (streamRef.current) {
-        codeReader.reset();
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+    const startCameraAndScan = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          
+          codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+            if (result) {
+              handleRedeemCoupon(result.getText());
+            }
+            if (err && err.name !== 'NotFoundException') {
+              console.error('Barcode scan error:', err);
+            }
+          });
+        }
+      } catch (err) {
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please allow camera access in your browser settings to use this feature.',
+        });
+        setActiveTab('manual');
       }
     };
-  }, [activeTab, codeReader, handleRedeemCoupon, toast]);
+    
+    startCameraAndScan();
+
+    return () => {
+      codeReader.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [activeTab, handleRedeemCoupon, toast]);
 
   
   const handleLogoutConfirm = () => {
@@ -437,9 +442,7 @@ export default function StudentLoginPage() {
 
   const [loginTab, setLoginTab] = useState('nfc');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
-  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -485,45 +488,51 @@ export default function StudentLoginPage() {
 
 
   useEffect(() => {
-    if (loginTab === 'camera' && !activeStudentId) {
-      const startCamera = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          streamRef.current = stream;
-          setHasCameraPermission(true);
-
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
-              if (result) {
-                handleNfcSubmit(result.getText());
-              }
-              if (err && err.name !== 'NotFoundException') {
-                // Ignore not found errors.
-              }
-            });
-          }
-        } catch (err) {
-          setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please allow camera access in your browser settings.',
-          });
-          setLoginTab('nfc');
-        }
-      };
-      startCamera();
+    if (loginTab !== 'camera' || activeStudentId) {
+      return;
     }
+    
+    const codeReader = new BrowserMultiFormatReader();
+    let stream: MediaStream | null = null;
 
-    return () => {
-      if (streamRef.current) {
-        codeReader.reset();
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+            if (result) {
+              handleNfcSubmit(result.getText());
+            }
+            if (err && err.name !== 'NotFoundException') {
+              console.error(err);
+            }
+          });
+        }
+      } catch (err) {
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Access Denied',
+          description: 'Please allow camera access in your browser settings.',
+        });
+        setLoginTab('nfc');
       }
     };
-  }, [loginTab, activeStudentId, codeReader, handleNfcSubmit, toast]);
+    startCamera();
+
+    return () => {
+      codeReader.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+       if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
 
 
   const handleDone = useCallback(() => {
