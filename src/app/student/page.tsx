@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -131,7 +131,7 @@ function StudentDashboard({
   
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useMemoFirebase(() => new BrowserMultiFormatReader(), []);
+  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
 
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
@@ -180,37 +180,21 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    if (activeTab !== 'camera' || !videoRef.current) {
-      codeReader.reset();
-      return;
-    }
-    
-    codeReader.decodeContinuouslyFromVideoDevice(undefined, videoRef.current, (result, err) => {
+    if (activeTab === 'camera' && videoRef.current) {
+      codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
         if (result) {
-            // Stop scanning once a barcode is found
-            codeReader.reset(); 
-            handleRedeemCoupon(result.getText());
-            setActiveTab('manual');
+          handleRedeemCoupon(result.getText());
         }
         if (err && err.name !== 'NotFoundException') {
-            console.error('Zxing Decode Error:', err);
+          console.error('Zxing Decode Error:', err);
         }
-    }).catch(err => {
-        if (err.name !== 'NotAllowedError') { // Don't toast for user denial
-            console.error('Camera permission error:', err);
-            toast({
-                variant: 'destructive',
-                title: 'Camera Error',
-                description: 'Could not access the camera.',
-            });
-        }
-        setActiveTab('manual');
-    });
+      });
 
-    return () => {
-        codeReader.reset();
-    };
-}, [activeTab, codeReader, handleRedeemCoupon, playSound, toast]);
+      return () => {
+        codeReader.stopStreams();
+      };
+    }
+  }, [activeTab, codeReader, handleRedeemCoupon]);
 
   
   const handleLogoutConfirm = () => {
@@ -418,7 +402,7 @@ export default function StudentLoginPage() {
 
   const [loginTab, setLoginTab] = useState('nfc');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReader = useMemoFirebase(() => new BrowserMultiFormatReader(), []);
+  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -464,34 +448,30 @@ export default function StudentLoginPage() {
 
 
   useEffect(() => {
-    if (loginTab !== 'camera' || activeStudentId || !videoRef.current) {
-      codeReader.reset();
-      return;
+    if (loginTab === 'camera' && !activeStudentId && videoRef.current) {
+        codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+            if (result) {
+                handleNfcSubmit(result.getText());
+            }
+            if (err && err.name !== 'NotFoundException') {
+                console.error('Zxing Decode Error:', err);
+            }
+        }).catch(err => {
+            if (err.name !== 'NotAllowedError') {
+                 console.error('Camera permission error:', err);
+                toast({
+                    variant: 'destructive',
+                    title: 'Camera Error',
+                    description: 'Could not access the camera. Please check permissions.',
+                });
+            }
+            setLoginTab('nfc');
+        });
+
+        return () => {
+            codeReader.stopStreams();
+        };
     }
-
-    codeReader.decodeContinuouslyFromVideoDevice(undefined, videoRef.current, (result, err) => {
-        if (result) {
-            codeReader.reset();
-            handleNfcSubmit(result.getText());
-        }
-        if (err && err.name !== 'NotFoundException') {
-            console.error('Zxing Decode Error:', err);
-        }
-    }).catch(err => {
-        if (err.name !== 'NotAllowedError') {
-             console.error('Camera permission error:', err);
-            toast({
-                variant: 'destructive',
-                title: 'Camera Error',
-                description: 'Could not access the camera. Please check permissions.',
-            });
-        }
-        setLoginTab('nfc');
-    });
-
-    return () => {
-        codeReader.reset();
-    };
   }, [loginTab, activeStudentId, codeReader, handleNfcSubmit, toast]);
 
 
