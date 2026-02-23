@@ -3,17 +3,17 @@ import type { Database } from './types';
 export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   name: 'School ABC',
   students: [
-    { id: 'ss1', firstName: 'Emily', lastName: 'Smith', nfcId: 's101', points: 120, classId: 'sc1', history: [
+    { id: '100', firstName: 'Emily', lastName: 'Smith', nfcId: '100', points: 100, classId: 'sc1', history: [
         { desc: 'Bonus points for class participation', amount: 50, date: Date.now() - 86400000 * 2 },
         { desc: 'Redeemed coupon: ACAD100 (Academics)', amount: 100, date: Date.now() - 86400000 * 5 },
-        { desc: 'Redeemed prize: Sticker Pack', amount: -30, date: Date.now() - 86400000 * 1 },
+        { desc: 'Redeemed prize: Sticker Pack', amount: -50, date: Date.now() - 86400000 * 1 },
       ] 
     },
-    { id: 'ss2', firstName: 'Jacob', lastName: 'Johnson', nfcId: 's102', points: 220, classId: 'sc2', history: [
+    { id: 'ss2', firstName: 'Jacob', lastName: 'Johnson', nfcId: 's102', points: 215, classId: 'sc2', history: [
         { desc: 'Extra credit for science fair project', amount: 100, date: Date.now() - 86400000 * 5 },
         { desc: 'Redeemed coupon: TEAM45 (Teamwork)', amount: 45, date: Date.now() - 86400000 * 3 },
         { desc: 'Redeemed coupon: SOLVE50 (Problem Solving)', amount: 50, date: Date.now() - 86400000 * 2 },
-        { desc: 'Redeemed coupon: BEHAVE20 (Good Behavior)', amount: 25, date: Date.now() - 86400000 * 1 },
+        { desc: 'Redeemed coupon: BEHAVE20 (Good Behavior)', amount: 20, date: Date.now() - 86400000 * 1 },
       ] 
     },
     { id: 'ss3', firstName: 'Sophia', lastName: 'Williams', nfcId: 's103', points: 130, classId: 'sc1', history: [
@@ -29,11 +29,11 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
         { desc: 'Redeemed coupon: ATTEND25 (Attendance)', amount: 25, date: Date.now() - 86400000 * 5 },
       ] 
     },
-    { id: 'ss5', firstName: 'Emma', lastName: 'Jones', nfcId: 's105', points: 145, classId: 'sc2', history: [
+    { id: 'ss5', firstName: 'Emma', lastName: 'Jones', nfcId: 's105', points: 170, classId: 'sc2', history: [
         { desc: 'Helping a classmate with homework', amount: 20, date: Date.now() - 86400000 * 3 },
         { desc: 'Redeemed coupon: SPIRIT20 (School Spirit)', amount: 20, date: Date.now() - 86400000 * 1 },
         { desc: 'Redeemed coupon: EXTRA30 (Extra Curricular)', amount: 30, date: Date.now() - 86400000 * 6 },
-        { desc: 'Redeemed coupon: ACAD100 (Academics)', amount: 75, date: Date.now() - 86400000 * 9 },
+        { desc: 'Redeemed coupon: ACAD100 (Academics)', amount: 100, date: Date.now() - 86400000 * 9 },
       ] 
     },
     { id: 'ss6', firstName: 'William', lastName: 'Garcia', nfcId: 's106', points: 50, classId: 'sc1', history: [{ desc: 'Cleaned up the classroom', amount: 50, date: Date.now() - 86400000 * 8 }] },
@@ -149,3 +149,5 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   ],
   updatedAt: Date.now(),
 };
+
+    
