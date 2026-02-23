@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -182,19 +182,18 @@ function StudentDashboard({
     if (activeTab !== 'camera') {
       return;
     }
-    
+
+    let controls: IScannerControls | null = null;
     const codeReader = new BrowserMultiFormatReader();
-    let stream: MediaStream | null = null;
 
-    const startCameraAndScan = async () => {
+    const startScan = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
-
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          
-          codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
             if (result) {
               handleRedeemCoupon(result.getText());
             }
@@ -213,20 +212,15 @@ function StudentDashboard({
         setActiveTab('manual');
       }
     };
-    
-    startCameraAndScan();
+
+    startScan();
 
     return () => {
-      codeReader.reset();
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (controls) {
+        controls.stop();
       }
     };
-  }, [activeTab, handleRedeemCoupon, toast]);
-
+  }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
   
   const handleLogoutConfirm = () => {
     if (logoutPasscode === '1234') {
@@ -491,18 +485,17 @@ export default function StudentLoginPage() {
     if (loginTab !== 'camera' || activeStudentId) {
       return;
     }
-    
+
     const codeReader = new BrowserMultiFormatReader();
-    let stream: MediaStream | null = null;
+    let controls: IScannerControls | null = null;
 
-    const startCamera = async () => {
+    const startScan = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
             if (result) {
               handleNfcSubmit(result.getText());
             }
@@ -521,15 +514,12 @@ export default function StudentLoginPage() {
         setLoginTab('nfc');
       }
     };
-    startCamera();
+    
+    startScan();
 
     return () => {
-      codeReader.reset();
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-       if (videoRef.current) {
-        videoRef.current.srcObject = null;
+      if (controls) {
+        controls.stop();
       }
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
