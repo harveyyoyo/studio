@@ -3,11 +3,39 @@ import type { Database } from './types';
 export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   name: 'School ABC',
   students: [
-    { id: 'ss1', firstName: 'Emily', lastName: 'Smith', nfcId: 's101', points: 150, classId: 'sc1', history: [{ desc: 'Bonus points for class participation', amount: 50, date: Date.now() - 86400000 * 2 }] },
-    { id: 'ss2', firstName: 'Jacob', lastName: 'Johnson', nfcId: 's102', points: 200, classId: 'sc2', history: [{ desc: 'Extra credit for science fair project', amount: 100, date: Date.now() - 86400000 * 5 }] },
-    { id: 'ss3', firstName: 'Sophia', lastName: 'Williams', nfcId: 's103', points: 75, classId: 'sc1', history: [{ desc: 'Perfect attendance award', amount: 75, date: Date.now() - 86400000 * 1 }] },
-    { id: 'ss4', firstName: 'Michael', lastName: 'Brown', nfcId: 's104', points: 300, classId: 'sc3', history: [{ desc: 'Redeemed: Pizza party with friends', amount: -200, date: Date.now() - 86400000 * 10 }, { desc: 'A+ on history exam', amount: 500, date: Date.now() - 86400000 * 20 }] },
-    { id: 'ss5', firstName: 'Emma', lastName: 'Jones', nfcId: 's105', points: 120, classId: 'sc2', history: [{ desc: 'Helping a classmate with homework', amount: 20, date: Date.now() - 86400000 * 3 }] },
+    { id: 'ss1', firstName: 'Emily', lastName: 'Smith', nfcId: 's101', points: 120, classId: 'sc1', history: [
+        { desc: 'Bonus points for class participation', amount: 50, date: Date.now() - 86400000 * 2 },
+        { desc: 'Redeemed coupon: ACAD100 (Academics)', amount: 100, date: Date.now() - 86400000 * 5 },
+        { desc: 'Redeemed prize: Sticker Pack', amount: -30, date: Date.now() - 86400000 * 1 },
+      ] 
+    },
+    { id: 'ss2', firstName: 'Jacob', lastName: 'Johnson', nfcId: 's102', points: 220, classId: 'sc2', history: [
+        { desc: 'Extra credit for science fair project', amount: 100, date: Date.now() - 86400000 * 5 },
+        { desc: 'Redeemed coupon: TEAM45 (Teamwork)', amount: 45, date: Date.now() - 86400000 * 3 },
+        { desc: 'Redeemed coupon: SOLVE50 (Problem Solving)', amount: 50, date: Date.now() - 86400000 * 2 },
+        { desc: 'Redeemed coupon: BEHAVE20 (Good Behavior)', amount: 25, date: Date.now() - 86400000 * 1 },
+      ] 
+    },
+    { id: 'ss3', firstName: 'Sophia', lastName: 'Williams', nfcId: 's103', points: 130, classId: 'sc1', history: [
+        { desc: 'Perfect attendance award', amount: 75, date: Date.now() - 86400000 * 1 },
+        { desc: 'Redeemed coupon: BEHAVE5 (Good Behavior)', amount: 5, date: Date.now() - 86400000 * 10 },
+        { desc: 'Redeemed coupon: HELP15 (Helping Others)', amount: 15, date: Date.now() - 86400000 * 8 },
+        { desc: 'Redeemed coupon: CREATE35 (Creativity)', amount: 35, date: Date.now() - 86400000 * 4 },
+      ]
+    },
+    { id: 'ss4', firstName: 'Michael', lastName: 'Brown', nfcId: 's104', points: 325, classId: 'sc3', history: [
+        { desc: 'Redeemed: Pizza party with friends', amount: -200, date: Date.now() - 86400000 * 10 }, 
+        { desc: 'A+ on history exam', amount: 500, date: Date.now() - 86400000 * 20 },
+        { desc: 'Redeemed coupon: ATTEND25 (Attendance)', amount: 25, date: Date.now() - 86400000 * 5 },
+      ] 
+    },
+    { id: 'ss5', firstName: 'Emma', lastName: 'Jones', nfcId: 's105', points: 145, classId: 'sc2', history: [
+        { desc: 'Helping a classmate with homework', amount: 20, date: Date.now() - 86400000 * 3 },
+        { desc: 'Redeemed coupon: SPIRIT20 (School Spirit)', amount: 20, date: Date.now() - 86400000 * 1 },
+        { desc: 'Redeemed coupon: EXTRA30 (Extra Curricular)', amount: 30, date: Date.now() - 86400000 * 6 },
+        { desc: 'Redeemed coupon: ACAD100 (Academics)', amount: 75, date: Date.now() - 86400000 * 9 },
+      ] 
+    },
     { id: 'ss6', firstName: 'William', lastName: 'Garcia', nfcId: 's106', points: 50, classId: 'sc1', history: [{ desc: 'Cleaned up the classroom', amount: 50, date: Date.now() - 86400000 * 8 }] },
     { id: 'ss7', firstName: 'Olivia', lastName: 'Miller', nfcId: 's107', points: 450, classId: 'sc3', history: [{ desc: 'Won the school spelling bee', amount: 450, date: Date.now() - 86400000 * 4 }] },
     { id: 'ss8', firstName: 'James', lastName: 'Davis', nfcId: 's108', points: 600, classId: 'sc2', history: [{ desc: 'Tutoring younger students', amount: 600, date: Date.now() - 86400000 * 12 }] },
