@@ -184,10 +184,8 @@ function StudentDashboard({
     }
 
     const codeReader = new BrowserMultiFormatReader();
-    let controls: IScannerControls | null = null;
-    
-    const startScan = async () => {
-       try {
+    const controlsPromise = (async (): Promise<IScannerControls | null> => {
+      try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
             || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
@@ -199,11 +197,11 @@ function StudentDashboard({
         }
         
         if (!videoRef.current) {
-            return;
+            return null;
         }
 
         setHasCameraPermission(true);
-        controls = codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
+        return codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
           if (result) {
             handleRedeemCoupon(result.getText());
           }
@@ -211,7 +209,6 @@ function StudentDashboard({
             console.error('Coupon scan error:', error);
           }
         });
-
       } catch (err: any) {
         console.error('Coupon scan failed:', err);
         setHasCameraPermission(false);
@@ -221,16 +218,16 @@ function StudentDashboard({
           title: 'Camera Error',
           description: err.message || 'Could not access the camera. Please check permissions.',
         });
+        return null;
       }
-    };
-
-    startScan();
+    })();
 
     return () => {
-      if (controls) {
-        controls.stop();
-        controls = null;
-      }
+      controlsPromise.then(controls => {
+        if (controls) {
+          controls.stop();
+        }
+      });
     };
   }, [activeTab, handleRedeemCoupon, toast]);
   
@@ -499,9 +496,7 @@ export default function StudentLoginPage() {
     }
     
     const codeReader = new BrowserMultiFormatReader();
-    let controls: IScannerControls | null = null;
-    
-    const startScan = async () => {
+    const controlsPromise = (async (): Promise<IScannerControls | null> => {
        try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
@@ -514,11 +509,11 @@ export default function StudentLoginPage() {
         }
         
         if (!videoRef.current) {
-            return;
+            return null;
         }
 
         setHasCameraPermission(true);
-        const controls = codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
+        return codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
           if (result) {
             handleNfcSubmit(result.getText());
           }
@@ -526,7 +521,6 @@ export default function StudentLoginPage() {
             console.error('Login scan error:', error);
           }
         });
-
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
         setHasCameraPermission(false);
@@ -536,16 +530,16 @@ export default function StudentLoginPage() {
             title: 'Camera Error',
             description: err.message || 'Could not access the camera. Please check permissions.',
         });
+        return null;
       }
-    };
+    })();
     
-    startScan();
-
     return () => {
-      if (controls) {
-        controls.stop();
-        controls = null;
-      }
+      controlsPromise.then(controls => {
+        if (controls) {
+          controls.stop();
+        }
+      });
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
 
