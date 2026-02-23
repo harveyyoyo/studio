@@ -133,6 +133,7 @@ function StudentDashboard({
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const streamRef = useRef<MediaStream | null>(null);
 
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
@@ -181,12 +182,11 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    let stream: MediaStream | null = null;
-
     if (activeTab === 'camera' && videoRef.current) {
       const startCamera = async () => {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          streamRef.current = stream;
           setHasCameraPermission(true);
 
           if (videoRef.current) {
@@ -214,9 +214,10 @@ function StudentDashboard({
     }
 
     return () => {
-      codeReader.reset();
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        codeReader.reset();
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
   }, [activeTab, codeReader, handleRedeemCoupon, toast]);
@@ -312,7 +313,7 @@ function StudentDashboard({
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted playsInline />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
@@ -438,6 +439,7 @@ export default function StudentLoginPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -483,11 +485,11 @@ export default function StudentLoginPage() {
 
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    if (loginTab === 'camera' && !activeStudentId && videoRef.current) {
+    if (loginTab === 'camera' && !activeStudentId) {
       const startCamera = async () => {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          streamRef.current = stream;
           setHasCameraPermission(true);
 
           if (videoRef.current) {
@@ -515,9 +517,10 @@ export default function StudentLoginPage() {
     }
 
     return () => {
-      codeReader.reset();
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        codeReader.reset();
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
   }, [loginTab, activeStudentId, codeReader, handleNfcSubmit, toast]);
@@ -607,7 +610,7 @@ export default function StudentLoginPage() {
                <TabsContent value="camera">
                 <div className="py-8 space-y-4">
                     <div className="relative">
-                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted playsInline/>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
                         </div>
