@@ -392,8 +392,11 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
 
         const classObj = allClasses.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
-        const newStudentData: Omit<Student, 'id' | 'lifetimePoints'> => {
-            firstName, lastName, nfcId: newNfcId, points: 0,
+        const newStudentData: Omit<Student, 'id' | 'lifetimePoints'> = {
+            firstName,
+            lastName,
+            nfcId: newNfcId,
+            points: 0,
             classId: classObj?.id || '',
         };
         
