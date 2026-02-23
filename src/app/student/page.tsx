@@ -132,6 +132,7 @@ function StudentDashboard({
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
+  const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
@@ -180,21 +181,45 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    if (activeTab === 'camera' && videoRef.current) {
-      codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
-        if (result) {
-          handleRedeemCoupon(result.getText());
-        }
-        if (err && err.name !== 'NotFoundException') {
-          console.error('Zxing Decode Error:', err);
-        }
-      });
+    let stream: MediaStream | null = null;
 
-      return () => {
-        codeReader.stopStreams();
+    if (activeTab === 'camera' && videoRef.current) {
+      const startCamera = async () => {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setHasCameraPermission(true);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+              if (result) {
+                handleRedeemCoupon(result.getText());
+              }
+              if (err && err.name !== 'NotFoundException') {
+                // This error is expected when no barcode is found, so we can ignore it.
+              }
+            });
+          }
+        } catch (err) {
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please allow camera access in your browser settings to use this feature.',
+          });
+          setActiveTab('manual');
+        }
       };
+      startCamera();
     }
-  }, [activeTab, codeReader, handleRedeemCoupon]);
+
+    return () => {
+      codeReader.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [activeTab, codeReader, handleRedeemCoupon, toast]);
 
   
   const handleLogoutConfirm = () => {
@@ -292,6 +317,15 @@ function StudentDashboard({
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
                         </div>
+                        {!hasCameraPermission && (
+                            <Alert variant="destructive">
+                                <Camera className="h-4 w-4" />
+                                <AlertTitle>Camera Access Denied</AlertTitle>
+                                <AlertDescription>
+                                    Please allow camera access to use this feature.
+                                </AlertDescription>
+                            </Alert>
+                        )}
                         <p className="text-sm text-muted-foreground text-center">Position the coupon's barcode inside the red box.</p>
                     </TabsContent>
                   </Tabs>
@@ -403,6 +437,7 @@ export default function StudentLoginPage() {
   const [loginTab, setLoginTab] = useState('nfc');
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
+  const [hasCameraPermission, setHasCameraPermission] = useState(true);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -448,30 +483,43 @@ export default function StudentLoginPage() {
 
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
     if (loginTab === 'camera' && !activeStudentId && videoRef.current) {
-        codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
-            if (result) {
-                handleNfcSubmit(result.getText());
-            }
-            if (err && err.name !== 'NotFoundException') {
-                console.error('Zxing Decode Error:', err);
-            }
-        }).catch(err => {
-            if (err.name !== 'NotAllowedError') {
-                 console.error('Camera permission error:', err);
-                toast({
-                    variant: 'destructive',
-                    title: 'Camera Error',
-                    description: 'Could not access the camera. Please check permissions.',
-                });
-            }
-            setLoginTab('nfc');
-        });
+      const startCamera = async () => {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setHasCameraPermission(true);
 
-        return () => {
-            codeReader.stopStreams();
-        };
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+              if (result) {
+                handleNfcSubmit(result.getText());
+              }
+              if (err && err.name !== 'NotFoundException') {
+                // Ignore not found errors.
+              }
+            });
+          }
+        } catch (err) {
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please allow camera access in your browser settings.',
+          });
+          setLoginTab('nfc');
+        }
+      };
+      startCamera();
     }
+
+    return () => {
+      codeReader.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [loginTab, activeStudentId, codeReader, handleNfcSubmit, toast]);
 
 
@@ -564,6 +612,15 @@ export default function StudentLoginPage() {
                             <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
                         </div>
                     </div>
+                     {!hasCameraPermission && (
+                        <Alert variant="destructive">
+                            <Camera className="h-4 w-4" />
+                            <AlertTitle>Camera Access Required</AlertTitle>
+                            <AlertDescription>
+                            Please allow camera access to use this feature.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <p className="text-muted-foreground">
                       Position your ID card's barcode inside the box.
                     </p>
