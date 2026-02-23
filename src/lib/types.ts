@@ -68,4 +68,5 @@ export interface Database {
   hasMigratedTeachers?: boolean;
   hasMigratedPrizes?: boolean;
   hasMigratedCoupons?: boolean;
+  hasMigratedCategories?: boolean;
 }
