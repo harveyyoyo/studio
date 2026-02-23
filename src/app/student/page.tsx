@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -175,69 +176,52 @@ function StudentDashboard({
     }
 
     setCouponCode('');
-  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast]);
   
-useEffect(() => {
-    if (activeTab !== 'camera' || !videoRef.current) {
+  useEffect(() => {
+    // This effect handles the camera scanning tab.
+    if (activeTab !== 'camera') {
       return;
     }
-
-    const videoElement = videoRef.current;
-    let stream: MediaStream | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
+    // Using 'any' for controls because IScannerControls is often not exported.
     let controls: any;
-    let cancelled = false;
 
-    const cleanup = () => {
-      cancelled = true;
-      if (controls) {
-          controls.stop();
-      }
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(async (s) => {
-            if (cancelled) {
-                s.getTracks().forEach(t => t.stop());
-                return;
-            }
-            stream = s;
-            setHasCameraPermission(true);
-            
-            if (videoElement) {
-              // videoElement.srcObject = stream; // decodeFromStream handles this
-              
-              try {
-                  controls = await codeReader.decodeFromStream(stream, videoElement, (result, err) => {
-                      if (result) {
-                          playSound('redeem');
-                          handleRedeemCoupon(result.getText());
-                          setActiveTab('manual'); 
-                      }
-                      if (err && err.name !== 'NotFoundException') {
-                          console.error('Zxing Error:', err);
-                      }
-                  });
-              } catch (error) {
-                  console.error("Decode error", error);
-              }
-            }
-        })
-        .catch(err => {
-            console.error('Camera permission error:', err);
-            setHasCameraPermission(false);
-            toast({
-                variant: 'destructive',
-                title: 'Camera Access Denied',
-                description: 'Please allow camera access in your browser settings.',
-            });
-            setActiveTab('manual');
+    // decodeFromVideoDevice handles the stream and continuous scanning.
+    codeReader.decodeFromVideoDevice(undefined, 'barcode-scanner-video', (result, err) => {
+        if (result) {
+            // A barcode was successfully found
+            playSound('redeem');
+            handleRedeemCoupon(result.getText());
+            setActiveTab('manual'); // Switch back to manual tab after scan
+        }
+        if (err && !(err instanceof NotFoundException)) {
+            // Log errors other than 'barcode not found'.
+            console.error('Zxing Decode Error:', err);
+        }
+    }).then(c => {
+        // Successfully started the camera
+        setHasCameraPermission(true);
+        controls = c;
+    }).catch(err => {
+        // Failed to start the camera (e.g., permission denied)
+        console.error('Camera permission error:', err);
+        setHasCameraPermission(false);
+        toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please allow camera access in your browser settings.',
         });
+        setActiveTab('manual');
+    });
 
-    return cleanup;
+    // Cleanup function to stop the scanner when the component unmounts
+    // or the tab is changed.
+    return () => {
+        if (controls) {
+            controls.stop();
+        }
+    };
 }, [activeTab, codeReader, handleRedeemCoupon, playSound, toast]);
 
 
@@ -331,7 +315,7 @@ useEffect(() => {
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" />
+                            <video id="barcode-scanner-video" ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
