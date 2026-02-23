@@ -19,6 +19,8 @@ import {
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Class } from '@/lib/types';
+import { useFirestore } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -29,11 +31,12 @@ interface StudentModalProps {
 }
 
 export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses }: StudentModalProps) {
-  const { addStudent, updateStudent } = useAppContext();
+  const { addStudent, updateStudent, schoolId } = useAppContext();
+  const firestore = useFirestore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
-  const [nfcId, setNfcId] = useState('');
+  const [id, setId] = useState('');
   const [classId, setClassId] = useState('none');
   const { toast } = useToast();
 
@@ -45,13 +48,13 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setFirstName(student.firstName);
         setLastName(student.lastName);
         setPoints(student.points.toString());
-        setNfcId(student.nfcId);
+        setId(student.id);
         setClassId(student.classId || 'none');
       } else { // Create mode
         setFirstName('');
         setLastName('');
         setPoints('0');
-        setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
+        setId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
       }
     }
@@ -62,18 +65,24 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
-    if (!nfcId) {
+    if (!id) {
       toast({ variant: 'destructive', title: 'Student ID is required.' });
       return;
     }
+    if (!firestore || !schoolId) {
+      toast({ variant: 'destructive', title: 'Database connection not found.' });
+      return;
+    }
 
-    const studentWithSameId = allStudents.find(s => s.nfcId === nfcId);
 
-    if (studentWithSameId && (!isEditing || studentWithSameId.id !== student?.id)) {
+    const studentDocRef = doc(firestore, 'schools', schoolId, 'students', id);
+    const docSnap = await getDoc(studentDocRef);
+
+    if (docSnap.exists() && (!isEditing || docSnap.id !== student?.id)) {
         toast({
             variant: 'destructive',
             title: 'Duplicate Student ID',
-            description: `Student ID "${nfcId}" is already assigned to another student.`,
+            description: `Student ID "${id}" is already assigned to another student.`,
         });
         return;
     }
@@ -81,12 +90,14 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     const finalClassId = classId === 'none' ? '' : classId;
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, nfcId, points: parseInt(points) || 0, classId: finalClassId };
+      const updatedStudent: Student = { ...student, firstName, lastName, points: parseInt(points) || 0, classId: finalClassId };
       await updateStudent(updatedStudent);
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
-        firstName, lastName, nfcId,
+        id,
+        firstName, 
+        lastName,
         points: parseInt(points) || 0,
         classId: finalClassId,
       };
@@ -114,8 +125,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
             </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="nfcId">Student ID (for scanning)</Label>
-            <Input id="nfcId" value={nfcId} onChange={e => setNfcId(e.target.value)} placeholder="Tap card or enter ID..." />
+            <Label htmlFor="student-id">Student ID (for scanning)</Label>
+            <Input id="student-id" value={id} onChange={e => setId(e.target.value)} placeholder="Tap card or enter ID..." disabled={isEditing} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="points">Points</Label>

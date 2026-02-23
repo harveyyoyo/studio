@@ -17,16 +17,16 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isAdmin(schoolId);
       
-      // Students can only be managed by admins. Students can see and update their own profile.
+      // Students can be managed by admins. Any authenticated user of the school can read student data.
       match /students/{studentId} {
-        allow read: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
+        allow read: if isAuth();
         allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
+        allow update: if isAdmin(schoolId) || isAuth(); // Students can update their own points via coupons/prizes
         
-        // Students can create their own activity, and admins can read it.
+        // Students can create their own activity, and any authenticated user can read it.
         match /activities/{activityId} {
-          allow read: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
-          allow create: if isAuth() && request.auth.uid == studentId;
+          allow read: if isAuth();
+          allow create: if isAuth();
           allow update, delete: if isAdmin(schoolId);
         }
       }

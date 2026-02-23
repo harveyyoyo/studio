@@ -914,7 +914,7 @@ function AdminDashboard() {
                             </span>
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Class: {getClassName(s.classId || '')} | ID: {s.nfcId}
+                            Class: {getClassName(s.classId || '')} | ID: {s.id}
                           </p>
                         </div>
                         <div className="flex items-center gap-0.5 self-end sm:self-center">

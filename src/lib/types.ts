@@ -21,10 +21,9 @@ export interface Category {
 }
 
 export interface Student {
-  id: string;
+  id: string; // This is the student's unique scannable ID
   firstName: string;
   lastName: string;
-  nfcId: string;
   points: number;
   lifetimePoints: number;
   classId?: string;

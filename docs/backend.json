@@ -6,15 +6,13 @@
       "type": "object",
       "description": "Represents a student in the school's reward system.",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the Student." },
         "firstName": { "type": "string", "description": "The first name of the student." },
         "lastName": { "type": "string", "description": "The last name of the student." },
-        "nfcId": { "type": "string", "description": "The NFC card ID associated with the student." },
         "points": { "type": "number", "description": "The current points balance." },
         "lifetimePoints": { "type": "number", "description": "The total points ever earned by the student." },
         "classId": { "type": "string", "description": "Reference to the student's assigned Class." }
       },
-      "required": ["id", "firstName", "lastName", "nfcId", "points", "lifetimePoints"]
+      "required": ["firstName", "lastName", "points", "lifetimePoints"]
     },
     "Teacher": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -103,7 +101,7 @@
   "firestore": {
     "/schools/{schoolId}/students/{studentId}": {
       "schema": { "$ref": "#/entities/Student" },
-      "description": "Student profiles for a specific school."
+      "description": "Student profiles for a specific school. The document ID is the student's unique scannable ID."
     },
     "/schools/{schoolId}/students/{studentId}/activities/{activityId}": {
       "schema": { "$ref": "#/entities/StudentActivity" },

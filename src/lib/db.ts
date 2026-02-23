@@ -17,9 +17,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 
 // --- Student Mutations ---
-export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'id' | 'lifetimePoints'>) => {
-  const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newStudent: Student = { ...studentData, id: newId, lifetimePoints: studentData.points };
+export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'lifetimePoints'>) => {
+  const newStudent: Student = { ...studentData, lifetimePoints: studentData.points };
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   setDoc(studentDocRef, newStudent)
     .catch(error => {
@@ -365,7 +364,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
         return {success: 0, failed: 0, errors:['File is empty.']};
     }
 
-    const existingNfcIds = new Set(currentStudents.map(s => s.nfcId));
+    const existingNfcIds = new Set(currentStudents.map(s => s.id));
     let successCount = 0;
     const batch = writeBatch(firestore);
 
@@ -385,28 +384,26 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
             return;
         }
 
-        let newNfcId;
+        let newStudentId;
         do {
-            newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
-        } while (existingNfcIds.has(newNfcId));
+            newStudentId = Math.floor(10000000 + Math.random() * 90000000).toString();
+        } while (existingNfcIds.has(newStudentId));
 
         const classObj = allClasses.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
-        const newStudentData: Omit<Student, 'id' | 'lifetimePoints'> = {
+        const newStudent: Student = {
+            id: newStudentId,
             firstName,
             lastName,
-            nfcId: newNfcId,
             points: 0,
+            lifetimePoints: 0,
             classId: classObj?.id || '',
         };
-        
-        const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const newStudent: Student = { ...newStudentData, id: newId, lifetimePoints: newStudentData.points };
         
         const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
         batch.set(studentDocRef, newStudent);
         
-        existingNfcIds.add(newStudent.nfcId);
+        existingNfcIds.add(newStudent.id);
         successCount++;
     });
 

@@ -9,7 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 
 import {
   Card,
@@ -445,20 +445,26 @@ export default function StudentLoginPage() {
   const handleNfcSubmit = async () => {
     if(!nfcId || !schoolId) return;
 
-    const studentsRef = collection(firestore, 'schools', schoolId, 'students');
-    const q = query(studentsRef, where("nfcId", "==", nfcId), limit(1));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      const studentDoc = querySnapshot.docs[0];
-      setActiveStudentId(studentDoc.id);
-    } else {
-      toast({
+    const studentRef = doc(firestore, 'schools', schoolId, 'students', nfcId);
+    try {
+      const studentSnap = await getDoc(studentRef);
+      if (studentSnap.exists()) {
+        setActiveStudentId(studentSnap.id);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Student Not Found',
+          description: 'The provided ID does not match any student.',
+        });
+      }
+    } catch (error) {
+       toast({
         variant: 'destructive',
-        title: 'Student Not Found',
-        description: 'The provided ID does not match any student.',
+        title: 'Error',
+        description: 'Could not look up student.',
       });
     }
+
     setNfcId('');
   };
 
