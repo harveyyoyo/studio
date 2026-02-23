@@ -8,6 +8,9 @@ import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
+import { useFirestore, useCollection, useDoc } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
 import {
   Card,
   CardContent,
@@ -18,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize } from '@/lib/types';
+import type { Student, Prize, HistoryItem } from '@/lib/types';
 import {
   Nfc,
   Type,
@@ -45,17 +48,77 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
+    const firestore = useFirestore();
+    const activitiesQuery = useMemo(() => (
+        query(
+        collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
+        orderBy('date', 'desc'),
+        limit(100)
+        )
+    ), [firestore, schoolId, studentId]);
+    const { data: history, isLoading } = useCollection<HistoryItem>(activitiesQuery);
+
+    if (isLoading) {
+        return <div className="space-y-3">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
+    }
+
+    return (
+        <ScrollArea className="h-[30rem] w-full pr-2">
+            <ul className="space-y-3">
+            {history && history.length > 0 ? (
+                history.map((item, index) => (
+                    <li
+                    key={index}
+                    className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border"
+                    >
+                    <div>
+                        <p className="font-medium">{item.desc}</p>
+                        <p className="text-xs text-muted-foreground">
+                        {format(new Date(item.date), 'MMM d, yyyy, h:mm a')}
+                        </p>
+                    </div>
+                    <Badge
+                        variant={item.amount >= 0 ? 'default' : 'destructive'}
+                        className={`font-bold ${item.amount >= 0 ? 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700' : 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700'}`}
+                    >
+                        {item.amount > 0 ? `+${item.amount}` : item.amount}
+                    </Badge>
+                    </li>
+                ))
+            ) : (
+                <p className="text-center text-muted-foreground italic py-4">
+                No transaction history yet.
+                </p>
+            )}
+            </ul>
+        </ScrollArea>
+    );
+}
 
 // Student Dashboard component
 function StudentDashboard({
-  student,
+  studentId,
   onDone,
 }: {
-  student: Student;
+  studentId: string;
   onDone: () => void;
 }) {
-  const { redeemCoupon, db } = useAppContext();
+  const { redeemCoupon, schoolId } = useAppContext();
+  const firestore = useFirestore();
   const { toast } = useToast();
+
+  const studentDocRef = useMemo(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
+  const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+  
+  const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
@@ -73,7 +136,6 @@ function StudentDashboard({
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
-  // Auto-logout timer effect
   useEffect(() => {
     const handleDone = () => onDone();
     if (logoutTimer <= 0) {
@@ -89,6 +151,7 @@ function StudentDashboard({
   }, [logoutTimer, onDone]);
   
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
+    if (!student) return;
     const code = (codeToRedeem || couponCode).toUpperCase();
     if (!code) return;
     resetTimer();
@@ -110,7 +173,7 @@ function StudentDashboard({
       });
     }
     setCouponCode('');
-  }, [couponCode, resetTimer, redeemCoupon, student.id, toast]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast]);
   
 useEffect(() => {
     if (activeTab !== 'camera' || !videoRef.current) {
@@ -178,8 +241,12 @@ useEffect(() => {
     setLogoutPasscode('');
     setIsLogoutDialogOpen(false);
   };
+  
+  if (studentLoading || prizesLoading || !student || !schoolId) {
+      return <p>Loading...</p> // Add a proper skeleton later
+  }
 
-  const eligibleRewards = db.prizes?.filter(r => r.inStock && student.points >= r.points) || [];
+  const eligibleRewards = prizes?.filter(r => r.inStock && student.points >= r.points) || [];
 
   return (
     <TooltipProvider>
@@ -208,7 +275,6 @@ useEffect(() => {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Left Column */}
             <div className="md:col-span-2 space-y-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -292,7 +358,6 @@ useEffect(() => {
               </Card>
             </div>
 
-            {/* Right Column */}
             <div className="md:col-span-1">
               <Card>
                 <CardHeader>
@@ -301,39 +366,7 @@ useEffect(() => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="relative">
-                  <ul className="space-y-3 max-h-[30rem] overflow-y-auto pr-2">
-                    {student.history.length > 0 ? (
-                      student.history
-                        .sort((a, b) => b.date - a.date)
-                        .map((item, index) => (
-                          <li
-                            key={index}
-                            className="flex justify-between items-center text-sm"
-                          >
-                            <div>
-                              <p className="font-medium">{item.desc}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(
-                                  new Date(item.date),
-                                  "MMM d, yyyy, h:mm a"
-                                )}
-                              </p>
-                            </div>
-                            <span
-                              className={`font-bold ${
-                                item.amount > 0 ? 'text-green-500' : 'text-red-500'
-                              }`}
-                            >
-                              {item.amount > 0 ? `+${item.amount}` : item.amount}
-                            </span>
-                          </li>
-                        ))
-                    ) : (
-                      <p className="text-center text-muted-foreground italic py-4">
-                        No transaction history yet.
-                      </p>
-                    )}
-                  </ul>
+                  <StudentActivityList schoolId={schoolId} studentId={student.id} />
                   <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -394,11 +427,12 @@ useEffect(() => {
 
 // Main Student Login component
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, db } = useAppContext();
+  const { loginState, isInitialized, schoolId } = useAppContext();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [activeStudent, setActiveStudent] = useState<Student | null>(null);
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [nfcId, setNfcId] = useState('');
   const nfcInputRef = useRef<HTMLInputElement>(null);
 
@@ -408,18 +442,22 @@ export default function StudentLoginPage() {
     }
   }, [isInitialized, loginState, router]);
 
-  // Auto-focus the NFC input when the component mounts or tab is selected
   useEffect(() => {
-    if (!activeStudent) {
+    if (!activeStudentId) {
         setTimeout(() => nfcInputRef.current?.focus(), 100);
     }
-  }, [activeStudent]);
+  }, [activeStudentId]);
 
-  const handleNfcSubmit = () => {
-    if(!nfcId) return;
-    const student = db.students.find((s) => s.nfcId === nfcId);
-    if (student) {
-      setActiveStudent(student);
+  const handleNfcSubmit = async () => {
+    if(!nfcId || !schoolId) return;
+
+    const studentsRef = collection(firestore, 'schools', schoolId, 'students');
+    const q = query(studentsRef, where("nfcId", "==", nfcId), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const studentDoc = querySnapshot.docs[0];
+      setActiveStudentId(studentDoc.id);
     } else {
       toast({
         variant: 'destructive',
@@ -427,11 +465,11 @@ export default function StudentLoginPage() {
         description: 'The provided ID does not match any student.',
       });
     }
-    setNfcId(''); // Clear after submit
+    setNfcId('');
   };
 
   const handleDone = useCallback(() => {
-    setActiveStudent(null);
+    setActiveStudentId(null);
     setNfcId('');
   }, []);
 
@@ -439,16 +477,8 @@ export default function StudentLoginPage() {
     return <p>Loading...</p>;
   }
 
-  if (activeStudent) {
-    // Re-fetch the student object from the db context to ensure it's always the latest version
-    const liveStudent = db.students.find(s => s.id === activeStudent.id) || null;
-    if (liveStudent) {
-      return <StudentDashboard student={liveStudent} onDone={handleDone} />;
-    } else {
-      // The student was likely deleted in another session, so log out.
-      handleDone();
-      return <p>Loading...</p>
-    }
+  if (activeStudentId) {
+    return <StudentDashboard studentId={activeStudentId} onDone={handleDone} />;
   }
 
   return (
@@ -483,7 +513,7 @@ export default function StudentLoginPage() {
                   <Input
                     ref={nfcInputRef}
                     type="text"
-                    className="absolute -top-[9999px] -left-[9999px]" // Visually hide but keep focusable
+                    className="absolute -top-[9999px] -left-[9999px]"
                     value={nfcId}
                     onChange={(e) => setNfcId(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}

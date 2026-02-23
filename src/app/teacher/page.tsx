@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon } from '@/lib/types';
+import type { Coupon, Category, Teacher } from '@/lib/types';
 import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck } from 'lucide-react';
 import {
   Dialog,
@@ -22,11 +22,18 @@ import {
 } from "@/components/ui/dialog";
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
-    const { db, addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
+    const { addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
     const { toast } = useToast();
+    const firestore = useFirestore();
+
+    const categoriesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+    const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
@@ -36,17 +43,17 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
     useEffect(() => {
-        if (db.categories?.length > 0 && !printCategoryId) {
-          setPrintCategoryId(db.categories[0].id);
+        if (categories?.length > 0 && !printCategoryId) {
+          setPrintCategoryId(categories[0].id);
         }
-    }, [db.categories, printCategoryId]);
+    }, [categories, printCategoryId]);
 
      useEffect(() => {
-        const category = db.categories?.find(c => c.id === printCategoryId);
+        const category = categories?.find(c => c.id === printCategoryId);
         if (category) {
             setPrintValue(category.points.toString());
         }
-    }, [printCategoryId, db.categories]);
+    }, [printCategoryId, categories]);
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
@@ -90,7 +97,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
           });
           return;
         }
-        const selectedCategory = db.categories.find(c => c.id === printCategoryId);
+        const selectedCategory = categories?.find(c => c.id === printCategoryId);
         if (!selectedCategory) {
             toast({
                 variant: 'destructive',
@@ -99,7 +106,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
             });
             return;
         }
-        const coupons: Coupon[] = Array.from({ length: 24 }, () => {
+        const couponsToCreate: Coupon[] = Array.from({ length: 24 }, () => {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           return {
             id: code,
@@ -111,11 +118,11 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
             createdAt: Date.now(),
           };
         });
-        await addCoupons(coupons);
-        setCouponsToPrint(coupons);
+        await addCoupons(couponsToCreate);
+        setCouponsToPrint(couponsToCreate);
     };
 
-    const selectedCategoryForPreview = db.categories.find(c => c.id === printCategoryId);
+    const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
       id: 'PREVIEW',
       code: 'PREVIEW',
@@ -160,6 +167,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="flex flex-col md:flex-row gap-6">
+                            {categoriesLoading ? <Skeleton className="h-48 w-full" /> : (
                             <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                                 <div>
                                     <Label>Category</Label>
@@ -167,7 +175,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                                         <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
                                         <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
                                         <SelectContent>
-                                            {db.categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                            {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                         </SelectContent>
                                         </Select>
                                         <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
@@ -220,6 +228,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
+                            )}
                              <div className="w-full md:w-1/3 flex flex-col items-center flex-shrink-0">
                                 <Label className="font-semibold text-muted-foreground">Live Preview</Label>
                                 <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
@@ -236,10 +245,16 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
 
 
 export default function TeacherPage() {
-    const { loginState, isInitialized, db, isDbLoading } = useAppContext();
+    const { loginState, isInitialized, schoolId } = useAppContext();
     const router = useRouter();
+    const firestore = useFirestore();
+
     const [loggedInTeacher, setLoggedInTeacher] = useState<string | null>(null);
     const [selectedLoginName, setSelectedLoginName] = useState('Admin');
+
+    const teachersQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
+    const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
+
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -257,7 +272,7 @@ export default function TeacherPage() {
         setLoggedInTeacher(null);
     };
 
-    if (!isInitialized || loginState !== 'school' || isDbLoading) {
+    if (!isInitialized || loginState !== 'school') {
         return <p>Loading...</p>;
     }
     
@@ -274,19 +289,21 @@ export default function TeacherPage() {
                         <CardDescription>Select your name to continue.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {teachersLoading ? <Skeleton className="h-10 w-full" /> : (
                         <div>
                             <Label htmlFor="teacher-name">Select Your Name</Label>
                             <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
                               <SelectTrigger id="teacher-name"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                  <SelectItem value="Admin">Admin</SelectItem>
-                                {db.teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                                {teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                         </div>
+                        )}
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button onClick={handleLogin} className="w-full font-bold">
+                                <Button onClick={handleLogin} className="w-full font-bold" disabled={teachersLoading}>
                                    <LogIn className="mr-2" /> Log In
                                 </Button>
                             </TooltipTrigger>

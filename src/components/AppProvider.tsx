@@ -422,7 +422,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={value}>
       {children}
       {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
-      {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} getClassName={(classId) => ''} />}
+      {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} />}
     </AppContext.Provider>
   );
 }
