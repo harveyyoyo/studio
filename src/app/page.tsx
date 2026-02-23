@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import {
@@ -149,7 +150,10 @@ export default function LoginPage() {
                 <Info className="h-4 w-4" />
                 <AlertTitle className="font-bold">Try It Out!</AlertTitle>
                 <AlertDescription className="font-code text-xs">
-                  <div className="flex justify-between"><span>ID: schoolabc</span><span>Pass: 1234</span></div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between"><span>ID: schoolabc</span><span>Pass: 1234</span></div>
+                    <div className="flex justify-between"><span>ID: yeshiva</span><span>Pass: 1234</span></div>
+                  </div>
                 </AlertDescription>
               </Alert>
 

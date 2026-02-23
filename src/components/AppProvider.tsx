@@ -80,7 +80,7 @@ interface AppContextType {
   toggleAutoBackup: () => void;
 
   // Data mutation functions
-  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>, studentId: string) => void;
+  addStudent: (studentData: Omit<Student, 'lifetimePoints'>) => void;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => void;
   addClass: (classData: { name: string }) => void;
@@ -208,13 +208,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               sessionStorage.setItem('schoolId', lowerSchoolId);
               
               const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-              setDoc(adminRoleRef, { grantedAt: Date.now() }).catch(error => {
-                 errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: adminRoleRef.path,
-                    operation: 'create',
-                    requestResourceData: { grantedAt: "timestamp" }
-                }));
-              });
+              // This is a non-blocking write. If it fails due to security rules,
+              // the error will be caught and emitted globally by the error handler.
+              setDoc(adminRoleRef, { grantedAt: Date.now() })
+                .catch(error => {
+                  errorEmitter.emit('permission-error', new FirestorePermissionError({
+                      path: adminRoleRef.path,
+                      operation: 'create',
+                      requestResourceData: { grantedAt: "timestamp" }
+                  }));
+                });
 
               return true;
             }
@@ -276,14 +279,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (sampleData) {
         // Process students and their history separately
         sampleData.students?.forEach((studentWithHistory: any) => {
-            const { history, nfcId, ...studentData } = studentWithHistory;
+            const { id: internalId, history, nfcId, ...studentData } = studentWithHistory;
+
+            const studentId = nfcId;
+            if (!studentId) {
+                console.warn("Skipping student with no nfcId in sample data:", studentData);
+                return;
+            }
+
+            studentData.id = studentId;
 
             // Add lifetimePoints if missing from sample data
             if (typeof studentData.lifetimePoints !== 'number') {
                 studentData.lifetimePoints = studentData.points;
             }
-
-            const studentRef = doc(firestore, 'schools', cleanId, 'students', studentData.id);
+            
+            const studentRef = doc(firestore, 'schools', cleanId, 'students', studentId);
             batch.set(studentRef, studentData);
 
             if (history && Array.isArray(history)) {
@@ -523,10 +534,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
       isAutoBackupEnabled, toggleAutoBackup,
-      addStudent: (studentData, studentId) => {
+      addStudent: (studentData) => {
         if (!firestore || !schoolId) return;
-        dbAddStudent(firestore, schoolId, studentData, studentId);
-        toast({ title: 'Student added!' });
+        dbAddStudent(firestore, schoolId, studentData);
       },
       updateStudent: (studentData) => {
         if (!firestore || !schoolId) return Promise.resolve();
@@ -537,55 +547,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteStudent: (studentId) => {
         if (!firestore || !schoolId) return;
         dbDeleteStudent(firestore, schoolId, studentId);
-        toast({ title: 'Student deleted' });
       },
       addClass: (classData) => {
         if (!firestore || !schoolId) return;
         dbAddClass(firestore, schoolId, classData);
-        toast({ title: 'Class added!' });
       },
       deleteClass: (classId, students) => {
         if (!firestore || !schoolId) return Promise.resolve();
-        return dbDeleteClass(firestore, schoolId, classId, students).then(() => {
-            toast({ title: 'Class deleted' });
-        });
+        return dbDeleteClass(firestore, schoolId, classId, students);
       },
       addTeacher: (teacherData) => {
         if (!firestore || !schoolId) return;
         dbAddTeacher(firestore, schoolId, teacherData);
-        toast({ title: 'Teacher added!' });
       },
       deleteTeacher: (teacherId: string) => {
         if (!firestore || !schoolId) return;
         dbDeleteTeacher(firestore, schoolId, teacherId);
-        toast({ title: 'Teacher deleted' });
       },
       addCategory: (categoryData) => {
          if (!firestore || !schoolId) throw new Error("Not logged in");
         const newCategory = dbAddCategory(firestore, schoolId, categoryData);
-        toast({ title: 'Category added!' });
         return newCategory;
       },
       deleteCategory: (categoryId: string) => {
         if (!firestore || !schoolId) return;
         dbDeleteCategory(firestore, schoolId, categoryId);
-        toast({ title: 'Category deleted' });
       },
       addPrize: (prizeData) => {
         if (!firestore || !schoolId) return;
         dbAddPrize(firestore, schoolId, prizeData);
-        toast({ title: 'Prize added!' });
       },
       updatePrize: (prizeData) => {
         if (!firestore || !schoolId) return Promise.resolve();
-        return dbUpdatePrize(firestore, schoolId, prizeData).then(() => {
-          toast({ title: 'Prize updated!' });
-        });
+        return dbUpdatePrize(firestore, schoolId, prizeData);
       },
       deletePrize: (prizeId) => {
         if (!firestore || !schoolId) return;
         dbDeletePrize(firestore, schoolId, prizeId);
-        toast({ title: 'Prize deleted' });
       },
       addCoupons: (coupons) => {
         if (!firestore || !schoolId) return Promise.resolve();

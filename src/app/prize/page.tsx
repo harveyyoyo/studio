@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -5,7 +6,7 @@ import Link from 'next/link';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, getDoc } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -23,7 +24,8 @@ import {
   Gift,
   LogOut,
   ShoppingBag,
-  ArrowLeft
+  ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -148,11 +150,9 @@ export default function PrizePage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
-    const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
-
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [nfcId, setNfcId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const nfcInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -167,19 +167,31 @@ export default function PrizePage() {
         }
     }, [activeStudentId]);
 
-    const handleNfcSubmit = () => {
-        if(!nfcId || !students) return;
-        const student = students.find((s) => s.nfcId === nfcId);
-        if (student) {
-            setActiveStudentId(student.id);
-        } else {
-        toast({
+    const handleNfcSubmit = async () => {
+        if(!nfcId || !schoolId) return;
+
+        setIsLoading(true);
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', nfcId);
+        try {
+          const studentSnap = await getDoc(studentRef);
+          if (studentSnap.exists()) {
+            setActiveStudentId(studentSnap.id);
+          } else {
+            toast({
+              variant: 'destructive',
+              title: 'Student Not Found',
+              description: 'The provided ID does not match any student.',
+            });
+          }
+        } catch (error) {
+           toast({
             variant: 'destructive',
-            title: 'Student Not Found',
-            description: 'The provided ID does not match any student.',
-        });
+            title: 'Error',
+            description: 'Could not look up student.',
+          });
         }
         setNfcId('');
+        setIsLoading(false);
     };
 
     const handleDone = useCallback(() => {
@@ -189,14 +201,6 @@ export default function PrizePage() {
 
     if (!isInitialized || loginState !== 'school') {
         return <p>Loading...</p>;
-    }
-    
-    if (studentsLoading) {
-      return (
-        <div className="flex justify-center items-center h-full">
-           <Skeleton className="w-full max-w-md h-96" />
-        </div>
-      );
     }
 
     if (activeStudentId) {
@@ -249,18 +253,19 @@ export default function PrizePage() {
                     <TabsContent value="manual">
                     <div className="space-y-4 py-4">
                         <div>
-                        <Label htmlFor="manual-nfcId">Student NFC ID</Label>
+                        <Label htmlFor="manual-nfcId">Student ID</Label>
                         <Input
                             id="manual-nfcId"
                             value={nfcId}
                             onChange={(e) => setNfcId(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                            placeholder="Enter student NFC ID"
+                            placeholder="Enter student ID"
                         />
                         </div>
                          <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button onClick={handleNfcSubmit} className="w-full">
+                                <Button onClick={handleNfcSubmit} className="w-full" disabled={isLoading}>
+                                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Login to Redeem
                                 </Button>
                             </TooltipTrigger>
