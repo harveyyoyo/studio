@@ -99,17 +99,17 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center py-10 space-y-6">
-       <Dialog>
+      <Dialog>
         <DialogTrigger asChild>
-           <Button variant="outline"><BookOpen className="mr-2 h-4 w-4" /> How to Use This App</Button>
+          <Button variant="outline"><BookOpen className="mr-2 h-4 w-4" /> How to Use This App</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-4xl">
-           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-headline text-2xl"><BookOpen className="w-6 h-6"/> How to Use the App</DialogTitle>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-headline text-2xl"><BookOpen className="w-6 h-6" /> How to Use the App</DialogTitle>
           </DialogHeader>
           <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground space-y-4 max-h-[70vh] overflow-y-auto pr-6">
             <p>Reward Arcade is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.</p>
-            
+
             <div>
               <h3 className="font-bold text-foreground">1. Login</h3>
               <ul className="list-disc list-inside space-y-1 pl-2">
@@ -134,7 +134,7 @@ export default function LoginPage() {
                 <li>
                   <strong className="text-foreground">Prize Shop:</strong> Students scan their ID to browse and redeem points for available prizes.
                 </li>
-                 <li>
+                <li>
                   <strong className="text-foreground">Hall of Fame:</strong> View a leaderboard of the top all-time point earners in the school.
                 </li>
               </ul>
@@ -143,7 +143,7 @@ export default function LoginPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       <Tabs defaultValue="school" className="w-full max-w-md">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="school" onClick={() => playSound('click')}>
@@ -187,7 +187,7 @@ export default function LoginPage() {
                   placeholder="e.g. lincoln_high"
                   value={schoolId}
                   onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSchoolLogin()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSchoolLogin()}
                 />
               </div>
               <div>
@@ -202,7 +202,7 @@ export default function LoginPage() {
                   type="password"
                   value={schoolPasscode}
                   onChange={(e) => setSchoolPasscode(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSchoolLogin()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSchoolLogin()}
                 />
               </div>
               <Button onClick={handleSchoolLogin} className="w-full font-bold">
@@ -234,7 +234,7 @@ export default function LoginPage() {
                   type="password"
                   value={devPasscode}
                   onChange={(e) => setDevPasscode(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleDeveloperLogin()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDeveloperLogin()}
                 />
               </div>
               <Button

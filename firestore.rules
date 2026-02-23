@@ -17,13 +17,18 @@ service cloud.firestore {
       allow read: if isAuth();
       allow write: if isAdmin(schoolId);
       
-      // Students can be managed by admins. Any authenticated user of the school can read student data.
+      // Students: admins have full control. Authenticated users can only update
+      // specific fields on student docs (points, lifetimePoints, categoryPoints)
+      // via transactional coupon/prize redemption. They cannot create or delete students.
       match /students/{studentId} {
         allow read: if isAuth();
         allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId) || isAuth(); // Students can update their own points via coupons/prizes
+        allow update: if isAdmin(schoolId)
+          || (isAuth() && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['points', 'lifetimePoints', 'categoryPoints']));
         
-        // Students can create their own activity, and any authenticated user can read it.
+        // Activity logs: any authenticated user can read or create (for redemptions).
+        // Only admins can update or delete activity records.
         match /activities/{activityId} {
           allow read: if isAuth();
           allow create: if isAuth();
@@ -54,11 +59,14 @@ service cloud.firestore {
           allow write: if isAdmin(schoolId);
       }
       
-      // Coupons can be created by admins/teachers, and updated (redeemed) by any authenticated student.
+      // Coupons: admins can create/delete. Any authenticated user can read or update
+      // (to mark a coupon as redeemed), but only specific fields are allowed on update.
       match /coupons/{couponId} {
         allow read: if isAuth();
-        allow create: if isAdmin(schoolId); // In a real app, you'd extend this to teachers
-        allow update: if isAuth(); // Allow students to redeem (update 'used' field)
+        allow create: if isAdmin(schoolId);
+        allow update: if isAuth()
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['used', 'usedAt', 'usedBy']);
         allow delete: if isAdmin(schoolId);
       }
       

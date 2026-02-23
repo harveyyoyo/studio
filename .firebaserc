@@ -1,5 +1,15 @@
 {
-  "projects": {},
-  "targets": {},
+  "projects": {
+    "default": "studio-1273073612-71183"
+  },
+  "targets": {
+    "studio-1273073612-71183": {
+      "hosting": {
+        "default": [
+          "studio-1273073612-71183"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

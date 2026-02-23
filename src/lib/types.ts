@@ -28,7 +28,8 @@ export interface Student {
   lifetimePoints?: number;
   classId?: string;
   nfcId: string;
-  history: HistoryItem[];
+  /** @deprecated History is now stored in the `activities` subcollection. This field exists only for backward compatibility during migration. */
+  history?: HistoryItem[];
   categoryPoints?: { [key: string]: number };
 }
 
