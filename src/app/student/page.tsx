@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader, NotFoundException, type IScannerControls } from '@zxing/browser';
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -183,20 +183,16 @@ function StudentDashboard({
       return;
     }
 
-    let controls: IScannerControls | null = null;
     const codeReader = new BrowserMultiFormatReader();
-
+    let controls: IScannerControls | null = null;
+    
     const startScan = async () => {
-      try {
+       try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        
-        let selectedDeviceId: string | undefined;
-        if (videoInputDevices.length > 0) {
-            const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back'))
-                || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
+        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
+            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
             
-            selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
-        }
+        const selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
 
         if (!selectedDeviceId) {
             throw new Error("No video input devices found.");
@@ -211,7 +207,7 @@ function StudentDashboard({
           if (result) {
             handleRedeemCoupon(result.getText());
           }
-          if (error && !(error instanceof NotFoundException)) {
+          if (error && error.name !== 'NotFoundException') {
             console.error('Coupon scan error:', error);
           }
         });
@@ -233,6 +229,7 @@ function StudentDashboard({
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
       }
     };
   }, [activeTab, handleRedeemCoupon, toast]);
@@ -501,20 +498,16 @@ export default function StudentLoginPage() {
       return;
     }
     
-    let controls: IScannerControls | null = null;
     const codeReader = new BrowserMultiFormatReader();
-
+    let controls: IScannerControls | null = null;
+    
     const startScan = async () => {
-      try {
+       try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        
-        let selectedDeviceId: string | undefined;
-        if (videoInputDevices.length > 0) {
-            const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
-                || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
+        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
+            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
             
-            selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
-        }
+        const selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
 
         if (!selectedDeviceId) {
             throw new Error("No video input devices found.");
@@ -525,11 +518,11 @@ export default function StudentLoginPage() {
         }
 
         setHasCameraPermission(true);
-        controls = codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
+        const controls = codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
           if (result) {
             handleNfcSubmit(result.getText());
           }
-          if (error && !(error instanceof NotFoundException)) {
+          if (error && error.name !== 'NotFoundException') {
             console.error('Login scan error:', error);
           }
         });
@@ -551,6 +544,7 @@ export default function StudentLoginPage() {
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
       }
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
@@ -682,6 +676,3 @@ export default function StudentLoginPage() {
     </TooltipProvider>
   );
 }
-
-
-    
