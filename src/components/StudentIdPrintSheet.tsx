@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
 import { useAppContext } from './AppProvider';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 interface StudentIdPrintSheetProps {
@@ -15,10 +14,10 @@ export function StudentIdPrintSheet({ students }: StudentIdPrintSheetProps) {
   const { schoolId } = useAppContext();
   const firestore = useFirestore();
   
-  const classesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
+  const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes } = useCollection<Class>(classesQuery);
 
-  const classMap = useMemo(() => {
+  const classMap = useMemoFirebase(() => {
     if (!classes) return new Map<string, string>();
     return new Map(classes.map(c => [c.id, c.name]));
   }, [classes]);

@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 
@@ -25,7 +24,7 @@ interface StudentActivityModalProps {
 
 function ActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
     const firestore = useFirestore();
-    const activitiesQuery = useMemo(() => (
+    const activitiesQuery = useMemoFirebase(() => (
         query(
         collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
         orderBy('date', 'desc'),
