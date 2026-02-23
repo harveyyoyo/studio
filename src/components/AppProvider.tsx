@@ -14,7 +14,7 @@ import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } fr
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirestore, useFunctions } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -30,6 +30,7 @@ import {
   writeBatch,
   where,
 } from 'firebase/firestore';
+import { signInAnonymously, signOut } from 'firebase/auth';
 import { httpsCallable } from "firebase/functions";
 import { INITIAL_DATA } from '@/lib/data';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
@@ -124,8 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const router = useRouter();
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const functions = useFunctions();
+  const { auth, firestore, functions } = useFirebase();
   const playSound = useArcadeSound();
 
   // Restore session & settings
@@ -259,42 +259,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   const login = useCallback(
     async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }): Promise<boolean> => {
-      if (type === 'developer') {
-        if (credentials.passcode === process.env.NEXT_PUBLIC_DEV_PASSCODE) { 
-          setLoginState('developer');
-          sessionStorage.setItem('loginState', 'developer');
-          return true;
-        }
-      } else if (type === 'school' && credentials.schoolId && firestore) {
-          const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
-          const schoolLoginDocRef = doc(firestore, 'schools', lowerSchoolId);
-          try {
-            const docSnap = await getDoc(schoolLoginDocRef);
-            if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
-               setSchoolId(lowerSchoolId);
-               setLoginState('school');
-               sessionStorage.setItem('loginState', 'school');
-               sessionStorage.setItem('schoolId', lowerSchoolId);
-               return true;
-            }
-          } catch(e) {
-            console.error("School login error", e);
-            return false;
+      if (!auth || !firestore) return false;
+
+      const performAuth = async () => {
+        try {
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
           }
+          return true;
+        } catch (error) {
+          console.error("Anonymous sign-in failed:", error);
+          toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'Could not establish a secure connection.',
+          });
+          return false;
+        }
+      };
+
+      if (type === 'developer') {
+        if (credentials.passcode === process.env.NEXT_PUBLIC_DEV_PASSCODE) {
+          if (await performAuth()) {
+            setLoginState('developer');
+            sessionStorage.setItem('loginState', 'developer');
+            return true;
+          }
+        }
+      } else if (type === 'school' && credentials.schoolId && credentials.passcode) {
+        const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+        const schoolLoginDocRef = doc(firestore, 'schools', lowerSchoolId);
+        try {
+          const docSnap = await getDoc(schoolLoginDocRef);
+          if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
+            if (await performAuth()) {
+              setSchoolId(lowerSchoolId);
+              setLoginState('school');
+              sessionStorage.setItem('loginState', 'school');
+              sessionStorage.setItem('schoolId', lowerSchoolId);
+              return true;
+            }
+          }
+        } catch (e) {
+          console.error("School login error", e);
+          return false;
+        }
       }
       return false;
     },
-    [firestore]
+    [auth, firestore, toast]
   );
   
   const logout = useCallback(() => {
     playSound('swoosh');
+    if (auth) {
+      signOut(auth);
+    }
     sessionStorage.clear();
     setLoginState('loggedOut');
     setSchoolId(null);
     setDb(EMPTY_DB);
     router.push('/');
-  }, [router, playSound]);
+  }, [router, playSound, auth]);
   
   const createSchool = useCallback(async (schoolId: string): Promise<{ passcode: string; cleanId: string } | null> => {
     if (!firestore) return null;
