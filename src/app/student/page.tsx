@@ -131,7 +131,6 @@ function StudentDashboard({
   
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const codeReader = useMemoFirebase(() => new BrowserMultiFormatReader(), []);
 
 
@@ -160,6 +159,7 @@ function StudentDashboard({
     const result = await redeemCoupon(student.id, code);
 
     if (result.success) {
+        playSound('redeem');
         toast({
             title: 'Coupon Redeemed!',
             description: `You gained ${result.value} points.`,
@@ -168,6 +168,7 @@ function StudentDashboard({
         setAnimatedValue(result.value || null);
         setTimeout(() => setAnimatedValue(null), 1500);
     } else {
+        playSound('error');
         toast({
             variant: 'destructive',
             title: 'Redemption Failed',
@@ -176,45 +177,40 @@ function StudentDashboard({
     }
 
     setCouponCode('');
-  }, [couponCode, resetTimer, redeemCoupon, student, toast]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    if (activeTab !== 'camera') {
+    if (activeTab !== 'camera' || !videoRef.current) {
+      codeReader.reset();
       return;
     }
     
-    let controls: any;
-
-    codeReader.decodeFromVideoDevice(undefined, 'barcode-scanner-video', (result, err) => {
+    codeReader.decodeContinuouslyFromVideoDevice(undefined, videoRef.current, (result, err) => {
         if (result) {
-            playSound('redeem');
+            // Stop scanning once a barcode is found
+            codeReader.reset(); 
             handleRedeemCoupon(result.getText());
             setActiveTab('manual');
         }
         if (err && err.name !== 'NotFoundException') {
             console.error('Zxing Decode Error:', err);
         }
-    }).then(c => {
-        setHasCameraPermission(true);
-        controls = c;
     }).catch(err => {
-        console.error('Camera permission error:', err);
-        setHasCameraPermission(false);
-        toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please allow camera access in your browser settings.',
-        });
+        if (err.name !== 'NotAllowedError') { // Don't toast for user denial
+            console.error('Camera permission error:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: 'Could not access the camera.',
+            });
+        }
         setActiveTab('manual');
     });
 
     return () => {
-        if (controls) {
-            controls.stop();
-        }
+        codeReader.reset();
     };
 }, [activeTab, codeReader, handleRedeemCoupon, playSound, toast]);
-
 
   
   const handleLogoutConfirm = () => {
@@ -222,6 +218,7 @@ function StudentDashboard({
         onDone();
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } else {
+        playSound('error');
         toast({
             variant: 'destructive',
             title: 'Incorrect Passcode',
@@ -306,19 +303,11 @@ function StudentDashboard({
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video id="barcode-scanner-video" ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
                         </div>
-                        {hasCameraPermission === false && (
-                            <Alert variant="destructive">
-                                <AlertTitle>Camera Access Required</AlertTitle>
-                                <AlertDescription>
-                                    Please allow camera access in your browser to use this feature.
-                                </AlertDescription>
-                            </Alert>
-                        )}
                         <p className="text-sm text-muted-foreground text-center">Position the coupon's barcode inside the red box.</p>
                     </TabsContent>
                   </Tabs>
@@ -421,10 +410,15 @@ export default function StudentLoginPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const playSound = useArcadeSound();
 
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [nfcId, setNfcId] = useState('');
   const nfcInputRef = useRef<HTMLInputElement>(null);
+
+  const [loginTab, setLoginTab] = useState('nfc');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const codeReader = useMemoFirebase(() => new BrowserMultiFormatReader(), []);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -433,20 +427,23 @@ export default function StudentLoginPage() {
   }, [isInitialized, loginState, router]);
 
   useEffect(() => {
-    if (!activeStudentId) {
+    if (!activeStudentId && loginTab === 'nfc') {
         setTimeout(() => nfcInputRef.current?.focus(), 100);
     }
-  }, [activeStudentId]);
+  }, [activeStudentId, loginTab]);
 
-  const handleNfcSubmit = async () => {
-    if(!nfcId || !schoolId) return;
+  const handleNfcSubmit = useCallback(async (scannedId?: string) => {
+    const idToSubmit = scannedId || nfcId;
+    if(!idToSubmit || !schoolId) return;
 
-    const studentRef = doc(firestore, 'schools', schoolId, 'students', nfcId);
+    const studentRef = doc(firestore, 'schools', schoolId, 'students', idToSubmit);
     try {
       const studentSnap = await getDoc(studentRef);
       if (studentSnap.exists()) {
+        playSound('login');
         setActiveStudentId(studentSnap.id);
       } else {
+        playSound('error');
         toast({
           variant: 'destructive',
           title: 'Student Not Found',
@@ -454,6 +451,7 @@ export default function StudentLoginPage() {
         });
       }
     } catch (error) {
+       playSound('error');
        toast({
         variant: 'destructive',
         title: 'Error',
@@ -462,11 +460,45 @@ export default function StudentLoginPage() {
     }
 
     setNfcId('');
-  };
+  }, [firestore, schoolId, nfcId, playSound, toast]);
+
+
+  useEffect(() => {
+    if (loginTab !== 'camera' || activeStudentId || !videoRef.current) {
+      codeReader.reset();
+      return;
+    }
+
+    codeReader.decodeContinuouslyFromVideoDevice(undefined, videoRef.current, (result, err) => {
+        if (result) {
+            codeReader.reset();
+            handleNfcSubmit(result.getText());
+        }
+        if (err && err.name !== 'NotFoundException') {
+            console.error('Zxing Decode Error:', err);
+        }
+    }).catch(err => {
+        if (err.name !== 'NotAllowedError') {
+             console.error('Camera permission error:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: 'Could not access the camera. Please check permissions.',
+            });
+        }
+        setLoginTab('nfc');
+    });
+
+    return () => {
+        codeReader.reset();
+    };
+  }, [loginTab, activeStudentId, codeReader, handleNfcSubmit, toast]);
+
 
   const handleDone = useCallback(() => {
     setActiveStudentId(null);
     setNfcId('');
+    setLoginTab('nfc');
   }, []);
 
   if (!isInitialized || loginState !== 'school') {
@@ -488,13 +520,16 @@ export default function StudentLoginPage() {
             <CardDescription>Check your points and redeem coupons.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="nfc" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
                   <Nfc className="mr-2 h-4 w-4" /> Card
                 </TabsTrigger>
                 <TabsTrigger value="manual">
                   <Type className="mr-2 h-4 w-4" /> Manual
+                </TabsTrigger>
+                 <TabsTrigger value="camera">
+                  <Camera className="mr-2 h-4 w-4" /> Scan ID
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="nfc" className="text-center">
@@ -531,7 +566,7 @@ export default function StudentLoginPage() {
                   </div>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleNfcSubmit} className="w-full">
+                      <Button onClick={() => handleNfcSubmit()} className="w-full">
                         Login
                       </Button>
                     </TooltipTrigger>
@@ -539,6 +574,19 @@ export default function StudentLoginPage() {
                       <p>Log in with the student ID to view your dashboard.</p>
                     </TooltipContent>
                   </Tooltip>
+                </div>
+              </TabsContent>
+               <TabsContent value="camera">
+                <div className="py-8 space-y-4">
+                    <div className="relative">
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
+                        </div>
+                    </div>
+                    <p className="text-muted-foreground">
+                      Position your ID card's barcode inside the box.
+                    </p>
                 </div>
               </TabsContent>
             </Tabs>
