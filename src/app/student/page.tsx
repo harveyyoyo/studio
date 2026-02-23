@@ -188,7 +188,7 @@ function StudentDashboard({
     
     const startScan = async () => {
       try {
-        const videoInputDevices = await codeReader.listVideoInputDevices();
+        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
             || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
             
@@ -505,7 +505,7 @@ export default function StudentLoginPage() {
 
     const startScan = async () => {
        try {
-        const videoInputDevices = await codeReader.listVideoInputDevices();
+        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
             || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
             
