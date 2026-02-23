@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, query, getDocs } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Key,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -22,25 +22,45 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+
+interface SchoolInfo {
+  id: string;
+  name: string;
+}
+
+interface BackupInfo {
+    id: string;
+}
 
 export default function DeveloperPage() {
-  const { loginState, isInitialized, createSchool, deleteSchool, updateSchoolPasscode } = useAppContext();
+  const { 
+      loginState, isInitialized, createSchool, deleteSchool, updateSchool,
+      devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
+      isAutoBackupEnabled, toggleAutoBackup
+    } = useAppContext();
   const firestore = useFirestore();
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
   
-  const [allSchools, setAllSchools] = useState<string[]>([]);
+  const [allSchools, setAllSchools] = useState<SchoolInfo[]>([]);
   
   // State for showing new school passcode
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{id: string, passcode: string} | null>(null);
   
-  // State for editing a school's passcode
-  const [editingSchoolId, setEditingSchoolId] = useState<string | null>(null);
+  // State for editing a school
+  const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
+  const [newSchoolName, setNewSchoolName] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
+  
+  // State for managing backups
+  const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
+  const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'developer') {
@@ -66,7 +86,7 @@ export default function DeveloperPage() {
     };
     
     createSampleSchoolIfNeeded('yeshiva');
-    createSampleSchoolIfNeeded('school');
+    createSampleSchoolIfNeeded('schoolabc');
   }, [loginState, firestore, createSchool]);
 
 
@@ -78,8 +98,11 @@ export default function DeveloperPage() {
 
     const schoolsColRef = collection(firestore, 'schools');
     const unsubscribe = onSnapshot(schoolsColRef, (snapshot) => {
-        const schoolIds = snapshot.docs.map(doc => doc.id);
-        setAllSchools(schoolIds);
+        const schoolData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name || doc.id,
+        }));
+        setAllSchools(schoolData);
     }, (error) => {
         console.error("Error fetching all schools:", error);
         toast({variant: 'destructive', title: "Could not fetch school list"});
@@ -101,24 +124,69 @@ export default function DeveloperPage() {
       setNewSchoolId('');
   };
   
-  const handleOpenEditModal = (id: string) => {
-    setEditingSchoolId(id);
-    setNewPasscode('');
+  const handleOpenEditModal = (school: SchoolInfo) => {
+    setEditingSchool(school);
+    setNewSchoolName(school.name);
+    setNewPasscode(''); // Clear passcode for security
   }
 
   const handleCloseEditModal = () => {
-    setEditingSchoolId(null);
+    setEditingSchool(null);
+    setNewSchoolName('');
     setNewPasscode('');
   }
 
-  const handleUpdatePasscode = async () => {
-    if (!editingSchoolId || !newPasscode) {
-      toast({ variant: 'destructive', title: 'New passcode cannot be empty.' });
-      return;
+  const handleUpdateSchool = async () => {
+    if (!editingSchool) return;
+
+    const updates: { name?: string; passcode?: string } = {};
+    if (newSchoolName && newSchoolName !== editingSchool.name) {
+      updates.name = newSchoolName;
     }
-    await updateSchoolPasscode(editingSchoolId, newPasscode);
-    toast({ title: `Passcode for ${editingSchoolId} updated!` });
+    if (newPasscode) {
+      updates.passcode = newPasscode;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await updateSchool(editingSchool.id, updates);
+      toast({ title: `School "${editingSchool.id}" updated!` });
+    } else {
+      toast({ title: 'No changes were made.' });
+    }
     handleCloseEditModal();
+  }
+  
+   const handleOpenBackupModal = async (school: SchoolInfo) => {
+    if (!firestore) return;
+    setBackupSchool(school);
+    const backupsColRef = collection(firestore, 'schools', school.id, 'backups');
+    const q = query(backupsColRef);
+    const snapshot = await getDocs(q);
+    const backupList = snapshot.docs.map(doc => ({ id: doc.id })).sort((a, b) => parseInt(b.id) - parseInt(a.id));
+    setSchoolBackups(backupList);
+  }
+
+  const handleCloseBackupModal = () => {
+    setBackupSchool(null);
+    setSchoolBackups([]);
+  }
+  
+  const handleCreateBackup = async () => {
+      if (!backupSchool) return;
+      await devCreateBackup(backupSchool.id);
+      handleOpenBackupModal(backupSchool); // Refresh list
+      toast({title: "Backup Created"});
+  }
+  
+  const handleRestoreBackup = async (backupId: string) => {
+      if (!backupSchool) return;
+      await devRestoreFromBackup(backupSchool.id, backupId);
+      toast({title: "Restore Complete", description: `School "${backupSchool.id}" has been restored.`});
+  }
+
+  const handleBackupAll = async () => {
+    await devBackupAllSchools();
+    toast({title: "Backup process complete", description: "All schools have been backed up."});
   }
 
   if (!isInitialized || loginState !== 'developer') {
@@ -135,6 +203,54 @@ export default function DeveloperPage() {
                   </h2>
                   <p className="text-slate-400 text-sm">Manage all school databases.</p>
               </div>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Global Actions</CardTitle>
+              <CardDescription>Perform actions across all school databases.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
+                <div>
+                  <h3 className="font-bold flex items-center gap-2"><Database />One-Click Backup</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Create a new backup for every school instance instantly.</p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="secondary" className="mt-4">Backup All Schools</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will trigger a backup for all {allSchools.length} school databases. This may take a few moments to complete.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleBackupAll}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+              <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
+                  <div>
+                    <h3 className="font-bold flex items-center gap-2"><ShieldCheck />Automatic Daily Backups</h3>
+                    <p className="text-sm text-muted-foreground mt-1">If enabled, a backup of all schools will be created automatically once every 24 hours.</p>
+                  </div>
+                  <div className="flex items-center space-x-2 mt-4">
+                    <Switch
+                      id="auto-backup-switch"
+                      checked={isAutoBackupEnabled}
+                      onCheckedChange={toggleAutoBackup}
+                    />
+                    <Label htmlFor="auto-backup-switch" className="font-normal">
+                      {isAutoBackupEnabled ? "Enabled" : "Disabled"}
+                    </Label>
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
           <Card>
@@ -163,18 +279,31 @@ export default function DeveloperPage() {
                   </div>
 
                    <ul className="space-y-2">
-                      {[...allSchools].sort().map((id) => (
-                          <li key={id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
-                              <p className="font-bold font-code break-all">{id}</p>
+                      {[...allSchools].sort((a,b) => a.id.localeCompare(b.id)).map((school) => (
+                          <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
+                              <div>
+                                <p className="font-bold font-code break-all">{school.id}</p>
+                                <p className="text-sm text-muted-foreground">{school.name}</p>
+                              </div>
                               <div className="flex items-center gap-0.5">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(id)}>
-                                      <Key className="w-4 h-4 text-blue-500" />
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenBackupModal(school)}>
+                                      <Database className="w-4 h-4 text-green-500" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Change the passcode for this school.</p>
+                                    <p>Manage Backups</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(school)}>
+                                      <Pencil className="w-4 h-4 text-blue-500" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Edit school name and passcode.</p>
                                   </TooltipContent>
                                 </Tooltip>
                                 <AlertDialog>
@@ -194,12 +323,12 @@ export default function DeveloperPage() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{id}</span>.
+                                        This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{school.id}</span>.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={async () => await deleteSchool(id)}>Continue</AlertDialogAction>
+                                      <AlertDialogAction onClick={async () => await deleteSchool(school.id)}>Continue</AlertDialogAction>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
@@ -234,24 +363,92 @@ export default function DeveloperPage() {
             </AlertDialogContent>
           </AlertDialog>
           
-          {/* Dialog for editing passcode */}
-          <Dialog open={!!editingSchoolId} onOpenChange={handleCloseEditModal}>
+          {/* Dialog for editing school */}
+          <Dialog open={!!editingSchool} onOpenChange={handleCloseEditModal}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Edit Passcode for <span className="font-code">{editingSchoolId}</span></DialogTitle>
+                <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
+                <DialogDescription>
+                  Update the school's name or set a new passcode. Leaving the passcode field blank will not change it.
+                </DialogDescription>
               </DialogHeader>
-              <div className="py-4">
-                <Label htmlFor="new-passcode">New Passcode</Label>
-                <Input
-                  id="new-passcode"
-                  value={newPasscode}
-                  onChange={(e) => setNewPasscode(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && handleUpdatePasscode()}
-                />
+              <div className="grid gap-4 py-4">
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-school-name" className="text-right">Name</Label>
+                    <Input
+                      id="edit-school-name"
+                      value={newSchoolName}
+                      onChange={(e) => setNewSchoolName(e.target.value)}
+                      className="col-span-3"
+                    />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="new-passcode" className="text-right">New Passcode</Label>
+                    <Input
+                      id="new-passcode"
+                      value={newPasscode}
+                      placeholder="(Leave blank to keep unchanged)"
+                      onChange={(e) => setNewPasscode(e.target.value)}
+                      className="col-span-3"
+                    />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="secondary" onClick={handleCloseEditModal}>Cancel</Button>
-                <Button onClick={handleUpdatePasscode}>Save New Passcode</Button>
+                <Button onClick={handleUpdateSchool}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog for managing backups */}
+          <Dialog open={!!backupSchool} onOpenChange={handleCloseBackupModal}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Manage Backups for <span className="font-code">{backupSchool?.id}</span></DialogTitle>
+                <DialogDescription>
+                  Create, download, or restore backups for this school instance.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Button onClick={handleCreateBackup} className="mb-4"><Plus className="mr-2" />Create New Backup</Button>
+                 <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
+                  {schoolBackups.length > 0 ? schoolBackups.map(backup => (
+                    <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
+                      <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
+                      <div className="flex gap-1">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                               <Button size="sm" variant="outline" onClick={() => devDownloadBackup(backupSchool!.id, backup.id)}><Download className="h-4 w-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Download</p></TooltipContent>
+                          </Tooltip>
+                        <AlertDialog>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Restore</p></TooltipContent>
+                          </Tooltip>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
+                              <AlertDialogDescription>This will overwrite all current data for {backupSchool?.id} with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRestoreBackup(backup.id)}>Restore</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </li>
+                  )) : <p className="text-center text-sm text-muted-foreground italic py-4">No backups found for this school.</p>}
+                </ul>
+              </div>
+              <DialogFooter>
+                <Button variant="secondary" onClick={handleCloseBackupModal}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

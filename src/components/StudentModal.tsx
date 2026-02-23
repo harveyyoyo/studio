@@ -65,6 +65,17 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
       return;
     }
 
+    const studentWithSameId = db.students.find(s => s.nfcId === nfcId);
+
+    if (studentWithSameId && (!isEditing || studentWithSameId.id !== student?.id)) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Student ID',
+            description: `Student ID "${nfcId}" is already assigned to another student.`,
+        });
+        return;
+    }
+
     const finalClassId = classId === 'none' ? '' : classId;
 
     if (isEditing && student) {

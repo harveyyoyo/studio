@@ -24,12 +24,13 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
-  enableMultiTabIndexedDbPersistence,
   collection,
   query,
   getDocs,
   writeBatch,
+  where,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { INITIAL_DATA } from '@/lib/data';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
@@ -47,7 +48,7 @@ interface AppContextType {
   syncStatus: SyncStatus;
   login: (
     type: 'school' | 'developer',
-    credentials: { schoolId?: string; passcode: string }
+    credentials: { schoolId?: string; passcode?: string }
   ) => Promise<boolean>;
   logout: () => void;
   getClassName: (classId: string) => string;
@@ -66,21 +67,34 @@ interface AppContextType {
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
-  updateSchoolPasscode: (schoolId: string, passcode: string) => Promise<void>;
+  updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
   setData: (data: Database) => Promise<void>;
   backups: { id: string }[];
   createBackup: () => Promise<void>;
   restoreFromBackup: (backupId: string) => Promise<void>;
   downloadBackup: (backupId: string) => Promise<void>;
+  devCreateBackup: (schoolId: string) => Promise<void>;
+  devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
+  devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
+  devBackupAllSchools: () => Promise<void>;
+  isAutoBackupEnabled: boolean;
+  toggleAutoBackup: () => void;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string) => Promise<{success: number, failed: number, errors: string[]}>;
+  migrateStudents: (schoolId: string) => Promise<void>;
+  migrateClasses: (schoolId: string) => Promise<void>;
+  migrateTeachers: (schoolId: string) => Promise<void>;
+  migratePrizes: (schoolId: string) => Promise<void>;
+  migrateCoupons: (schoolId: string) => Promise<void>;
+  getStudentPointsByCategory: (studentId: string) => Record<string, number>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
 const EMPTY_DB: Database = {
+  name: '',
   passcode: '',
   students: [],
   classes: [],
@@ -89,6 +103,11 @@ const EMPTY_DB: Database = {
   coupons: [],
   prizes: [],
   updatedAt: 0,
+  hasMigratedStudents: false,
+  hasMigratedClasses: false,
+  hasMigratedTeachers: false,
+  hasMigratedPrizes: false,
+  hasMigratedCoupons: false,
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -101,25 +120,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [backups, setBackups] = useState<{ id: string }[]>([]);
+  const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
 
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
   const playSound = useArcadeSound();
 
-  useEffect(() => {
-    if (firestore) {
-      enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn('Firestore persistence failed: another tab is open.');
-        } else {
-          console.error('Firestore persistence failed:', err.code);
-        }
-      });
-    }
-  }, [firestore]);
-
-  // Restore session
+  // Restore session & settings
   useEffect(() => {
     const savedState = sessionStorage.getItem('loginState');
     const savedSchoolId = sessionStorage.getItem('schoolId');
@@ -130,6 +138,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSchoolId(savedSchoolId);
       }
     }
+    const storedPref = localStorage.getItem('autoBackupEnabled');
+    if (storedPref) {
+        setIsAutoBackupEnabled(JSON.parse(storedPref));
+    }
     setIsInitialized(true);
   }, []);
   
@@ -139,48 +151,73 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   
   const isInitialSnapshot = useRef(true);
-  
+
   useEffect(() => {
-    if (!schoolDocRef) {
-        const defaultDb = { ...EMPTY_DB, ...INITIAL_DATA, passcode: db.passcode };
-        setDb(defaultDb);
-        setIsDbLoading(false);
-        return;
+    if (!schoolDocRef || !firestore || !schoolId) {
+      setDb({ ...EMPTY_DB, ...SCHOOL_DATA, passcode: db.passcode });
+      setIsDbLoading(false);
+      return;
     }
-    
+  
     isInitialSnapshot.current = true;
     setIsDbLoading(true);
     setSyncStatus('syncing');
-
-    const unsubscribe = onSnapshot(schoolDocRef, (snapshot) => {
-        if (isInitialSnapshot.current) {
-            setIsDbLoading(false);
-            isInitialSnapshot.current = false;
-        }
-        setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          // This is a small migration for older school documents that don't have a `prizes` field.
-          if (data.prizes === undefined) {
-              data.prizes = INITIAL_DATA.prizes;
-          }
-          const mergedData = {
-            ...EMPTY_DB,
-            ...data
-          };
-          setDb(mergedData);
-        } else {
-           const defaultDb = { ...EMPTY_DB, ...INITIAL_DATA, passcode: db.passcode };
-           setDb(defaultDb);
-        }
-      }, (error) => {
-        console.error('Firestore snapshot error:', error);
-        setSyncStatus('error');
+  
+    const listeners: (()=>void)[] = [];
+  
+    const schoolUnsubscribe = onSnapshot(schoolDocRef, (schoolSnap) => {
+      if (isInitialSnapshot.current) {
         setIsDbLoading(false);
-      });
+        isInitialSnapshot.current = false;
+      }
+  
+      listeners.forEach(l => l());
+      listeners.length = 0;
+  
+      if (schoolSnap.exists()) {
+        const schoolData = schoolSnap.data();
+        setSyncStatus(schoolSnap.metadata.hasPendingWrites ? 'synced' : 'syncing');
+        const baseData = { ...EMPTY_DB, ...schoolData };
+  
+        const setupListener = (collectionName: keyof Database, flag: keyof Database) => {
+          if (schoolData[flag]) {
+            baseData[collectionName] = db[collectionName] || [];
+            const collectionRef = collection(firestore, 'schools', schoolId, collectionName as string);
+            const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+              const data = snapshot.docs.map(doc => doc.data());
+              setDb(prevDb => ({ ...prevDb, [collectionName]: data }));
+              setSyncStatus(snapshot.metadata.hasPendingWrites ? 'synced' : 'syncing');
+            }, (error) => {
+              console.error(`${collectionName} subcollection error:`, error);
+              setSyncStatus('error');
+            });
+            listeners.push(unsubscribe);
+          }
+        };
 
-    return () => unsubscribe();
-  }, [schoolDocRef, db.passcode]);
+        setupListener('students', 'hasMigratedStudents');
+        setupListener('classes', 'hasMigratedClasses');
+        setupListener('teachers', 'hasMigratedTeachers');
+        setupListener('prizes', 'hasMigratedPrizes');
+        setupListener('coupons', 'hasMigratedCoupons');
+
+        setDb(baseData);
+      } else {
+        setDb({ ...EMPTY_DB, ...SCHOOL_DATA, passcode: db.passcode });
+      }
+    }, (error) => {
+      console.error('Firestore snapshot error:', error);
+      setSyncStatus('error');
+      setIsDbLoading(false);
+    });
+  
+    return () => {
+      schoolUnsubscribe();
+      listeners.forEach(l => l());
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolDocRef, firestore, schoolId]);
+
 
   // Fetch backups
   useEffect(() => {
@@ -208,22 +245,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (newDbState: Partial<Database>) => {
       if (!schoolDocRef) return;
       const dbWithTimestamp = { ...newDbState, updatedAt: Date.now() };
-
       setSyncStatus('syncing');
       try {
         await setDoc(schoolDocRef, dbWithTimestamp, { merge: true });
       } catch (e) {
         setSyncStatus('error');
-        toast({ variant: 'destructive', title: 'Sync Error' });
+        toast({ variant: 'destructive', title: 'Sync Error', description: (e as Error).message });
       }
     },
     [schoolDocRef, toast]
   );
   
   const login = useCallback(
-    async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode: string }): Promise<boolean> => {
+    async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }): Promise<boolean> => {
       if (type === 'developer') {
-        if (credentials.passcode === '1234') { 
+        if (credentials.passcode === process.env.NEXT_PUBLIC_DEV_PASSCODE) { 
           setLoginState('developer');
           sessionStorage.setItem('loginState', 'developer');
           return true;
@@ -270,402 +306,620 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     const schoolExists = (await getDoc(doc(firestore, 'schools', cleanId))).exists();
     if(schoolExists) {
-      if (cleanId !== 'yeshiva' && cleanId !== 'school') { // Don't show toast for automatic creation
+      if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
         playSound('error');
         toast({variant: 'destructive', title: `School ID "${cleanId}" already exists.`});
       }
       return null;
     }
     
-    let schoolData;
-    let newPasscode;
-
+    let schoolData, newPasscode;
     if (cleanId === 'yeshiva') {
       newPasscode = '1234';
       schoolData = { ...YESHIVA_DATA, passcode: newPasscode };
-    } else if (cleanId === 'school') {
+    } else if (cleanId === 'schoolabc') {
       newPasscode = '1234';
       schoolData = { ...SCHOOL_DATA, passcode: newPasscode };
     } else {
       newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
-      schoolData = { ...INITIAL_DATA, passcode: newPasscode };
+      schoolData = { ...INITIAL_DATA, name: cleanId, passcode: newPasscode };
     }
     
-    const newSchoolDocRef = doc(firestore, 'schools', cleanId);
-    await setDoc(newSchoolDocRef, schoolData);
+    await setDoc(doc(firestore, 'schools', cleanId), schoolData);
     
-    if (cleanId !== 'yeshiva' && cleanId !== 'school') { // Don't show toast for automatic creation
+    if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
       playSound('success');
       toast({title: `School "${cleanId}" created!`});
     }
     return { passcode: newPasscode, cleanId };
   }, [firestore, toast, playSound]);
-  
+
+  const createBackup = useCallback(async () => {
+    if (!schoolId) return;
+    const functions = getFunctions();
+    const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
+    try {
+      await createBackupTrigger({ schoolId });
+      playSound('swoosh');
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
+    }
+  }, [schoolId, toast, playSound]);
+
+  const devCreateBackup = useCallback(async (schoolId: string) => {
+    const functions = getFunctions();
+    const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
+    try {
+      await createBackupTrigger({ schoolId });
+      playSound('swoosh');
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
+    }
+  }, [toast, playSound]);
+
+  const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
+    if (!firestore) return;
+    await devCreateBackup(schoolId);
+    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
+
+    const schoolDocRef = doc(firestore, 'schools', schoolId);
+    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+    try {
+      const backupSnap = await getDoc(backupDocRef);
+      const schoolSnap = await getDoc(schoolDocRef);
+      if (backupSnap.exists() && schoolSnap.exists()) {
+          const backupData = backupSnap.data();
+          const currentPasscode = schoolSnap.data().passcode;
+          const restoredDb = { ...backupData, passcode: currentPasscode };
+          await setDoc(schoolDocRef, restoredDb);
+          playSound('success');
+      } else {
+          throw new Error('Backup or school not found');
+      }
+    } catch (e) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Restore Failed', description: (e as Error).message });
+    }
+  }, [firestore, playSound, toast, devCreateBackup]);
+
+  const devDownloadBackup = useCallback(async (schoolId: string, backupId: string) => {
+    if (!firestore) return;
+    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+    try {
+      const backupSnap = await getDoc(backupDocRef);
+      if (backupSnap.exists()) {
+          playSound('swoosh');
+          const dataStr = JSON.stringify(backupSnap.data(), null, 2);
+          const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `reward-arcade-backup-${schoolId}-${backupId}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+      } else {
+          throw new Error('Backup not found');
+      }
+    } catch(e) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Download Failed', description: (e as Error).message });
+    }
+  }, [firestore, playSound, toast]);
+
+  const devBackupAllSchools = useCallback(async () => {
+    if (!firestore) return;
+    playSound('swoosh');
+    try {
+      const schoolsColRef = collection(firestore, 'schools');
+      const schoolsSnapshot = await getDocs(schoolsColRef);
+      const backupPromises = schoolsSnapshot.docs.map(schoolDoc => devCreateBackup(schoolDoc.id));
+      await Promise.all(backupPromises);
+    } catch (e) {
+      console.error('Backup of all schools failed', e);
+    }
+  }, [firestore, devCreateBackup, playSound]);
+
   const deleteSchool = useCallback(async (schoolId: string) => {
     if (!firestore) return;
+    try {
+      await devCreateBackup(schoolId);
+      toast({ title: "Final Backup Created", description: `A final backup for ${schoolId} has been saved.` });
+      await deleteDoc(doc(firestore, 'schools', schoolId));
+      playSound('success');
+      toast({title: `School "${schoolId}" deleted!`});
+    } catch (e) {
+      toast({variant: 'destructive', title: `School "${schoolId}" deletion failed!`, description: (e as Error).message});
+    }
+  }, [firestore, toast, playSound, devCreateBackup]);
 
-    // Batch delete subcollections first
-    const backupsCollectionRef = collection(firestore, 'schools', schoolId, 'backups');
-    const backupsSnapshot = await getDocs(backupsCollectionRef);
-    
-    const batch = writeBatch(firestore);
-    backupsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
-    await batch.commit();
-
-    // Then delete the main document
-    const schoolToDeleteDocRef = doc(firestore, 'schools', schoolId);
-    await deleteDoc(schoolToDeleteDocRef);
-    
-    playSound('success');
-    toast({title: `School "${schoolId}" deleted!`});
-  }, [firestore, toast, playSound]);
-
-  const updateSchoolPasscode = useCallback(async (schoolId: string, passcode: string) => {
+  const updateSchool = useCallback(async (schoolId: string, updates: { name?: string; passcode?: string }) => {
     if (!firestore) return;
-    const schoolDoc = doc(firestore, 'schools', schoolId);
-    await updateDoc(schoolDoc, { passcode });
-    playSound('success');
-  }, [firestore, playSound]);
+    try {
+      await updateDoc(doc(firestore, 'schools', schoolId), updates);
+      playSound('success');
+    } catch (e) {
+      toast({variant: 'destructive', title: "School update failed", description: (e as Error).message});
+    }
+  }, [firestore, playSound, toast]);
 
   const getClassName = useCallback((classId: string) => {
-    if (!classId) {
-      return 'Unassigned';
-    }
     return db.classes?.find((c) => c.id === classId)?.name || 'Unassigned';
   }, [db.classes]);
-  
-  const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
-    const newStudent: Student = { ...studentData, id: 's' + Date.now(), history: [] };
-    await updateDb({ students: arrayUnion(newStudent) as any });
-    playSound('success');
-  }, [updateDb, playSound]);
 
-  const updateStudent = useCallback(async (updatedStudent: Student) => {
-    const newStudents = db.students.map((s) => s.id === updatedStudent.id ? updatedStudent : s);
-    await updateDb({ students: newStudents });
-    playSound('success');
-  }, [db, updateDb, playSound]);
-
-  const deleteStudent = useCallback(async (studentId: string) => {
-    const studentToDelete = db.students.find(s => s.id === studentId);
-    if (!studentToDelete) {
+  const safeUpdate = useCallback(async (update: Record<string, any>) => {
+    if (!schoolDocRef) throw new Error("Not logged in");
+    try {
+      await updateDoc(schoolDocRef, update)
+      playSound('success');
+    } catch (e) {
+      console.error("Update failed:", e);
+      toast({ variant: "destructive", title: "Database Error", description: (e as Error).message });
       playSound('error');
-      return;
+      throw e; // Re-throw to be caught by caller if needed
     }
-    await updateDb({ students: arrayRemove(studentToDelete) as any });
-    playSound('success');
-  }, [db, updateDb, playSound]);
+  }, [schoolDocRef, playSound, toast]);
+  
+const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
+    if (!schoolId || !firestore) return;
+    try {
+      const newStudent: Student = { ...studentData, id: 's' + Date.now() + Math.random().toString(36).substring(2, 8), history: [] };
+      if (db.hasMigratedStudents) {
+          await setDoc(doc(firestore, 'schools', schoolId, 'students', newStudent.id), newStudent);
+      } else {
+          await safeUpdate({ students: arrayUnion(newStudent) });
+      }
+    } catch (e) { /* error is handled by safeUpdate */ }
+}, [schoolId, firestore, db.hasMigratedStudents, safeUpdate]);
 
-  const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
+const updateStudent = useCallback(async (updatedStudent: Student) => {
+    if (!schoolId || !firestore) return;
+    try {
+      if (db.hasMigratedStudents) {
+          await updateDoc(doc(firestore, 'schools', schoolId, 'students', updatedStudent.id), updatedStudent);
+      } else {
+          const newStudents = db.students.map((s) => s.id === updatedStudent.id ? updatedStudent : s);
+          await updateDb({ students: newStudents });
+      }
+      playSound('success');
+    } catch(e) {
+      toast({variant: 'destructive', title: 'Error updating student', description: (e as Error).message });
+    }
+}, [schoolId, firestore, db.hasMigratedStudents, db.students, updateDb, playSound, toast]);
+
+const deleteStudent = useCallback(async (studentId: string) => {
+    if (!schoolId || !firestore) return;
+    try {
+      const studentToDelete = db.students.find(s => s.id === studentId);
+      if (!studentToDelete) throw new Error("Student not found");
+      if (db.hasMigratedStudents) {
+          await deleteDoc(doc(firestore, 'schools', schoolId, 'students', studentId));
+      } else {
+          await safeUpdate({ students: arrayRemove(studentToDelete) });
+      }
+    } catch (e) { /* error is handled by safeUpdate or toast is shown below */
+      if (e instanceof Error && e.message !== "Not logged in") {
+        toast({ variant: 'destructive', title: 'Error deleting student', description: e.message });
+      }
+    }
+}, [schoolId, firestore, db.hasMigratedStudents, db.students, safeUpdate, toast]);
+
+
+const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
     if (db.classes?.some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
-        playSound('error');
         toast({variant: 'destructive', title: 'Class with this name already exists.'});
         return;
     }
-    const newClass: Class = { ...classData, id: 'c' + Date.now() };
-    await updateDb({ classes: arrayUnion(newClass) as any });
-    playSound('success');
-  }, [db.classes, updateDb, toast, playSound]);
+    try {
+      const newClass: Class = { ...classData, id: 'c' + Date.now() };
+      if (db.hasMigratedClasses) {
+          if (!schoolId || !firestore) return;
+          await setDoc(doc(firestore, 'schools', schoolId, 'classes', newClass.id), newClass);
+      } else {
+          await safeUpdate({ classes: arrayUnion(newClass) });
+      }
+    } catch (e) { /* error handled by safeUpdate */ }
+}, [db.classes, db.hasMigratedClasses, safeUpdate, toast, schoolId, firestore]);
 
-  const deleteClass = useCallback(async (classId: string) => {
-    const classToDelete = db.classes?.find(c => c.id === classId);
-    if (!classToDelete) {
-      playSound('error');
-      return;
+const deleteClass = useCallback(async (classId: string) => {
+    if (!schoolId || !firestore || !schoolDocRef) return;
+    try {
+      const classToDelete = db.classes?.find(c => c.id === classId);
+      if (!classToDelete) throw new Error("Class not found");
+
+      if (db.hasMigratedClasses) {
+          const batch = writeBatch(firestore);
+          const studentsQuery = query(collection(firestore, 'schools', schoolId, 'students'), where('classId', '==', classId));
+          const studentDocs = await getDocs(studentsQuery);
+          studentDocs.forEach(doc => batch.update(doc.ref, { classId: '' }));
+          batch.delete(doc(firestore, 'schools', schoolId, 'classes', classId));
+          await batch.commit();
+          toast({ title: 'Class deleted' });
+      } else {
+          const newStudents = db.students.map((s) => s.classId === classId ? { ...s, classId: '' } : s);
+          await updateDb({ classes: arrayRemove(classToDelete) as any, students: newStudents });
+      }
+      playSound('success');
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error deleting class', description: (e as Error).message });
     }
+}, [db, schoolId, firestore, schoolDocRef, updateDb, playSound, toast]);
 
-    const newStudents = db.students.map((s) => ({
-      ...s,
-      classId: s.classId === classId ? '' : s.classId,
-    }));
-
-    await updateDb({ 
-        classes: arrayRemove(classToDelete) as any,
-        students: newStudents
-    });
-    playSound('success');
-  }, [db, updateDb, playSound]);
   
-  const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
+const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
     if (db.teachers?.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
-        playSound('error');
         toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
         return;
     }
-    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
-    await updateDb({ teachers: arrayUnion(newTeacher) as any });
-    playSound('success');
-  }, [db.teachers, updateDb, toast, playSound]);
+    try {
+      const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+      if (db.hasMigratedTeachers) {
+        if (!schoolId || !firestore) return;
+        await setDoc(doc(firestore, 'schools', schoolId, 'teachers', newTeacher.id), newTeacher);
+      } else {
+        await safeUpdate({ teachers: arrayUnion(newTeacher) });
+      }
+    } catch (e) { /* error handled by safeUpdate */ }
+}, [db.teachers, db.hasMigratedTeachers, safeUpdate, toast, schoolId, firestore]);
 
-  const deleteTeacher = useCallback(async (teacherId: string) => {
-    const teacherToDelete = db.teachers?.find(c => c.id === teacherId);
-    if (!teacherToDelete) {
-      playSound('error');
-      return;
+const deleteTeacher = useCallback(async (teacherId: string) => {
+    try {
+      const teacherToDelete = db.teachers?.find(t => t.id === teacherId);
+      if (!teacherToDelete) throw new Error("Teacher not found");
+
+      if (db.hasMigratedTeachers) {
+          if (!schoolId || !firestore) return;
+          await deleteDoc(doc(firestore, 'schools', schoolId, 'teachers', teacherId));
+      } else {
+          await safeUpdate({ teachers: arrayRemove(teacherToDelete) });
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message !== "Not logged in") {
+        toast({ variant: 'destructive', title: 'Error deleting teacher', description: e.message });
+      }
     }
-    await updateDb({ 
-        teachers: arrayRemove(teacherToDelete) as any,
-    });
-    playSound('success');
-  }, [db, updateDb, playSound]);
+}, [db.teachers, db.hasMigratedTeachers, safeUpdate, schoolId, firestore, toast]);
 
   const addCategory = useCallback(async (newCategory: string) => {
-    if (db.categories.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
-        playSound('error');
+    if (db.categories?.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
         toast({ variant: 'destructive', title: 'Category already exists.' });
         return;
     }
-    await updateDb({ categories: arrayUnion(newCategory) as any });
-    playSound('success');
-  }, [db, updateDb, toast, playSound]);
+    try {
+      await safeUpdate({ categories: arrayUnion(newCategory) });
+    } catch(e) { /* error handled by safeUpdate */ }
+  }, [db.categories, safeUpdate, toast]);
 
   const deleteCategory = useCallback(async (categoryName: string) => {
-    await updateDb({ categories: arrayRemove(categoryName) as any });
-    playSound('success');
-  }, [updateDb, playSound]);
+    try {
+      await safeUpdate({ categories: arrayRemove(categoryName) });
+    } catch(e) { /* error handled by safeUpdate */ }
+  }, [safeUpdate]);
 
-  const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
-    await updateDb({ coupons: arrayUnion(...newCoupons) as any });
-    playSound('success');
-  }, [updateDb, playSound]);
-
-  const redeemCoupon = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
-    const coupon = db.coupons.find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
-
-    if (!coupon) {
-      playSound('error');
-      return { success: false, message: 'Coupon code not found.' };
-    }
-    if (coupon.used) {
-      playSound('error');
-      return { success: false, message: 'This coupon has already been used.' };
-    }
-
-    const student = db.students.find((s) => s.id === studentId);
-    if (!student) {
-      playSound('error');
-      return { success: false, message: 'Student not found.' };
-    }
-
-    const newHistoryItem: HistoryItem = {
-      desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
-      amount: coupon.value,
-      date: Date.now(),
-    };
-
-    const updatedStudent: Student = {
-      ...student,
-      points: student.points + coupon.value,
-      history: [newHistoryItem, ...student.history],
-    };
-    
-    const updatedCoupon: Coupon = {
-        ...coupon,
-        used: true,
-        usedAt: Date.now(),
-        usedBy: `${student.firstName} ${student.lastName}`,
-    };
-
-    const newStudents = db.students.map((s) => s.id === studentId ? updatedStudent : s);
-    const newCoupons = db.coupons.map((c) => c.code === coupon.code ? updatedCoupon : c);
-
-    await updateDb({ students: newStudents, coupons: newCoupons });
-    playSound('redeem');
-    return { success: true, message: 'Coupon redeemed!', value: coupon.value };
-  }, [db, updateDb, playSound]);
-  
-  const createBackup = useCallback(async () => {
+const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     if (!schoolId || !firestore) return;
-    
-    const backupId = Date.now().toString();
-    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
-    
-    const { passcode, updatedAt, ...backupData } = db;
-    
-    await setDoc(backupDocRef, backupData);
-    playSound('swoosh');
-  }, [schoolId, firestore, db, playSound]);
+    try {
+      if (db.hasMigratedCoupons) {
+          const batch = writeBatch(firestore);
+          newCoupons.forEach(coupon => {
+              const couponDocRef = doc(firestore, 'schools', schoolId, 'coupons', coupon.id);
+              batch.set(couponDocRef, coupon);
+          });
+          await batch.commit();
+      } else {
+          await safeUpdate({ coupons: arrayUnion(...newCoupons) });
+      }
+    } catch(e) { /* error handled by safeUpdate */ }
+}, [schoolId, firestore, db.hasMigratedCoupons, safeUpdate]);
+
+const redeemCoupon = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
+    if (!schoolId || !firestore) return { success: false, message: 'Not logged in.' };
+    try {
+      const coupon = db.coupons.find((c) => c.code.toUpperCase() === couponCode.toUpperCase());
+      if (!coupon) throw new Error('Coupon code not found.');
+      if (coupon.used) throw new Error('This coupon has already been used.');
+
+      const student = db.students.find((s) => s.id === studentId);
+      if (!student) throw new Error('Student not found.');
+
+      const newHistoryItem: HistoryItem = {
+          desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
+          amount: coupon.value,
+          date: Date.now(),
+      };
+
+      const updatedStudent: Student = {
+          ...student,
+          points: student.points + coupon.value,
+          history: [newHistoryItem, ...student.history],
+      };
+
+      const updatedCoupon: Coupon = {
+          ...coupon, used: true, usedAt: Date.now(), usedBy: `${student.firstName} ${student.lastName}`,
+      };
+      
+      if (db.hasMigratedStudents) {
+        await updateDoc(doc(firestore, 'schools', schoolId, 'students', studentId), updatedStudent);
+      } else {
+        const newStudents = db.students.map(s => s.id === studentId ? updatedStudent : s);
+        await updateDb({ students: newStudents });
+      }
+
+      if (db.hasMigratedCoupons) {
+          await updateDoc(doc(firestore, 'schools', schoolId, 'coupons', coupon.id), updatedCoupon);
+      } else {
+          const newCoupons = db.coupons.map((c) => c.code === coupon.code ? updatedCoupon : c);
+          await updateDb({ coupons: newCoupons });
+      }
+
+      playSound('redeem');
+      return { success: true, message: 'Coupon redeemed!', value: coupon.value };
+    } catch (e) {
+      playSound('error');
+      return { success: false, message: (e as Error).message };
+    }
+}, [schoolId, firestore, db, updateDb, playSound]);
+
 
   const setData = useCallback(async (data: Database) => {
     if (!schoolDocRef) return;
-    await createBackup();
-    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved before importing from file." });
-    await setDoc(schoolDocRef, data);
-    playSound('success');
+    try {
+      await createBackup();
+      toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved before importing from file." });
+      await setDoc(schoolDocRef, data);
+      playSound('success');
+    } catch(e) {
+      toast({ variant: 'destructive', title: 'Set Data Failed', description: (e as Error).message });
+    }
   }, [schoolDocRef, createBackup, toast, playSound]);
 
   const restoreFromBackup = useCallback(async (backupId: string) => {
     if (!schoolId || !firestore || !schoolDocRef) return;
+    try {
+      await createBackup();
+      toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
 
-    await createBackup();
-    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
+      const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+      const backupSnap = await getDoc(backupDocRef);
 
-    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
-    const backupSnap = await getDoc(backupDocRef);
-
-    if (backupSnap.exists()) {
-        const backupData = backupSnap.data();
-        const currentPasscode = db.passcode;
-        const restoredDb = { ...backupData, passcode: currentPasscode };
-        
-        await setDoc(schoolDocRef, restoredDb);
-        playSound('success');
-    } else {
-        playSound('error');
-        toast({ variant: 'destructive', title: 'Backup not found' });
+      if (backupSnap.exists()) {
+          const backupData = backupSnap.data();
+          const currentPasscode = db.passcode;
+          const restoredDb = { ...backupData, passcode: currentPasscode };
+          await setDoc(schoolDocRef, restoredDb);
+          playSound('success');
+      } else {
+          throw new Error('Backup not found');
+      }
+    } catch (e) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Restore Failed', description: (e as Error).message });
     }
   }, [schoolId, firestore, schoolDocRef, db.passcode, toast, createBackup, playSound]);
   
   const downloadBackup = useCallback(async (backupId: string) => {
     if (!schoolId || !firestore) return;
-    const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
-    const backupSnap = await getDoc(backupDocRef);
+    try {
+      const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+      const backupSnap = await getDoc(backupDocRef);
 
-    if (backupSnap.exists()) {
-        playSound('swoosh');
-        const dataStr = JSON.stringify(backupSnap.data(), null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `reward-arcade-backup-${schoolId}-${backupId}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    } else {
-        playSound('error');
-        toast({ variant: 'destructive', title: 'Backup not a found' });
+      if (backupSnap.exists()) {
+          playSound('swoosh');
+          const dataStr = JSON.stringify(backupSnap.data(), null, 2);
+          const dataBlob = new Blob([dataStr], { type: 'application/json' });
+          const url = URL.createObjectURL(dataBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `reward-arcade-backup-${schoolId}-${backupId}.json`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+      } else {
+          throw new Error('Backup not found');
+      }
+    } catch (e) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Download failed', description: (e as Error).message });
     }
   }, [schoolId, firestore, toast, playSound]);
 
-  const addPrize = useCallback(async (prizeData: Omit<Prize, 'id'>) => {
-      const newPrize: Prize = { ...prizeData, id: 'p' + Date.now() };
-      await updateDb({ prizes: arrayUnion(newPrize) as any });
-      playSound('success');
-  }, [updateDb, playSound]);
+  const toggleAutoBackup = useCallback(() => {
+    setIsAutoBackupEnabled(prev => {
+        const newState = !prev;
+        localStorage.setItem('autoBackupEnabled', JSON.stringify(newState));
+        toast({ title: newState ? 'Automatic Backups Enabled' : 'Automatic Backups Disabled' });
+        return newState;
+    });
+  }, [toast]);
 
-  const updatePrize = useCallback(async (updatedPrize: Prize) => {
-      const newPrizes = db.prizes.map((p) => p.id === updatedPrize.id ? updatedPrize : p);
-      await updateDb({ prizes: newPrizes });
-      playSound('success');
-  }, [db, updateDb, playSound]);
+  useEffect(() => {
+    if (loginState !== 'developer' || !isAutoBackupEnabled) return;
 
-  const deletePrize = useCallback(async (prizeId: string) => {
-      const prizeToDelete = db.prizes.find(p => p.id === prizeId);
-      if (!prizeToDelete) {
-        playSound('error');
-        return;
-      }
-      await updateDb({ prizes: arrayRemove(prizeToDelete) as any });
-      playSound('success');
-  }, [db, updateDb, playSound]);
-
-  const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number, errors: string[]}> => {
-    if (!firestore || !schoolId) return {success: 0, failed: 0, errors: ["Not logged in."]};
+    const checkAndBackup = async () => {
+        const lastAutoBackupTime = localStorage.getItem('lastGlobalAutoBackupTime');
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (!lastAutoBackupTime || Date.now() - parseInt(lastAutoBackupTime) > oneDay) {
+            console.log('Performing daily automatic backup of all schools...');
+            await devBackupAllSchools();
+            localStorage.setItem('lastGlobalAutoBackupTime', Date.now().toString());
+            toast({ title: "Automatic Daily Backup Complete", description: "All school databases have been backed up." });
+        }
+    };
     
+    checkAndBackup();
+    const intervalId = setInterval(checkAndBackup, 60 * 60 * 1000); // Check every hour
+    
+    return () => clearInterval(intervalId);
+  }, [isAutoBackupEnabled, loginState, devBackupAllSchools, toast]);
+
+const addPrize = useCallback(async (prizeData: Omit<Prize, 'id'>) => {
+  try {
+    const newPrize: Prize = { ...prizeData, id: 'p' + Date.now() };
+    if (db.hasMigratedPrizes) {
+      if (!schoolId || !firestore) return;
+      await setDoc(doc(firestore, 'schools', schoolId, 'prizes', newPrize.id), newPrize);
+    } else {
+      await safeUpdate({ prizes: arrayUnion(newPrize) });
+    }
+  } catch (e) { /* error handled by safeUpdate */ }
+}, [db.hasMigratedPrizes, safeUpdate, schoolId, firestore]);
+
+const updatePrize = useCallback(async (updatedPrize: Prize) => {
+    if (!schoolId || !firestore) return;
+    try {
+      if (db.hasMigratedPrizes) {
+          await updateDoc(doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id), updatedPrize);
+      } else {
+          const newPrizes = db.prizes.map((p) => p.id === updatedPrize.id ? updatedPrize : p);
+          await updateDb({ prizes: newPrizes });
+      }
+      playSound('success');
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error updating prize', description: (e as Error).message });
+    }
+}, [schoolId, firestore, db.hasMigratedPrizes, db.prizes, updateDb, playSound, toast]);
+
+const deletePrize = useCallback(async (prizeId: string) => {
+  try {
+    const prizeToDelete = db.prizes.find(p => p.id === prizeId);
+    if (!prizeToDelete) throw new Error("Prize not found");
+
+    if (db.hasMigratedPrizes) {
+      if (!schoolId || !firestore) return;
+      await deleteDoc(doc(firestore, 'schools', schoolId, 'prizes', prizeId));
+    } else {
+      await safeUpdate({ prizes: arrayRemove(prizeToDelete) });
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message !== "Not logged in") {
+      toast({ variant: 'destructive', title: 'Error deleting prize', description: e.message });
+    }
+  }
+}, [db.prizes, db.hasMigratedPrizes, safeUpdate, schoolId, firestore, toast]);
+
+const uploadStudents = useCallback(async (csvContent: string): Promise<{success: number, failed: number, errors: string[]}> => {
+    if (!firestore || !schoolId || !schoolDocRef) return {success: 0, failed: 0, errors: ["Not logged in."]};
+
     const lines = csvContent.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
     const errors: string[] = [];
 
     if (lines.length === 0) {
-      errors.push('File is empty.');
-      playSound('error');
-      return {success: 0, failed: 0, errors};
+        return {success: 0, failed: 0, errors:['File is empty.']};
     }
-    
-    const newStudents: Student[] = [];
+
     const existingNfcIds = new Set(db.students.map(s => s.nfcId));
     let successCount = 0;
-    let failedCount = 0;
+    const newStudents: Student[] = [];
 
     let dataLines = lines;
-    const firstLine = lines[0].toLowerCase();
-    // Simple header detection
-    if (firstLine.includes('first') || firstLine.includes('last') || firstLine.includes('username')) {
+    if (lines[0].toLowerCase().includes('first')) {
         dataLines = lines.slice(1);
     }
-    
-    const originalRowCount = dataLines.length;
 
     dataLines.forEach((row, index) => {
         if (!row.trim()) return;
-
         const delimiter = row.includes(';') ? ';' : ',';
         const values = row.split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+        const [firstName, lastName, studentClassName] = values;
 
-        let firstName: string = '', lastName: string = '', studentClassName: string = '';
-
-        if (values.length >= 4) { // Assumes format like: user, id, first, last
-            firstName = values[2];
-            lastName = values[3];
-        } else if (values.length >= 2) { // Assumes format like: first, last, [class]
-            firstName = values[0];
-            lastName = values[1];
-            studentClassName = values[2] || '';
-        }
-
-        if (!firstName || !lastName || firstName.length === 0 || lastName.length === 0) {
-            failedCount++;
-            errors.push(`Row ${index + (lines.length - originalRowCount) + 1}: Missing first or last name. Row content: "${row}"`);
+        if (!firstName || !lastName) {
+            errors.push(`Row ${index + 2}: Missing first or last name.`);
             return;
         }
-      
-        let newNfcId: string;
+
+        let newNfcId; // Ensure unique NFC ID for each new student
         do {
             newNfcId = Math.floor(10000000 + Math.random() * 90000000).toString();
         } while (existingNfcIds.has(newNfcId));
-
 
         const classObj = db.classes.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
         const newStudent: Student = {
             id: 's' + Date.now() + Math.random().toString(36).substring(2, 8),
-            firstName,
-            lastName,
-            nfcId: newNfcId,
-            points: 0,
-            classId: classObj?.id || '',
-            history: [],
+            firstName, lastName, nfcId: newNfcId, points: 0,
+            classId: classObj?.id || '', history: [],
         };
         newStudents.push(newStudent);
-        existingNfcIds.add(newStudent.nfcId); // prevent duplicates within the same file
+        existingNfcIds.add(newStudent.nfcId);
         successCount++;
     });
+    const failedCount = dataLines.length - successCount;
 
     if (newStudents.length > 0) {
-      await updateDb({ students: arrayUnion(...newStudents) as any });
-      await createBackup();
-      toast({ title: "Post-Upload Backup Created", description: "A backup was created after uploading new students." });
+      try {
+        if (db.hasMigratedStudents) {
+            const batch = writeBatch(firestore);
+            newStudents.forEach(student => {
+                const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+                batch.set(studentDocRef, student);
+            });
+            await batch.commit();
+        } else {
+            await safeUpdate({ students: arrayUnion(...newStudents) });
+        }
+        await createBackup();
+        toast({ title: "Post-Upload Backup Created", description: "A backup was created after uploading new students." });
+      } catch (e) {
+        return { success: 0, failed: dataLines.length, errors: [(e as Error).message] };
+      }
     }
     
-    const finalMessage = `${successCount} students added, ${failedCount} records failed.`;
-    if (failedCount > 0) {
-      playSound('error');
-    } else {
-      playSound('success');
-    }
-    toast({ title: 'Upload Complete', description: failedCount > 0 ? `${finalMessage} See details for errors.` : finalMessage });
-    
+    if (failedCount > 0) playSound('error');
+    else playSound('success');
+    toast({ title: 'Upload Complete', description: `${successCount} students added, ${failedCount} failed.` });
+
     return {success: successCount, failed: failedCount, errors};
-}, [db, firestore, schoolId, toast, updateDb, createBackup, playSound]);
+}, [db, firestore, schoolId, schoolDocRef, toast, createBackup, playSound, safeUpdate]);
+
+const migrateFunction = useCallback(async (schoolId: string, functionName: string) => {
+    const functions = getFunctions();
+    const callableFunction = httpsCallable(functions, functionName);
+    try {
+      const result = await callableFunction({ schoolId });
+      toast({ title: 'Migration Complete', description: (result.data as any).message });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
+    }
+  }, [toast]);
+
+const migrateStudents = (schoolId: string) => migrateFunction(schoolId, 'migrateStudentsToSubcollection');
+const migrateClasses = (schoolId: string) => migrateFunction(schoolId, 'migrateClassesToSubcollection');
+const migrateTeachers = (schoolId: string) => migrateFunction(schoolId, 'migrateTeachersToSubcollection');
+const migratePrizes = (schoolId: string) => migrateFunction(schoolId, 'migratePrizesToSubcollection');
+const migrateCoupons = (schoolId: string) => migrateFunction(schoolId, 'migrateCouponsToSubcollection');
+
+const getStudentPointsByCategory = useCallback((studentId: string): Record<string, number> => {
+  const student = db.students.find(s => s.id === studentId);
+  if (!student) return {};
+
+  return student.history.reduce((acc, item) => {
+      const match = item.desc.match(/\(([^)]+)\)/);
+      if (item.amount > 0 && match && match[1]) {
+          const category = match[1];
+          acc[category] = (acc[category] || 0) + item.amount;
+      }
+      return acc;
+  }, {} as Record<string, number>);
+}, [db.students]);
 
 
   const printTriggered = useRef(false);
-
   useEffect(() => {
     if (couponsToPrint.length > 0 && !printTriggered.current) {
       printTriggered.current = true;
-      const handleAfterPrint = () => {
+      const afterPrint = () => {
         setCouponsToPrint([]);
         printTriggered.current = false;
-        window.removeEventListener('afterprint', handleAfterPrint);
+        window.removeEventListener('afterprint', afterPrint);
       };
-      window.addEventListener('afterprint', handleAfterPrint);
-      
+      window.addEventListener('afterprint', afterPrint);
       playSound('swoosh');
-      document.fonts.load('38pt "Libre Barcode 39"').finally(() => {
-          window.print();
-      });
+      document.fonts.load('38pt "Libre Barcode 39"').finally(window.print);
     }
   }, [couponsToPrint, playSound]);
 
@@ -673,17 +927,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (studentsToPrint.length > 0 && !studentPrintTriggered.current) {
       studentPrintTriggered.current = true;
-      const handleAfterPrint = () => {
+      const afterPrint = () => {
         setStudentsToPrint([]);
         studentPrintTriggered.current = false;
-        window.removeEventListener('afterprint', handleAfterPrint);
+        window.removeEventListener('afterprint', afterPrint);
       };
-      window.addEventListener('afterprint', handleAfterPrint);
-      
+      window.addEventListener('afterprint', afterPrint);
       playSound('swoosh');
-      document.fonts.load('48pt "Libre Barcode 39"').finally(() => {
-          window.print();
-      });
+      document.fonts.load('48pt "Libre Barcode 39"').finally(window.print);
     }
   }, [studentsToPrint, playSound]);
 
@@ -693,17 +944,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, setCouponsToPrint, setStudentsToPrint, addStudent, updateStudent,
       deleteStudent, addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory,
-      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
+      addCoupons, redeemCoupon, createSchool, deleteSchool, updateSchool, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
       uploadStudents,
+      devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
+      isAutoBackupEnabled, toggleAutoBackup,
+      migrateStudents, migrateClasses, migrateTeachers, migratePrizes, migrateCoupons,
+      getStudentPointsByCategory,
     }),
     [
       isInitialized, isDbLoading, loginState, schoolId, db, syncStatus,
       login, logout, getClassName, addStudent, updateStudent, deleteStudent,
       addClass, deleteClass, addTeacher, deleteTeacher, addCategory, deleteCategory, addCoupons,
-      redeemCoupon, createSchool, deleteSchool, updateSchoolPasscode, setData,
+      redeemCoupon, createSchool, deleteSchool, updateSchool, setData,
       backups, createBackup, restoreFromBackup, downloadBackup, addPrize, updatePrize, deletePrize,
       uploadStudents,
+      devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
+      isAutoBackupEnabled, toggleAutoBackup,
+      migrateStudents, migrateClasses, migrateTeachers, migratePrizes, migrateCoupons,
+      getStudentPointsByCategory
     ]
   );
 

@@ -264,13 +264,7 @@ function AdminDashboard() {
   }
 
   const handleRestoreFromFile = () => {
-    if (
-      window.confirm(
-        'Are you sure? This will permanently overwrite all current data for this school with the data from the backup file.'
-      )
-    ) {
-      backupFileInputRef.current?.click();
-    }
+    backupFileInputRef.current?.click();
   };
 
   const onBackupFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -591,7 +585,7 @@ function AdminDashboard() {
                             <TooltipTrigger asChild>
                               <AlertDialogTrigger asChild>
                                 <Button size="icon" variant="ghost" className="h-8 w-8">
-                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                  <Trash2 className="h-4 h-4 text-red-500" />
                                 </Button>
                               </AlertDialogTrigger>
                             </TooltipTrigger>
@@ -672,14 +666,25 @@ function AdminDashboard() {
                   )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
                 </ul>
                 <Separator className="my-4" />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleRestoreFromFile} variant="outline" className="w-full justify-center gap-2">
+                 <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                     <Button variant="outline" className="w-full justify-center gap-2">
                       <Upload /> Restore from JSON file
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Overwrite the current database with data from a local JSON backup file.</p></TooltipContent>
-                </Tooltip>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                     <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will permanently overwrite all current data for this school with the data from the backup file. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRestoreFromFile}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <input
                   type="file"
                   ref={backupFileInputRef}

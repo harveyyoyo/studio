@@ -45,6 +45,7 @@ export interface Prize {
 }
 
 export interface Database {
+  name: string;
   passcode: string;
   students: Student[];
   classes: Class[];
