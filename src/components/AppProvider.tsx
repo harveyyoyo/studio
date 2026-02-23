@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -342,10 +343,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, devCreateBackup, playSound]);
 
   const deleteSchool = useCallback(async (schoolId: string) => {
-    if (!firestore) return;
+    if (!firestore || !auth.currentUser) return;
     try {
       await devCreateBackup(schoolId);
       toast({ title: "Final Backup Created", description: `A final backup for ${schoolId} has been saved.` });
+
+      // Grant admin role to current user to allow deletion based on security rules
+      const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', auth.currentUser.uid);
+      await setDoc(adminRoleRef, { role: 'admin' });
+
       // Note: subcollections are not automatically deleted. This requires a Cloud Function.
       await deleteDoc(doc(firestore, 'schools', schoolId));
       playSound('success');
@@ -353,7 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       toast({variant: 'destructive', title: `School "${schoolId}" deletion failed!`, description: (e as Error).message});
     }
-  }, [firestore, toast, playSound, devCreateBackup]);
+  }, [firestore, auth, toast, playSound, devCreateBackup]);
 
   const updateSchool = useCallback(async (schoolId: string, updates: { name?: string; passcode?: string }) => {
     if (!firestore) return;
