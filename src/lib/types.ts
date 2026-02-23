@@ -27,7 +27,7 @@ export interface Student {
   nfcId: string;
   points: number;
   classId?: string;
-  history: HistoryItem[];
+  // history is now a subcollection and not part of the student document
 }
 
 export interface Coupon {
@@ -54,11 +54,12 @@ export interface Prize {
 export interface Database {
   name: string;
   passcode: string;
-  students: Student[];
-  classes: Class[];
-  teachers: Teacher[];
-  categories: Category[];
-  coupons: Coupon[];
-  prizes: Prize[];
+  // All array fields are now subcollections
+  students?: Student[];
+  classes?: Class[];
+  teachers?: Teacher[];
+  categories?: Category[];
+  coupons?: Coupon[];
+  prizes?: Prize[];
   updatedAt: number;
 }

@@ -18,16 +18,18 @@ import {
 } from '@/components/ui/select';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Student } from '@/lib/types';
+import type { Student, Class } from '@/lib/types';
 
 interface StudentModalProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   student: Student | null;
+  allStudents: Student[];
+  allClasses: Class[];
 }
 
-export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) {
-  const { db, addStudent, updateStudent } = useAppContext();
+export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses }: StudentModalProps) {
+  const { addStudent, updateStudent } = useAppContext();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [points, setPoints] = useState('0');
@@ -65,7 +67,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
       return;
     }
 
-    const studentWithSameId = db.students.find(s => s.nfcId === nfcId);
+    const studentWithSameId = allStudents.find(s => s.nfcId === nfcId);
 
     if (studentWithSameId && (!isEditing || studentWithSameId.id !== student?.id)) {
         toast({
@@ -125,7 +127,7 @@ export function StudentModal({ isOpen, setIsOpen, student }: StudentModalProps) 
               <SelectTrigger id="class"><SelectValue placeholder="Select a class..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
-                {db.classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {allClasses?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

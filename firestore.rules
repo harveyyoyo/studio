@@ -1,10 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access only to authenticated users.
-    // This is a basic security rule, you should refine it for production.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    function isAdmin(schoolId) {
+      return isAuth() && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid));
+    }
+    
+    // School metadata document
+    match /schools/{schoolId} {
+      allow read: if isAuth();
+      allow write: if isAdmin(schoolId);
+      
+      // Students can only be managed by admins. Students can see and update their own profile.
+      match /students/{studentId} {
+        allow read: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
+        allow create, delete: if isAdmin(schoolId);
+        allow update: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
+        
+        // Students can create their own activity, and admins can read it.
+        match /activities/{activityId} {
+          allow read: if isAdmin(schoolId) || (isAuth() && request.auth.uid == studentId);
+          allow create: if isAuth() && request.auth.uid == studentId;
+          allow update, delete: if isAdmin(schoolId);
+        }
+      }
+      
+      // Teachers and Classes can only be managed by admins, but read by any authenticated user.
+      match /teachers/{teacherId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
+      }
+      
+      match /classes/{classId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
+      }
+      
+      // Categories can only be managed by admins, but read by any authenticated user.
+      match /categories/{categoryId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
+      }
+
+      // Prizes (Reward Items) can only be managed by admins, but read by any authenticated user.
+      match /prizes/{prizeId} {
+          allow read: if isAuth();
+          allow write: if isAdmin(schoolId);
+      }
+      
+      // Coupons can be created by admins/teachers, and updated (redeemed) by any authenticated student.
+      match /coupons/{couponId} {
+        allow read: if isAuth();
+        allow create: if isAdmin(schoolId); // In a real app, you'd extend this to teachers
+        allow update: if isAuth(); // Allow students to redeem (update 'used' field)
+        allow delete: if isAdmin(schoolId);
+      }
+      
+      // Admin roles can only be managed by other admins.
+      match /roles_admin/{uid} {
+        allow read, write: if isAdmin(schoolId);
+      }
+
+      // Backups subcollection
+      match /backups/{backupId} {
+        allow read, write: if isAdmin(schoolId);
+      }
     }
   }
 }

@@ -1,7 +1,9 @@
 'use client';
-import { useEffect, useState, useRef, ChangeEvent } from 'react';
+import { useEffect, useState, useRef, ChangeEvent, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud, IdCard,
@@ -10,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Database as DbInfo, Category } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -123,16 +125,41 @@ function AdminDashboardSkeleton() {
 }
 
 function AdminDashboard() {
-  const { db, schoolId, getClassName, setCouponsToPrint, deleteStudent,
-    addClass, deleteClass, deleteCategory, addCategory, addCoupons, setData, isDbLoading,
-    createBackup, backups, restoreFromBackup, downloadBackup, addTeacher, deleteTeacher,
+  const { 
+    schoolId, setCouponsToPrint, deleteStudent,
+    addClass, deleteClass, deleteCategory, addCategory, addCoupons,
+    devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
   } = useAppContext();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
   const backupTriggeredRef = useRef(false);
+  
+  // Data fetching hooks
+  const studentsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
+  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+
+  const classesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
+  const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
+
+  const teachersQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
+  const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
+
+  const categoriesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
+  const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+
+  const couponsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
+  const { data: coupons, isLoading: couponsLoading } = useCollection<Coupon>(couponsQuery);
+  
+  const backupsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
+  const { data: backups, isLoading: backupsLoading } = useCollection<{id: string}>(backupsQuery);
+
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -154,36 +181,42 @@ function AdminDashboard() {
   const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
   const [uploadReport, setUploadReport] = useState<{success: number, failed: number, errors: string[]} | null>(null);
+  
+  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
+
+  const getClassName = (classId: string) => {
+    return classes?.find((c) => c.id === classId)?.name || 'Unassigned';
+  };
 
   useEffect(() => {
-    if (isDbLoading || backupTriggeredRef.current || !backups) return;
+    if (isDbLoading || !schoolId || backupTriggeredRef.current || !backups) return;
 
     const lastBackupTime = backups.length > 0 ? parseInt(backups[0].id) : 0;
     const oneDay = 24 * 60 * 60 * 1000;
 
     if (Date.now() - lastBackupTime > oneDay) {
       backupTriggeredRef.current = true;
-      createBackup().then(() => {
+      devCreateBackup(schoolId).then(() => {
         toast({
           title: "Automatic Backup Created",
           description: "A backup was created as the last one was over 24 hours ago."
         });
       });
     }
-  }, [isDbLoading, backups, createBackup, toast]);
+  }, [isDbLoading, backups, devCreateBackup, toast, schoolId]);
 
   useEffect(() => {
-    if (db.categories?.length > 0 && !printCategoryId) {
-      setPrintCategoryId(db.categories[0].id);
+    if (categories?.length > 0 && !printCategoryId) {
+      setPrintCategoryId(categories[0].id);
     }
-  }, [db.categories, printCategoryId]);
+  }, [categories, printCategoryId]);
 
   useEffect(() => {
-    const category = db.categories?.find(c => c.id === printCategoryId);
+    const category = categories?.find(c => c.id === printCategoryId);
     if(category) {
         setPrintValue(category.points.toString());
     }
-  }, [printCategoryId, db.categories]);
+  }, [printCategoryId, categories]);
 
 
   if (isDbLoading) {
@@ -201,7 +234,6 @@ function AdminDashboard() {
     }
     addClass({ name: newClassName });
     setNewClassName('');
-    toast({ title: 'Class Added' });
   };
   
   const handleAddTeacher = () => {
@@ -215,7 +247,6 @@ function AdminDashboard() {
     }
     addTeacher({ name: newTeacherName });
     setNewTeacherName('');
-    toast({ title: 'Teacher / Faculty Added' });
   };
 
   const handleAddCategory = async () => {
@@ -239,7 +270,6 @@ function AdminDashboard() {
     await addCategory({ name: newCategoryName, points });
     setNewCategoryName('');
     setNewCategoryPoints('10');
-    toast({ title: 'Category Added' });
   };
 
   const handleAddPrintCategory = async () => {
@@ -267,7 +297,6 @@ function AdminDashboard() {
     setNewPrintCategoryName('');
     setNewPrintCategoryPoints('10');
     setIsPrintCategoryDialogOpen(false);
-    toast({ title: 'Category Added' });
   };
 
   const handleOpenStudentModal = (student: Student | null) => {
@@ -294,7 +323,7 @@ function AdminDashboard() {
       });
       return;
     }
-    const selectedCategory = db.categories.find(c => c.id === printCategoryId);
+    const selectedCategory = categories?.find(c => c.id === printCategoryId);
     if (!selectedCategory) {
       toast({
         variant: 'destructive',
@@ -303,7 +332,7 @@ function AdminDashboard() {
       });
       return;
     }
-    const coupons = Array.from({ length: 24 }, () => {
+    const couponsToCreate = Array.from({ length: 24 }, () => {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       return {
         id: code,
@@ -315,60 +344,37 @@ function AdminDashboard() {
         createdAt: Date.now(),
       };
     });
-    await addCoupons(coupons);
-    setCouponsToPrint(coupons);
+    await addCoupons(couponsToCreate);
+    setCouponsToPrint(couponsToCreate);
   };
 
   const handleCreateBackup = async () => {
-    await createBackup();
+    if (!schoolId) return;
+    await devCreateBackup(schoolId);
     toast({ title: "Backup Created", description: "A new backup has been saved." });
   }
 
   const handleRestoreFromBackup = async (backupId: string) => {
-    await restoreFromBackup(backupId);
+    if (!schoolId) return;
+    await devRestoreFromBackup(schoolId, backupId);
     toast({ title: "Restore Complete", description: "Data has been restored from the backup." });
   }
 
   const handleDownloadBackup = async (backupId: string) => {
-    await downloadBackup(backupId);
+    if (!schoolId) return;
+    await devDownloadBackup(schoolId, backupId);
   }
 
   const handleRestoreFromFile = () => {
     backupFileInputRef.current?.click();
   };
-
-  const onBackupFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text) as DbInfo;
-      if (data.students && data.classes && data.categories && data.coupons) {
-        await setData(data);
-        toast({ title: 'Data restored successfully!' });
-      } else {
-        throw new Error('Invalid data file format. Missing required fields.');
-      }
-    } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to restore data.',
-        description: (err as Error).message,
-      });
-    }
-    if (backupFileInputRef.current) backupFileInputRef.current.value = '';
-  };
-  
-  const handleStudentCsvUpload = () => {
-    studentCsvInputRef.current?.click();
-  }
   
   const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
         const text = await file.text();
-        const report = await uploadStudents(text);
+        const report = await uploadStudents(text, students || [], classes || []);
         if (report.failed > 0) {
             setUploadReport(report);
         }
@@ -383,14 +389,12 @@ function AdminDashboard() {
   }
 
 
-  const usedCoupons = db.coupons.filter((c) => c.used).length;
-  const totalPointsAwarded = db.coupons
-    .filter((c) => c.used)
-    .reduce((sum, c) => sum + c.value, 0);
-  const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
-  const prizesRedeemed = db.students.flatMap(s => s.history).filter(h => h.desc.startsWith('Redeemed:')).length;
-
-  const selectedCategoryForPreview = db.categories.find(c => c.id === printCategoryId);
+  const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
+  const totalPointsAwarded = coupons
+    ?.filter((c) => c.used)
+    .reduce((sum, c) => sum + c.value, 0) || 0;
+  
+  const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
   const previewCoupon: Coupon = {
       id: 'PREVIEW',
       code: 'PREVIEW',
@@ -446,7 +450,7 @@ function AdminDashboard() {
                 </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {db.classes?.map((c) => (
+                {classes?.map((c) => (
                   <li
                     key={c.id}
                     className="flex justify-between items-center bg-secondary p-2 rounded border"
@@ -472,10 +476,7 @@ function AdminDashboard() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={async () => {
-                             await deleteClass(c.id);
-                             toast({ title: 'Class Deleted' });
-                          }}>Continue</AlertDialogAction>
+                          <AlertDialogAction onClick={() => deleteClass(c.id, students || [])}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -508,7 +509,7 @@ function AdminDashboard() {
                 </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {db.teachers?.map((t) => (
+                {teachers?.map((t) => (
                   <li
                     key={t.id}
                     className="flex justify-between items-center bg-secondary p-2 rounded border"
@@ -534,10 +535,7 @@ function AdminDashboard() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={async () => {
-                             await deleteTeacher(t.id);
-                             toast({ title: 'Teacher / Faculty Deleted' });
-                          }}>Continue</AlertDialogAction>
+                          <AlertDialogAction onClick={() => deleteTeacher(t.id)}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -546,7 +544,6 @@ function AdminDashboard() {
               </ul>
             </CardContent>
           </Card>
-
 
           <Card className="border-t-4 border-chart-2">
             <CardHeader>
@@ -581,7 +578,7 @@ function AdminDashboard() {
                 </Tooltip>
               </div>
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {db.categories?.map((c) => (
+                {categories?.map((c) => (
                   <li
                     key={c.id}
                     className="flex justify-between items-center bg-secondary p-2 rounded border"
@@ -610,10 +607,7 @@ function AdminDashboard() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={async () => {
-                             await deleteCategory(c.id);
-                             toast({ title: 'Category Deleted' });
-                          }}>Continue</AlertDialogAction>
+                          <AlertDialogAction onClick={() => deleteCategory(c.id)}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -644,7 +638,7 @@ function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                  {db.prizes?.length > 0 ? [...db.prizes].sort((a,b) => a.points - b.points).map(prize => (
+                  {prizes && prizes.length > 0 ? [...prizes].sort((a,b) => a.points - b.points).map(prize => (
                     <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
                       <div className='flex items-center gap-3'>
                          <Switch 
@@ -685,10 +679,7 @@ function AdminDashboard() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={async () => {
-                                await deletePrize(prize.id);
-                                toast({ title: 'Prize Deleted' });
-                              }}>Continue</AlertDialogAction>
+                              <AlertDialogAction onClick={() => deletePrize(prize.id)}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -718,7 +709,7 @@ function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
-                  {backups.length > 0 ? backups.map(backup => (
+                  {backups && backups.length > 0 ? backups.map(backup => (
                     <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
                       <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
                       <div className="flex gap-1">
@@ -752,33 +743,6 @@ function AdminDashboard() {
                     </li>
                   )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
                 </ul>
-                <Separator className="my-4" />
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="outline" className="w-full justify-center gap-2">
-                      <Upload /> Restore from JSON file
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                     <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action will permanently overwrite all current data for this school with the data from the backup file. This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleRestoreFromFile}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <input
-                  type="file"
-                  ref={backupFileInputRef}
-                  onChange={onBackupFileChange}
-                  className="hidden"
-                  accept="application/json"
-                />
             </CardContent>
           </Card>
         </div>
@@ -799,7 +763,7 @@ function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Admin">Admin/General</SelectItem>
-                      {db.teachers?.map((t) => (
+                      {teachers?.map((t) => (
                         <SelectItem key={t.id} value={t.name}>
                           {t.name}
                         </SelectItem>
@@ -815,7 +779,7 @@ function AdminDashboard() {
                         <SelectValue placeholder="Select a category..."/>
                       </SelectTrigger>
                       <SelectContent>
-                        {db.categories?.map((c) => (
+                        {categories?.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
                           </SelectItem>
@@ -881,7 +845,7 @@ function AdminDashboard() {
           <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle>All Students</CardTitle>
-              <CardDescription>{db.students.length} students in the database.</CardDescription>
+              <CardDescription>{students?.length || 0} students in the database.</CardDescription>
             </div>
             <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
               <Tooltip>
@@ -896,7 +860,7 @@ function AdminDashboard() {
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={() => setStudentsToPrint(db.students)} variant="outline" className="flex-1">
+                  <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="flex-1">
                       <Printer className="mr-2 h-4 w-4" /> Print ID Cards
                   </Button>
                 </TooltipTrigger>
@@ -930,7 +894,7 @@ function AdminDashboard() {
               </div>
               <ScrollArea className="h-96">
                 <ul className="space-y-2 pr-4">
-                  {db.students
+                  {students && [...students]
                     .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
                     .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
                     .map((s) => (
@@ -994,10 +958,7 @@ function AdminDashboard() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={async () => {
-                                  await deleteStudent(s.id);
-                                  toast({ title: 'Student Deleted' });
-                                }}>Continue</AlertDialogAction>
+                                <AlertDialogAction onClick={() => deleteStudent(s.id)}>Continue</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -1015,24 +976,24 @@ function AdminDashboard() {
           </CardHeader>
           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
               <div className="bg-secondary p-4 rounded-lg">
-                  <p className="text-2xl font-bold">{db.students.length}</p>
+                  <p className="text-2xl font-bold">{students?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Students</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
-                  <p className="text-2xl font-bold">{db.classes?.length || 0}</p>
+                  <p className="text-2xl font-bold">{classes?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Classes</p>
               </div>
                <div className="bg-secondary p-4 rounded-lg">
-                  <p className="text-2xl font-bold">{db.teachers?.length || 0}</p>
+                  <p className="text-2xl font-bold">{teachers?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Teachers / Faculty</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
-                  <p className="text-2xl font-bold">{db.coupons.length} / {usedCoupons}</p>
+                  <p className="text-2xl font-bold">{coupons?.length || 0} / {usedCouponsCount}</p>
                   <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
-                  <p className="text-2xl font-bold">{db.prizes.length} / {prizesRedeemed}</p>
-                  <p className="text-sm text-muted-foreground">Prizes (Types/Redeemed)</p>
+                  <p className="text-2xl font-bold">{prizes?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Prize Types</p>
               </div>
               <div className="bg-secondary p-4 rounded-lg">
                   <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
@@ -1045,6 +1006,8 @@ function AdminDashboard() {
           isOpen={isStudentModalOpen}
           setIsOpen={setIsStudentModalOpen}
           student={editingStudent}
+          allStudents={students || []}
+          allClasses={classes || []}
         />
         <PrizeModal
           isOpen={isPrizeModalOpen}
@@ -1093,7 +1056,7 @@ export default function AdminPage() {
   }, [isInitialized, loginState, router]);
 
   if (!isInitialized || loginState !== 'school') {
-    return <p>Loading...</p>;
+    return <AdminDashboardSkeleton />;
   }
 
   return <AdminDashboard />;
