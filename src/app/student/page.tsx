@@ -184,45 +184,40 @@ function StudentDashboard({
     }
 
     let stream: MediaStream | null = null;
-    let codeReader: BrowserMultiFormatReader | null = null;
     let controls: IScannerControls | null = null;
 
     const startScan = async () => {
       try {
+        const codeReader = new BrowserMultiFormatReader();
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
-        
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            // The video element needs to be playing for the scanner to work.
-            videoRef.current.play(); 
-        }
-        
-        codeReader = new BrowserMultiFormatReader();
-        controls = await codeReader.decodeFromStream(stream, videoRef.current!, (result, error) => {
-          if (result) {
-            handleRedeemCoupon(result.getText());
-          }
-          if (error && error.name !== 'NotFoundException') {
-            console.error(error);
-          }
-        });
 
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
+            if (result) {
+              handleRedeemCoupon(result.getText());
+            }
+            if (error && error.name !== 'NotFoundException') {
+              console.error(error);
+            }
+          });
+        }
       } catch (error: any) {
         console.error('Camera setup failed:', error);
         setHasCameraPermission(false);
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-             toast({
-                variant: 'destructive',
-                title: 'Camera Access Denied',
-                description: 'Please enable camera permissions to use this feature.',
-            });
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description: 'Please enable camera permissions to use this feature.',
+          });
         } else {
-             toast({
-                variant: 'destructive',
-                title: 'Camera Error',
-                description: 'Could not initialize the camera. It might be in use by another application.',
-            });
+          toast({
+            variant: 'destructive',
+            title: 'Camera Error',
+            description: 'Could not initialize the camera. It might be in use by another application.',
+          });
         }
         setActiveTab('manual');
       }
@@ -234,15 +229,9 @@ function StudentDashboard({
     return () => {
       if (controls) {
         controls.stop();
-        controls = null;
-      }
-      if (codeReader) {
-        codeReader.reset();
-        codeReader = null;
       }
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
-        stream = null;
       }
     };
   }, [activeTab, handleRedeemCoupon, toast]);
@@ -337,7 +326,7 @@ function StudentDashboard({
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted playsInline />
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" muted playsInline />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
@@ -512,28 +501,25 @@ export default function StudentLoginPage() {
     }
     
     let stream: MediaStream | null = null;
-    let codeReader: BrowserMultiFormatReader | null = null;
     let controls: IScannerControls | null = null;
 
     const startScan = async () => {
       try {
+        const codeReader = new BrowserMultiFormatReader();
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play();
+          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
+            if (result) {
+              handleNfcSubmit(result.getText());
+            }
+            if (error && error.name !== 'NotFoundException') {
+              console.error('Login scan error:', error);
+            }
+          });
         }
-
-        codeReader = new BrowserMultiFormatReader();
-        controls = await codeReader.decodeFromStream(stream, videoRef.current!, (result, error) => {
-          if (result) {
-            handleNfcSubmit(result.getText());
-          }
-          if (error && error.name !== 'NotFoundException') {
-            console.error('Login scan error:', error);
-          }
-        });
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
         setHasCameraPermission(false);
@@ -559,15 +545,9 @@ export default function StudentLoginPage() {
     return () => {
       if (controls) {
         controls.stop();
-        controls = null;
-      }
-      if (codeReader) {
-        codeReader.reset();
-        codeReader = null;
       }
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
-        stream = null;
       }
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
@@ -657,7 +637,7 @@ export default function StudentLoginPage() {
                <TabsContent value="camera">
                 <div className="py-8 space-y-4">
                     <div className="relative">
-                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" autoPlay muted playsInline/>
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" muted playsInline/>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
                         </div>
