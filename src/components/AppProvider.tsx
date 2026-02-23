@@ -543,7 +543,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       login, logout, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
       isAutoBackupEnabled, toggleAutoBackup, firestore,
-      addClass, deleteClass, addTeacher, deleteStudent
+      addClass, deleteClass, addTeacher, deleteStudent, playSound,
     ]
   );
 
