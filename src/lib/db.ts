@@ -316,15 +316,20 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
         });
         return { success: true, message: "Redeemed successfully", value: couponValue };
     } catch (e: any) {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: couponRef.path,
-          operation: 'write',
-          requestResourceData: { studentId, couponCode },
-        })
-      );
-      return { success: false, message: e.message || 'An error occurred.' };
+      // Only emit a permission error if it's actually a permission error from Firebase.
+      // Otherwise, it's a business logic error (e.g., "Coupon not found").
+      if (e.name === 'FirebaseError' && e.code === 'permission-denied') {
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: couponRef.path,
+            operation: 'write',
+            requestResourceData: { studentId, couponCode },
+          })
+        );
+      }
+      // For all errors (custom or permission), return a user-friendly failure message.
+      return { success: false, message: e.message || 'An unknown error occurred.' };
     }
 };
 
