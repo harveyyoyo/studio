@@ -38,6 +38,7 @@ export type LoginState = 'loggedOut' | 'school' | 'developer';
 
 interface AppContextType {
   isInitialized: boolean;
+  isUserLoading: boolean;
   loginState: LoginState;
   schoolId: string | null;
   syncStatus: SyncStatus;
@@ -88,7 +89,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
 
   const { toast } = useToast();
-  const { auth, firestore, functions } = useFirebase();
+  const { auth, firestore, functions, isUserLoading } = useFirebase();
   const playSound = useArcadeSound();
   const router = useRouter();
   
@@ -543,7 +544,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isInitialized, loginState, schoolId, syncStatus,
+      isInitialized, isUserLoading, loginState, schoolId, syncStatus,
       login, logout, setCouponsToPrint, setStudentsToPrint, 
       addStudent: addStudent_,
       updateStudent: updateStudent_,
@@ -567,7 +568,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       devMigrateSchoolData,
     }),
     [
-      isInitialized, loginState, schoolId, syncStatus,
+      isInitialized, isUserLoading, loginState, schoolId, syncStatus,
       login, logout, playSound,
       addStudent_, updateStudent_, deleteStudent_,
       addClass_, deleteClass_, addTeacher_, deleteTeacher_, addCategory_, deleteCategory_, addCoupons_,
@@ -594,3 +595,5 @@ export const useAppContext = () => {
   }
   return context;
 };
+
+    

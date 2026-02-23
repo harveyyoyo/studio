@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -145,7 +146,7 @@ function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo
 
 export default function DeveloperPage() {
   const { 
-      loginState, isInitialized, createSchool, deleteSchool, updateSchool,
+      loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
       isAutoBackupEnabled, toggleAutoBackup, devMigrateSchoolData
     } = useAppContext();
@@ -166,7 +167,7 @@ export default function DeveloperPage() {
   const [latestBackup, setLatestBackup] = useState<{id: string} | null>(null);
   const [isFindingBackup, setIsFindingBackup] = useState(false);
 
-  const schoolsQuery = useMemoFirebase(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
+  const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
 
   useEffect(() => {
@@ -304,7 +305,7 @@ export default function DeveloperPage() {
     toast({title: "Backup process complete", description: "All schools have been backed up."});
   }
 
-  if (!isInitialized || loginState !== 'developer') {
+  if (!isInitialized || loginState !== 'developer' || isUserLoading) {
     return <p>Loading...</p>;
   }
   
@@ -650,3 +651,5 @@ export default function DeveloperPage() {
     </TooltipProvider>
   )
 }
+
+    
