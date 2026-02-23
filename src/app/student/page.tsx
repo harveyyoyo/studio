@@ -179,36 +179,31 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
   useEffect(() => {
-    if (activeTab !== 'camera') {
-      return;
-    }
-
-    const codeReader = new BrowserMultiFormatReader();
+    let active = true;
     let controls: IScannerControls | null = null;
+    
+    const startCameraAndScan = async () => {
+      if (activeTab !== 'camera' || !videoRef.current) return;
 
-    const startScan = async () => {
       try {
-        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const rearCamera = videoInputDevices.find(device => /back|rear|environment/i.test(device.label)) 
-            || videoInputDevices[0];
-            
-        if (!rearCamera) {
-          setHasCameraPermission(false);
-          throw new Error("No camera device found.");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (!active || !videoRef.current) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
         }
-
-        if (videoRef.current) {
-          controls = await codeReader.decodeFromVideoDevice(rearCamera.deviceId, videoRef.current, (result, error) => {
+        
+        videoRef.current.srcObject = stream;
+        
+        const codeReader = new BrowserMultiFormatReader();
+        controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
             if (result) {
               handleRedeemCoupon(result.getText());
             }
-            // NotFoundException is thrown when no barcode is found in a frame. This is normal.
             if (error && error.name !== 'NotFoundException') {
               console.error('Coupon scan error:', error);
             }
-          });
-          setHasCameraPermission(true);
-        }
+        });
+        setHasCameraPermission(true);
       } catch (error: any) {
         console.error('Camera setup failed:', error);
         setHasCameraPermission(false);
@@ -222,19 +217,20 @@ function StudentDashboard({
           toast({
             variant: 'destructive',
             title: 'Camera Error',
-            description: 'Could not initialize camera. It may be in use or not supported.',
+            description: `Could not initialize camera. It may be in use or not supported.`,
           });
         }
-        setActiveTab('manual');
+        if(active) setActiveTab('manual');
       }
     };
 
-    startScan();
+    startCameraAndScan();
 
     return () => {
-      if (controls) {
-        controls.stop();
-      }
+        active = false;
+        if (controls) {
+            controls.stop();
+        }
     };
   }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
   
@@ -328,7 +324,7 @@ function StudentDashboard({
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline />
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline muted />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
@@ -498,39 +494,33 @@ export default function StudentLoginPage() {
 
 
   useEffect(() => {
-    if (loginTab !== 'camera' || activeStudentId) {
-      return;
-    }
-    
-    const codeReader = new BrowserMultiFormatReader();
+    let active = true;
     let controls: IScannerControls | null = null;
-
-    const startScan = async () => {
-       try {
-        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const rearCamera = videoInputDevices.find(device => /back|rear|environment/i.test(device.label)) 
-            || videoInputDevices[0];
-
-        if (!rearCamera) {
-          setHasCameraPermission(false);
-          throw new Error("No camera device found.");
+    
+    const startCameraAndScan = async () => {
+      if (loginTab !== 'camera' || activeStudentId || !videoRef.current) return;
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        if (!active || !videoRef.current) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
         }
 
-        if (videoRef.current) {
-            controls = await codeReader.decodeFromVideoDevice(rearCamera.deviceId, videoRef.current, (result, error) => {
-                if (result) {
-                  handleNfcSubmit(result.getText());
-                }
-                if (error && error.name !== 'NotFoundException') {
-                    console.error('Login scan error:', error);
-                }
-            });
-            setHasCameraPermission(true);
-        }
+        videoRef.current.srcObject = stream;
+        
+        const codeReader = new BrowserMultiFormatReader();
+        controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
+            if (result) handleNfcSubmit(result.getText());
+            if (error && error.name !== 'NotFoundException') {
+                console.error('Login scan error:', error);
+            }
+        });
+        setHasCameraPermission(true);
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
         setHasCameraPermission(false);
-         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
              toast({
                 variant: 'destructive',
                 title: 'Camera Access Denied',
@@ -543,13 +533,14 @@ export default function StudentLoginPage() {
                 description: 'Could not initialize camera. It may be in use or not supported.',
             });
         }
-        setLoginTab('nfc');
+        if(active) setLoginTab('nfc');
       }
     };
     
-    startScan();
+    startCameraAndScan();
 
     return () => {
+      active = false;
       if (controls) {
         controls.stop();
       }
@@ -641,7 +632,7 @@ export default function StudentLoginPage() {
                <TabsContent value="camera">
                 <div className="py-8 space-y-4">
                     <div className="relative">
-                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline/>
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline muted />
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
                         </div>
@@ -683,5 +674,3 @@ export default function StudentLoginPage() {
     </TooltipProvider>
   );
 }
-
-    
