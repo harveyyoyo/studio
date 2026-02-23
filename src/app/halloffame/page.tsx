@@ -115,7 +115,7 @@ export default function HallOfFamePage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Time Points</SelectItem>
-                            {db.categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {db.categories.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                  </div>

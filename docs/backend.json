@@ -76,11 +76,16 @@
         "name": {
           "type": "string",
           "description": "The descriptive name of the category (e.g., 'Good Behavior')."
+        },
+        "points": {
+          "type": "number",
+          "description": "The default point value for coupons in this category."
         }
       },
       "required": [
         "id",
-        "name"
+        "name",
+        "points"
       ]
     },
     "Coupon": {

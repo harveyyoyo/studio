@@ -1,6 +1,7 @@
 import type { Database } from './types';
 
 export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
+  name: 'Yeshiva',
   students: [
     { id: 'ys1', firstName: 'Shmuel', lastName: 'Goldstein', nfcId: 'y101', points: 120, classId: 'yc1', history: [{ desc: 'Redeemed coupon: BOKERTOV-10 (Tefillah)', amount: 120, date: Date.now() - 86400000 * 2 }] },
     { id: 'ys2', firstName: 'Avi', lastName: 'Schwartz', nfcId: 'y102', points: 80, classId: 'yc2', history: [{ desc: 'Redeemed coupon: SHTEIG-50 (Shteiging)', amount: 80, date: Date.now() - 86400000 * 5 }] },
@@ -73,14 +74,14 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: 'yt5', name: 'Rabbi Epstein' },
   ],
   categories: [
-    'Middos Tovos', // Good Character
-    'Shteiging', // Growth in Learning
-    'Gemara B\'iyun', // In-depth Talmud Study
-    'Mishna Mastery',
-    'Tefillah', // Prayer
-    'Chesed', // Acts of Kindness
-    'Avos Ubanim', // Father-Son Learning
-    'Chavrusa Learning', // Partner Study
+    { id: 'ycat1', name: 'Middos Tovos', points: 100 },
+    { id: 'ycat2', name: 'Shteiging', points: 50 },
+    { id: 'ycat3', name: 'Gemara B\'iyun', points: 75 },
+    { id: 'ycat4', name: 'Mishna Mastery', points: 40 },
+    { id: 'ycat5', name: 'Tefillah', points: 10 },
+    { id: 'ycat6', name: 'Chesed', points: 150 },
+    { id: 'ycat7', name: 'Avos Ubanim', points: 25 },
+    { id: 'ycat8', name: 'Chavrusa Learning', points: 20 },
   ],
   coupons: [
     { code: 'BOKERTOV-10', value: 10, category: 'Tefillah', teacher: 'Rabbi Cohen', used: false, createdAt: Date.now(), description: 'For excellent concentration during morning prayers.' },

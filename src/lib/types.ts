@@ -14,6 +14,12 @@ export interface Teacher {
   name: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  points: number;
+}
+
 export interface Student {
   id: string;
   firstName: string;
@@ -50,7 +56,7 @@ export interface Database {
   students: Student[];
   classes: Class[];
   teachers: Teacher[];
-  categories: string[];
+  categories: Category[];
   coupons: Coupon[];
   prizes: Prize[];
   updatedAt: number;
