@@ -3,7 +3,6 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  arrayUnion,
   collection,
   writeBatch,
   query,
@@ -11,22 +10,37 @@ import {
   getDocs,
   runTransaction,
   Firestore,
-  CollectionReference,
-  DocumentReference,
 } from 'firebase/firestore';
-import { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem } from './types';
+import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem } from './types';
 
 // --- Student Mutations ---
-export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'id'>) => {
+export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'id' | 'lifetimePoints'>) => {
   const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newStudent: Student = { ...studentData, id: newId };
+  const newStudent: Student = { ...studentData, id: newId, lifetimePoints: studentData.points };
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   return setDoc(studentDocRef, newStudent);
 };
 
-export const updateStudent = (firestore: Firestore, schoolId: string, updatedStudent: Student) => {
-  const studentDocRef = doc(firestore, 'schools', schoolId, 'students', updatedStudent.id);
-  return updateDoc(studentDocRef, { ...updatedStudent });
+export const updateStudent = async (firestore: Firestore, schoolId: string, student: Student) => {
+  const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+  
+  // To correctly update lifetime points, we need the student's previous state.
+  return runTransaction(firestore, async (transaction) => {
+    const studentDoc = await transaction.get(studentDocRef);
+    if (!studentDoc.exists()) {
+      throw "Student not found";
+    }
+    const oldStudent = studentDoc.data() as Student;
+    
+    const pointsDifference = student.points - oldStudent.points;
+    
+    // Only add positive differences to lifetime points.
+    const newLifetimePoints = oldStudent.lifetimePoints + (pointsDifference > 0 ? pointsDifference : 0);
+    
+    const finalStudentData = { ...student, lifetimePoints: newLifetimePoints };
+    
+    transaction.update(studentDocRef, finalStudentData);
+  });
 };
 
 export const deleteStudent = (firestore: Firestore, schoolId: string, studentId: string) => {
@@ -45,14 +59,12 @@ export const addClass = (firestore: Firestore, schoolId: string, classData: Omit
 export const deleteClass = async (firestore: Firestore, schoolId: string, classId: string, students: Student[]) => {
     const batch = writeBatch(firestore);
     
-    // Find students in this class and unassign them
     const studentsToUpdate = students.filter(s => s.classId === classId);
     studentsToUpdate.forEach(student => {
         const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
         batch.update(studentRef, { classId: '' });
     });
 
-    // Delete the class document
     const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
     batch.delete(classRef);
 
@@ -114,23 +126,26 @@ export const addCoupons = (firestore: Firestore, schoolId: string, newCoupons: C
     return batch.commit();
 };
 
-export const redeemCoupon = async (firestore: Firestore, schoolId: string, studentId: string, studentPoints: number, couponCode: string, allCoupons: Coupon[]): Promise<{ success: boolean; message: string; value?: number }> => {
+export const redeemCoupon = async (firestore: Firestore, schoolId: string, studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
     try {
-        const coupon = allCoupons.find((c) => c.id.toUpperCase() === couponCode.toUpperCase());
-        if (!coupon) throw new Error('Coupon code not found.');
-        if (coupon.used) throw new Error('This coupon has already been used.');
+        const couponRef = doc(firestore, 'schools', schoolId, 'coupons', couponCode.toUpperCase());
 
         return await runTransaction(firestore, async (transaction) => {
+            const couponDoc = await transaction.get(couponRef);
+            
+            if (!couponDoc.exists()) throw new Error('Coupon code not found.');
+            
+            const coupon = couponDoc.data() as Coupon;
+            if (coupon.used) throw new Error('This coupon has already been used.');
+
             const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
-            const couponRef = doc(firestore, 'schools', schoolId, 'coupons', coupon.id);
             const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
 
-            // We get student from a transaction to prevent race conditions
             const studentDoc = await transaction.get(studentRef);
             if (!studentDoc.exists()) {
                 throw new Error("Student not found.");
             }
-            const currentPoints = studentDoc.data().points;
+            const currentStudent = studentDoc.data() as Student;
 
             const newHistoryItem: HistoryItem = {
                 desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
@@ -138,11 +153,12 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
                 date: Date.now(),
             };
 
-            // Update student points and add history item
-            transaction.update(studentRef, { points: currentPoints + coupon.value });
+            transaction.update(studentRef, { 
+                points: currentStudent.points + coupon.value,
+                lifetimePoints: (currentStudent.lifetimePoints || 0) + coupon.value
+            });
             transaction.set(activityRef, newHistoryItem);
 
-            // Mark coupon as used
             transaction.update(couponRef, { 
                 used: true, 
                 usedAt: Date.now(), 
@@ -155,6 +171,35 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
       return { success: false, message: (e as Error).message };
     }
 };
+
+export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize) => {
+    return runTransaction(firestore, async (transaction) => {
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+        const studentDoc = await transaction.get(studentRef);
+
+        if (!studentDoc.exists()) {
+            throw new Error("Student not found.");
+        }
+
+        const studentData = studentDoc.data() as Student;
+
+        if (studentData.points < prize.points) {
+            throw new Error("Not enough points.");
+        }
+
+        const newHistoryItem: HistoryItem = {
+            desc: `Redeemed: ${prize.name}`,
+            amount: -prize.points,
+            date: Date.now(),
+        };
+
+        const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        
+        transaction.update(studentRef, { points: studentData.points - prize.points });
+        transaction.set(activityRef, newHistoryItem);
+    });
+};
+
 
 export const uploadStudents = async (firestore: Firestore, schoolId: string, csvContent: string, currentStudents: Student[], allClasses: Class[]): Promise<{success: number, failed: number, errors: string[]}> => {
     const lines = csvContent.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
@@ -191,12 +236,13 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
 
         const classObj = allClasses.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
-        const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const newStudent: Student = {
-            id: newId,
+        const newStudentData: Omit<Student, 'id' | 'lifetimePoints'> = {
             firstName, lastName, nfcId: newNfcId, points: 0,
             classId: classObj?.id || '',
         };
+        
+        const newId = `s_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const newStudent: Student = { ...newStudentData, id: newId, lifetimePoints: newStudentData.points };
         
         const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
         batch.set(studentDocRef, newStudent);

@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useAppContext } from '@/components/AppProvider';
+import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -15,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize } from '@/lib/types';
+import { redeemPrize } from '@/lib/db';
 import {
   Nfc,
   Type,
@@ -29,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function PrizeDashboard({
   studentId,
@@ -37,15 +41,18 @@ function PrizeDashboard({
   studentId: string;
   onDone: () => void;
 }) {
-    const { db, updateStudent } = useAppContext();
+    const { schoolId } = useAppContext();
+    const firestore = useFirestore();
     const { toast } = useToast();
     
-    // Find the student from the live db context to ensure data is always fresh
-    const student = db.students.find(s => s.id === studentId);
+    const studentDocRef = useMemo(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
+    const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
 
-    // If student is not found (e.g., deleted in another tab), log out.
+    const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+    const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+
     useEffect(() => {
-        if (!student) {
+        if (!studentLoading && !student) {
             toast({
                 variant: 'destructive',
                 title: 'Student not found',
@@ -53,40 +60,35 @@ function PrizeDashboard({
             });
             onDone();
         }
-    }, [student, onDone, toast]);
+    }, [student, studentLoading, onDone, toast]);
 
-    if (!student) {
-        return null; // Render nothing while logging out
+    if (studentLoading || prizesLoading || !student) {
+        return (
+             <div className="space-y-6 animate-pulse">
+                <Skeleton className="h-28 w-full" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+                </div>
+            </div>
+        );
     }
 
-
     const handleRedeemReward = async (prize: Prize) => {
-        if (student.points < prize.points) {
+        if (!schoolId) return;
+
+        try {
+            await redeemPrize(firestore, schoolId, student.id, prize);
+            toast({
+                title: 'Reward Redeemed!',
+                description: `You redeemed a ${prize.name} for ${prize.points} points.`,
+            });
+        } catch (e: any) {
             toast({
                 variant: 'destructive',
-                title: 'Not enough points',
-                description: `You need ${prize.points} points to redeem this item.`,
+                title: 'Redemption Failed',
+                description: e.message || 'An unknown error occurred.',
             });
-            return;
         }
-
-        const newHistoryItem = {
-            desc: `Redeemed: ${prize.name}`,
-            amount: -prize.points,
-            date: Date.now(),
-        };
-
-        const updatedStudent: Student = {
-            ...student,
-            points: student.points - prize.points,
-            history: [newHistoryItem, ...student.history],
-        };
-
-        await updateStudent(updatedStudent);
-        toast({
-            title: 'Reward Redeemed!',
-            description: `You redeemed a ${prize.name} for ${prize.points} points. Your new balance is ${updatedStudent.points}.`,
-        });
     };
 
     return (
@@ -108,7 +110,7 @@ function PrizeDashboard({
                 </Card>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {db.prizes?.filter(p => p.inStock).map((prize: Prize) => {
+                    {prizes?.filter(p => p.inStock).sort((a, b) => a.points - b.points).map((prize: Prize) => {
                         const canAfford = student.points >= prize.points;
                         return (
                             <Card key={prize.id} className={cn(
@@ -152,9 +154,13 @@ function PrizeDashboard({
 }
 
 export default function PrizePage() {
-    const { loginState, isInitialized, schoolId, db } = useAppContext();
+    const { loginState, isInitialized, schoolId } = useAppContext();
+    const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
+
+    const studentsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
+    const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [nfcId, setNfcId] = useState('');
@@ -173,8 +179,8 @@ export default function PrizePage() {
     }, [activeStudentId]);
 
     const handleNfcSubmit = () => {
-        if(!nfcId) return;
-        const student = db.students.find((s) => s.nfcId === nfcId);
+        if(!nfcId || !students) return;
+        const student = students.find((s) => s.nfcId === nfcId);
         if (student) {
             setActiveStudentId(student.id);
         } else {
@@ -194,6 +200,14 @@ export default function PrizePage() {
 
     if (!isInitialized || loginState !== 'school') {
         return <p>Loading...</p>;
+    }
+    
+    if (studentsLoading) {
+      return (
+        <div className="flex justify-center items-center h-full">
+           <Skeleton className="w-full max-w-md h-96" />
+        </div>
+      );
     }
 
     if (activeStudentId) {

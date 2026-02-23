@@ -11,18 +11,17 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize, Category } from '@/lib/types';
+import type { Database, Student, Coupon } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import {
   doc,
   setDoc,
   getDoc,
   updateDoc,
   collection,
-  query,
   getDocs,
   deleteDoc,
   writeBatch
@@ -33,16 +32,13 @@ import { INITIAL_DATA } from '@/lib/data';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { addCategory, addClass, addCoupons, addPrize, addStudent, addTeacher, deleteCategory, deleteClass, deletePrize, deleteStudent, deleteTeacher, redeemCoupon, updatePrize, updateStudent, uploadStudents } from '@/lib/db';
 
-export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
 
 interface AppContextType {
   isInitialized: boolean;
   loginState: LoginState;
   schoolId: string | null;
-  syncStatus: SyncStatus; // This can be derived from useCollection/useDoc loading states now
   login: (
     type: 'school' | 'developer',
     credentials: { schoolId?: string; passcode?: string }
@@ -51,23 +47,6 @@ interface AppContextType {
   setCouponsToPrint: (coupons: Coupon[]) => void;
   setStudentsToPrint: (students: Student[]) => void;
   
-  // Data mutation functions
-  addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
-  updateStudent: (student: Student) => Promise<void>;
-  deleteStudent: (studentId: string) => Promise<void>;
-  addClass: (newClass: Omit<Class, 'id'>) => void;
-  deleteClass: (classId: string, students: Student[]) => Promise<void>;
-  addTeacher: (newTeacher: Omit<Teacher, 'id'>) => void;
-  deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: { name: string; points: number; }) => Promise<Category | null>;
-  deleteCategory: (categoryId: string) => Promise<void>;
-  addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (studentId: string, studentPoints: number, couponCode: string, allCoupons: Coupon[]) => Promise<{ success: boolean; message: string; value?: number }>;
-  addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
-  updatePrize: (prize: Prize) => Promise<void>;
-  deletePrize: (prizeId: string) => Promise<void>;
-  uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{success: number, failed: number, errors: string[]}>;
-
   // School management functions
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
@@ -96,9 +75,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const { auth, firestore, functions } = useFirebase();
   const playSound = useArcadeSound();
-
-  // This is kept simple, could be derived from multiple useCollection hooks in a real app
-  const syncStatus: SyncStatus = 'synced'; 
 
   // Restore session & settings
   useEffect(() => {
@@ -395,107 +371,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(intervalId);
   }, [isAutoBackupEnabled, loginState, devBackupAllSchools, toast]);
   
-  const handleAddClass = (classData: Omit<Class, 'id'>) => {
-    if (!schoolId) return;
-    addClass(firestore, schoolId, classData).then(() => {
-      toast({ title: "Class Added" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-
-  const handleDeleteClass = async (classId: string, students: Student[]) => {
-    if (!schoolId) return;
-    deleteClass(firestore, schoolId, classId, students).then(() => {
-        toast({ title: "Class Deleted" });
-        playSound('success');
-    }).catch(() => playSound('error'));
-  }
-  
-  const handleAddTeacher = (teacherData: Omit<Teacher, 'id'>) => {
-    if (!schoolId) return;
-    addTeacher(firestore, schoolId, teacherData).then(() => {
-      toast({ title: "Teacher Added" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-  
-  const handleDeleteTeacher = (teacherId: string) => {
-      if (!schoolId) return;
-      deleteTeacher(firestore, schoolId, teacherId).then(() => {
-          toast({ title: "Teacher Deleted" });
-          playSound('success');
-      }).catch(() => playSound('error'));
-  }
-  
-  const handleAddCategory = async (category: { name: string; points: number; }) => {
-    if (!schoolId) return null;
-    const newCategory = await addCategory(firestore, schoolId, category);
-    if(newCategory) {
-      toast({ title: "Category Added" });
-      playSound('success');
-    } else {
-      playSound('error');
-    }
-    return newCategory;
-  }
-
-  const handleDeleteCategory = (categoryId: string) => {
-    if (!schoolId) return;
-    deleteCategory(firestore, schoolId, categoryId).then(() => {
-      toast({ title: "Category Deleted" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-  
-  const handleAddCoupons = (newCoupons: Coupon[]) => {
-      if (!schoolId) return;
-      addCoupons(firestore, schoolId, newCoupons);
-  }
-
-  const handleRedeemCoupon = async (studentId: string, studentPoints: number, couponCode: string, allCoupons: Coupon[]) => {
-    if (!schoolId) return { success: false, message: 'Not logged in.' };
-    const result = await redeemCoupon(firestore, schoolId, studentId, studentPoints, couponCode, allCoupons);
-    if (result.success) {
-      playSound('redeem');
-    } else {
-      playSound('error');
-    }
-    return result;
-  }
-  
-  const handleAddPrize = (prize: Omit<Prize, 'id'>) => {
-    if (!schoolId) return;
-    addPrize(firestore, schoolId, prize).then(() => {
-      toast({ title: "Prize Added" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-  
-  const handleUpdatePrize = (prize: Prize) => {
-    if (!schoolId) return;
-    updatePrize(firestore, schoolId, prize).then(() => {
-      toast({ title: "Prize Updated" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-
-  const handleDeletePrize = (prizeId: string) => {
-    if (!schoolId) return;
-    deletePrize(firestore, schoolId, prizeId).then(() => {
-      toast({ title: "Prize Deleted" });
-      playSound('success');
-    }).catch(() => playSound('error'));
-  }
-  
-  const handleUploadStudents = async (csvContent: string, currentStudents: Student[], allClasses: Class[]) => {
-    if(!schoolId) return {success: 0, failed: 0, errors: ["Not logged in."]};
-    const report = await uploadStudents(firestore, schoolId, csvContent, currentStudents, allClasses);
-     if (report.failed > 0) playSound('error');
-     else playSound('success');
-     toast({ title: 'Upload Complete', description: `${report.success} students added, ${report.failed} failed.` });
-     return report;
-  }
-  
   const printTriggered = useRef(false);
   useEffect(() => {
     if (couponsToPrint.length > 0 && !printTriggered.current) {
@@ -529,40 +404,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      isInitialized, loginState, schoolId, syncStatus,
+      isInitialized, loginState, schoolId,
       login, logout, setCouponsToPrint, setStudentsToPrint, 
-      addStudent: (s: Omit<Student, 'id'>) => addStudent(firestore, schoolId!, s),
-      updateStudent: (s: Student) => updateStudent(firestore, schoolId!, s),
-      deleteStudent: (id: string) => deleteStudent(firestore, schoolId!, id),
-      addClass: handleAddClass,
-      deleteClass: handleDeleteClass, 
-      addTeacher: handleAddTeacher,
-      deleteTeacher: handleDeleteTeacher,
-      addCategory: handleAddCategory,
-      deleteCategory: handleDeleteCategory,
-      addCoupons: handleAddCoupons,
-      redeemCoupon: handleRedeemCoupon,
-      addPrize: handleAddPrize,
-      updatePrize: handleUpdatePrize,
-      deletePrize: handleDeletePrize,
-      uploadStudents: handleUploadStudents,
       createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
       isAutoBackupEnabled, toggleAutoBackup,
     }),
     [
-      isInitialized, loginState, schoolId, syncStatus, firestore,
+      isInitialized, loginState, schoolId,
       login, logout, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup, handleAddClass, handleDeleteClass, 
-      handleAddTeacher, handleDeleteTeacher, handleAddCategory, handleDeleteCategory,
-      handleAddCoupons, handleRedeemCoupon, handleAddPrize, handleUpdatePrize, 
-      handleDeletePrize, handleUploadStudents
+      isAutoBackupEnabled, toggleAutoBackup
     ]
   );
 
   return (
-    <AppContext.Provider value={value as AppContextType}>
+    <AppContext.Provider value={value}>
       {children}
       {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
       {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} getClassName={(classId) => ''} />}

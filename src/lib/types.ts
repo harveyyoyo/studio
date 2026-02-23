@@ -26,8 +26,8 @@ export interface Student {
   lastName: string;
   nfcId: string;
   points: number;
+  lifetimePoints: number;
   classId?: string;
-  // history is now a subcollection and not part of the student document
 }
 
 export interface Coupon {

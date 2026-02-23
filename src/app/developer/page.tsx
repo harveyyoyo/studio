@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, doc, getDoc, query, getDocs } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, doc, getDoc, query, getDocs } from 'firebase/firestore';
 import {
   Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck,
 } from 'lucide-react';
@@ -25,7 +25,6 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 
 interface SchoolInfo {
@@ -48,19 +47,15 @@ export default function DeveloperPage() {
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
   
-  const [allSchools, setAllSchools] = useState<SchoolInfo[]>([]);
-  
-  // State for showing new school passcode
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{id: string, passcode: string} | null>(null);
-  
-  // State for editing a school
   const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
   const [newSchoolName, setNewSchoolName] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
-  
-  // State for managing backups
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
+
+  const schoolsQuery = useMemo(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
+  const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
 
   useEffect(() => {
     if (isInitialized && loginState !== 'developer') {
@@ -88,29 +83,6 @@ export default function DeveloperPage() {
     createSampleSchoolIfNeeded('yeshiva');
     createSampleSchoolIfNeeded('schoolabc');
   }, [loginState, firestore, createSchool]);
-
-
-  useEffect(() => {
-    if (loginState !== 'developer' || !firestore) {
-      setAllSchools([]);
-      return;
-    }
-
-    const schoolsColRef = collection(firestore, 'schools');
-    const unsubscribe = onSnapshot(schoolsColRef, (snapshot) => {
-        const schoolData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name || doc.id,
-        }));
-        setAllSchools(schoolData);
-    }, (error) => {
-        console.error("Error fetching all schools:", error);
-        toast({variant: 'destructive', title: "Could not fetch school list"});
-        setAllSchools([]);
-    });
-
-    return () => unsubscribe();
-  }, [loginState, firestore, toast]);
 
   const handleCreateSchool = async () => {
       if(!newSchoolId) {
@@ -185,6 +157,7 @@ export default function DeveloperPage() {
   }
 
   const handleBackupAll = async () => {
+    if (!allSchools) return;
     await devBackupAllSchools();
     toast({title: "Backup process complete", description: "All schools have been backed up."});
   }
@@ -224,7 +197,7 @@ export default function DeveloperPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will trigger a backup for all {allSchools.length} school databases. This may take a few moments to complete.
+                        This will trigger a backup for all {allSchools?.length || 0} school databases. This may take a few moments to complete.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -257,7 +230,7 @@ export default function DeveloperPage() {
               <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                       <span>School Instances</span>
-                      <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools.length} total</span>
+                      <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
                   </CardTitle>
               </CardHeader>
               <CardContent>
@@ -277,9 +250,9 @@ export default function DeveloperPage() {
                         </TooltipContent>
                       </Tooltip>
                   </div>
-
+                  {schoolsLoading ? <p>Loading schools...</p> : (
                    <ul className="space-y-2">
-                      {[...allSchools].sort((a,b) => a.id.localeCompare(b.id)).map((school) => (
+                      {allSchools && [...allSchools].sort((a,b) => a.id.localeCompare(b.id)).map((school) => (
                           <li key={school.id} className="flex flex-wrap gap-2 justify-between items-center bg-secondary p-3 rounded-lg border">
                               <div>
                                 <p className="font-bold font-code break-all">{school.id}</p>
@@ -335,14 +308,14 @@ export default function DeveloperPage() {
                               </div>
                           </li>
                       ))}
-                      {allSchools.length === 0 && (
+                      {(!allSchools || allSchools.length === 0) && (
                           <p className="text-center text-muted-foreground italic py-4">No schools found. Create one to begin.</p>
                       )}
                   </ul>
+                  )}
               </CardContent>
           </Card>
           
-          {/* Dialog for showing new school passcode */}
           <AlertDialog open={!!createdSchoolInfo} onOpenChange={() => setCreatedSchoolInfo(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -363,7 +336,6 @@ export default function DeveloperPage() {
             </AlertDialogContent>
           </AlertDialog>
           
-          {/* Dialog for editing school */}
           <Dialog open={!!editingSchool} onOpenChange={handleCloseEditModal}>
             <DialogContent>
               <DialogHeader>
@@ -400,7 +372,6 @@ export default function DeveloperPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Dialog for managing backups */}
           <Dialog open={!!backupSchool} onOpenChange={handleCloseBackupModal}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>

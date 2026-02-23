@@ -11,9 +11,10 @@
         "lastName": { "type": "string", "description": "The last name of the student." },
         "nfcId": { "type": "string", "description": "The NFC card ID associated with the student." },
         "points": { "type": "number", "description": "The current points balance." },
+        "lifetimePoints": { "type": "number", "description": "The total points ever earned by the student." },
         "classId": { "type": "string", "description": "Reference to the student's assigned Class." }
       },
-      "required": ["id", "firstName", "lastName", "nfcId", "points"]
+      "required": ["id", "firstName", "lastName", "nfcId", "points", "lifetimePoints"]
     },
     "Teacher": {
       "$schema": "http://json-schema.org/draft-07/schema#",
