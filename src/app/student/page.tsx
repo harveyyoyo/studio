@@ -180,25 +180,25 @@ function StudentDashboard({
   
   useEffect(() => {
     if (activeTab !== 'camera') {
-      return; // Do nothing if camera tab is not active
+      return;
     }
 
-    let stream: MediaStream | undefined;
-    const codeReader = new BrowserMultiFormatReader();
-    let controls: IScannerControls | undefined;
+    let stream: MediaStream | null = null;
+    let codeReader: BrowserMultiFormatReader | null = null;
+    let controls: IScannerControls | null = null;
 
     const startScan = async () => {
       try {
-        // 1. Get the media stream
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
-
-        // 2. Attach it to the video element to make it visible
+        
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+            videoRef.current.srcObject = stream;
+            // The video element needs to be playing for the scanner to work.
+            videoRef.current.play(); 
         }
-
-        // 3. Start scanning from the stream
+        
+        codeReader = new BrowserMultiFormatReader();
         controls = await codeReader.decodeFromStream(stream, videoRef.current!, (result, error) => {
           if (result) {
             handleRedeemCoupon(result.getText());
@@ -208,14 +208,22 @@ function StudentDashboard({
           }
         });
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('Camera setup failed:', error);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions to use this feature.',
-        });
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+             toast({
+                variant: 'destructive',
+                title: 'Camera Access Denied',
+                description: 'Please enable camera permissions to use this feature.',
+            });
+        } else {
+             toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: 'Could not initialize the camera. It might be in use by another application.',
+            });
+        }
         setActiveTab('manual');
       }
     };
@@ -226,12 +234,18 @@ function StudentDashboard({
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
+      }
+      if (codeReader) {
+        codeReader.reset();
+        codeReader = null;
       }
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        stream = null;
       }
     };
-  }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
+  }, [activeTab, handleRedeemCoupon, toast]);
   
   const handleLogoutConfirm = () => {
     if (logoutPasscode === '1234') {
@@ -497,19 +511,21 @@ export default function StudentLoginPage() {
       return;
     }
     
-    let stream: MediaStream | undefined;
-    const codeReader = new BrowserMultiFormatReader();
-    let controls: IScannerControls | undefined;
+    let stream: MediaStream | null = null;
+    let codeReader: BrowserMultiFormatReader | null = null;
+    let controls: IScannerControls | null = null;
 
     const startScan = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         setHasCameraPermission(true);
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.play();
         }
 
+        codeReader = new BrowserMultiFormatReader();
         controls = await codeReader.decodeFromStream(stream, videoRef.current!, (result, error) => {
           if (result) {
             handleNfcSubmit(result.getText());
@@ -521,11 +537,19 @@ export default function StudentLoginPage() {
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Error',
-          description: err.message || 'Could not initialize camera.',
-        });
+         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+             toast({
+                variant: 'destructive',
+                title: 'Camera Access Denied',
+                description: 'Please allow camera access to use this feature.',
+            });
+        } else {
+             toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: 'Could not initialize the camera. It might be in use by another application.',
+            });
+        }
         setLoginTab('nfc');
       }
     };
@@ -535,12 +559,18 @@ export default function StudentLoginPage() {
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
+      }
+      if (codeReader) {
+        codeReader.reset();
+        codeReader = null;
       }
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
+        stream = null;
       }
     };
-  }, [loginTab, activeStudentId, handleNfcSubmit, toast, setLoginTab]);
+  }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
 
 
   const handleDone = useCallback(() => {
