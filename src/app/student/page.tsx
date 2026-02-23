@@ -182,26 +182,32 @@ function StudentDashboard({
     if (activeTab !== 'camera') {
       return;
     }
-
-    let stream: MediaStream | null = null;
+    
+    const codeReader = new BrowserMultiFormatReader();
     let controls: IScannerControls | null = null;
-
+    
     const startScan = async () => {
       try {
-        const codeReader = new BrowserMultiFormatReader();
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        setHasCameraPermission(true);
+        const videoInputDevices = await codeReader.listVideoInputDevices();
+        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
+            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
+            
+        const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
+
+        if (!deviceId) {
+          throw new Error("No camera device found.");
+        }
 
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
+            controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error) => {
             if (result) {
-              handleRedeemCoupon(result.getText());
+                handleRedeemCoupon(result.getText());
             }
             if (error && error.name !== 'NotFoundException') {
-              console.error(error);
+                console.error(error);
             }
-          });
+            });
+            setHasCameraPermission(true);
         }
       } catch (error: any) {
         console.error('Camera setup failed:', error);
@@ -225,16 +231,10 @@ function StudentDashboard({
 
     startScan();
 
-    // Cleanup function
     return () => {
-      if (controls) {
-        controls.stop();
-      }
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      controls?.stop();
     };
-  }, [activeTab, handleRedeemCoupon, toast]);
+  }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
   
   const handleLogoutConfirm = () => {
     if (logoutPasscode === '1234') {
@@ -326,7 +326,7 @@ function StudentDashboard({
                     </TabsContent>
                     <TabsContent value="camera" className="pt-4 space-y-4">
                         <div className="relative">
-                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" muted playsInline />
+                            <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline />
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="w-2/3 h-1/3 border-4 border-red-500/50 rounded-lg" />
                             </div>
@@ -500,25 +500,31 @@ export default function StudentLoginPage() {
       return;
     }
     
-    let stream: MediaStream | null = null;
+    const codeReader = new BrowserMultiFormatReader();
     let controls: IScannerControls | null = null;
 
     const startScan = async () => {
-      try {
-        const codeReader = new BrowserMultiFormatReader();
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        setHasCameraPermission(true);
+       try {
+        const videoInputDevices = await codeReader.listVideoInputDevices();
+        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
+            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
+            
+        const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
+
+        if (!deviceId) {
+          throw new Error("No camera device found.");
+        }
 
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, error) => {
-            if (result) {
-              handleNfcSubmit(result.getText());
-            }
-            if (error && error.name !== 'NotFoundException') {
-              console.error('Login scan error:', error);
-            }
-          });
+            controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error) => {
+                if (result) {
+                handleNfcSubmit(result.getText());
+                }
+                if (error && error.name !== 'NotFoundException') {
+                    console.error('Login scan error:', error);
+                }
+            });
+            setHasCameraPermission(true);
         }
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
@@ -543,14 +549,9 @@ export default function StudentLoginPage() {
     startScan();
 
     return () => {
-      if (controls) {
-        controls.stop();
-      }
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      controls?.stop();
     };
-  }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
+  }, [loginTab, activeStudentId, handleNfcSubmit, toast, setLoginTab]);
 
 
   const handleDone = useCallback(() => {
@@ -637,7 +638,7 @@ export default function StudentLoginPage() {
                <TabsContent value="camera">
                 <div className="py-8 space-y-4">
                     <div className="relative">
-                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" muted playsInline/>
+                        <video ref={videoRef} className="w-full aspect-video rounded-md bg-muted" playsInline/>
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div className="w-2/3 h-1/3 border-4 border-primary/50 rounded-lg" />
                         </div>
