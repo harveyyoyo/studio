@@ -11,11 +11,11 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Student, Coupon, Class, Prize, Category, Teacher } from '@/lib/types';
+import type { Student, Coupon, Class, Prize, Category, Teacher, HistoryItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirebase, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -49,6 +49,8 @@ import {
   uploadStudents as dbUploadStudents,
 } from '@/lib/db';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { YESHIVA_DATA } from '@/lib/yeshiva-data';
+import { SCHOOL_DATA } from '@/lib/school-data';
 
 export type LoginState = 'loggedOut' | 'school' | 'developer';
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -78,7 +80,7 @@ interface AppContextType {
   toggleAutoBackup: () => void;
 
   // Data mutation functions
-  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>) => void;
+  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>, studentId: string) => void;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => void;
   addClass: (classData: { name: string }) => void;
@@ -199,26 +201,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const docSnap = await getDoc(schoolLoginDocRef);
           if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
-            if (await performAuth()) {
+            if (await performAuth() && auth.currentUser) {
               setSchoolId(lowerSchoolId);
               setLoginState('school');
               sessionStorage.setItem('loginState', 'school');
               sessionStorage.setItem('schoolId', lowerSchoolId);
               
-              if (auth.currentUser) {
-                const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-                setDoc(adminRoleRef, { grantedAt: Date.now() })
-                  .catch(error => {
-                    // This is a critical background failure, emit a contextual error for debugging
-                    console.error("Failed to set admin role, this may cause permission issues:", error);
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({
-                        path: adminRoleRef.path,
-                        operation: 'create',
-                        requestResourceData: { grantedAt: "timestamp" }
-                    }));
-                    // We can still let the login succeed optimistically, but the error will show in dev overlay
-                });
-              }
+              const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
+              setDoc(adminRoleRef, { grantedAt: Date.now() }).catch(error => {
+                 errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: adminRoleRef.path,
+                    operation: 'create',
+                    requestResourceData: { grantedAt: "timestamp" }
+                }));
+              });
 
               return true;
             }
@@ -253,7 +249,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return null;
     }
     
-    const schoolExists = (await getDoc(doc(firestore, 'schools', cleanId))).exists();
+    const schoolDocRef = doc(firestore, 'schools', cleanId);
+    const schoolExists = (await getDoc(schoolDocRef)).exists();
+
     if(schoolExists) {
       if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
         playSound('error');
@@ -263,22 +261,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     
     const newPasscode = process.env.NEXT_PUBLIC_DEV_PASSCODE || '1234';
-
-    const schoolDocRef = doc(firestore, 'schools', cleanId);
     const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
     const batch = writeBatch(firestore);
     
+    const sampleData = cleanId === 'yeshiva' ? YESHIVA_DATA : (cleanId === 'schoolabc' ? SCHOOL_DATA : null);
+
     batch.set(schoolDocRef, { 
-        name: cleanId,
+        name: sampleData?.name || cleanId,
         passcode: newPasscode,
         updatedAt: Date.now(),
-        hasMigratedStudents: true,
-        hasMigratedClasses: true,
-        hasMigratedTeachers: true,
-        hasMigratedPrizes: true,
-        hasMigratedCoupons: true,
     });
     batch.set(adminRoleRef, { grantedAt: Date.now() });
+
+    if (sampleData) {
+        // Process students and their history separately
+        sampleData.students?.forEach((studentWithHistory: any) => {
+            const { history, nfcId, ...studentData } = studentWithHistory;
+
+            // Add lifetimePoints if missing from sample data
+            if (typeof studentData.lifetimePoints !== 'number') {
+                studentData.lifetimePoints = studentData.points;
+            }
+
+            const studentRef = doc(firestore, 'schools', cleanId, 'students', studentData.id);
+            batch.set(studentRef, studentData);
+
+            if (history && Array.isArray(history)) {
+                history.forEach((activity: HistoryItem) => {
+                    const activityRef = doc(collection(firestore, studentRef.path, 'activities'));
+                    batch.set(activityRef, activity);
+                });
+            }
+        });
+        
+        sampleData.classes?.forEach(c => {
+            const classRef = doc(firestore, 'schools', cleanId, 'classes', c.id);
+            batch.set(classRef, c);
+        });
+        sampleData.teachers?.forEach(teacher => {
+            const teacherRef = doc(firestore, 'schools', cleanId, 'teachers', teacher.id);
+            batch.set(teacherRef, teacher);
+        });
+        sampleData.prizes?.forEach(prize => {
+            const prizeRef = doc(firestore, 'schools', cleanId, 'prizes', prize.id);
+            batch.set(prizeRef, prize);
+        });
+        sampleData.categories?.forEach(category => {
+            const categoryRef = doc(firestore, 'schools', cleanId, 'categories', category.id);
+            batch.set(categoryRef, category);
+        });
+        sampleData.coupons?.forEach(coupon => {
+            const couponRef = doc(firestore, 'schools', cleanId, 'coupons', coupon.id);
+            batch.set(couponRef, coupon);
+        });
+    }
     
     await batch.commit();
 
@@ -393,6 +429,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       await devCreateBackup(schoolId);
       toast({ title: "Final Backup Created", description: `A final backup for ${schoolId} has been saved.` });
+      
+      const collections = ['students', 'classes', 'teachers', 'prizes', 'coupons', 'categories', 'backups', 'roles_admin'];
+      for (const col of collections) {
+          const colRef = collection(firestore, 'schools', schoolId, col);
+          const snapshot = await getDocs(colRef);
+          const deleteBatch = writeBatch(firestore);
+          snapshot.docs.forEach(d => deleteBatch.delete(d.ref));
+          await deleteBatch.commit();
+      }
+
       await deleteDoc(doc(firestore, 'schools', schoolId));
       playSound('success');
       toast({title: `School "${schoolId}" deleted!`});
@@ -477,9 +523,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
       isAutoBackupEnabled, toggleAutoBackup,
-      addStudent: (studentData) => {
+      addStudent: (studentData, studentId) => {
         if (!firestore || !schoolId) return;
-        dbAddStudent(firestore, schoolId, studentData);
+        dbAddStudent(firestore, schoolId, studentData, studentId);
         toast({ title: 'Student added!' });
       },
       updateStudent: (studentData) => {
