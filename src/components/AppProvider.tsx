@@ -61,8 +61,8 @@ interface AppContextType {
   deleteClass: (classId: string) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: string) => Promise<void>;
-  deleteCategory: (categoryName: string) => Promise<void>;
+  addCategory: (category: { name: string; points: number }) => Promise<{ id: string } | undefined>;
+  deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
@@ -580,21 +580,36 @@ const deleteTeacher = useCallback(async (teacherId: string) => {
     }
 }, [db.teachers, db.hasMigratedTeachers, safeUpdate, schoolId, firestore, toast]);
 
-  const addCategory = useCallback(async (newCategory: string) => {
-    if (db.categories?.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
+  const addCategory = useCallback(async (categoryData: { name: string; points: number }) => {
+    if (db.categories?.map((c) => c.name.toLowerCase()).includes(categoryData.name.toLowerCase())) {
         toast({ variant: 'destructive', title: 'Category already exists.' });
         return;
     }
+    const newCategory = { ...categoryData, id: 'cat' + Date.now() };
     try {
-      await safeUpdate({ categories: arrayUnion(newCategory) });
+      if (schoolId && firestore) {
+        await setDoc(doc(firestore, 'schools', schoolId, 'categories', newCategory.id), newCategory);
+        playSound('success');
+      } else {
+        await safeUpdate({ categories: arrayUnion(newCategory) });
+      }
+      return newCategory;
     } catch(e) { /* error handled by safeUpdate */ }
-  }, [db.categories, safeUpdate, toast]);
+  }, [db.categories, safeUpdate, toast, schoolId, firestore, playSound]);
 
-  const deleteCategory = useCallback(async (categoryName: string) => {
+  const deleteCategory = useCallback(async (categoryId: string) => {
     try {
-      await safeUpdate({ categories: arrayRemove(categoryName) });
+      const categoryToDelete = db.categories?.find(c => c.id === categoryId);
+      if (!categoryToDelete) throw new Error("Category not found");
+      
+      if (schoolId && firestore) {
+        await deleteDoc(doc(firestore, 'schools', schoolId, 'categories', categoryId));
+      } else {
+        await safeUpdate({ categories: arrayRemove(categoryToDelete) });
+      }
+      playSound('success');
     } catch(e) { /* error handled by safeUpdate */ }
-  }, [safeUpdate]);
+  }, [db.categories, safeUpdate, schoolId, firestore, playSound]);
 
 const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     if (!schoolId || !firestore) return;

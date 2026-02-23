@@ -206,7 +206,7 @@ function AdminDashboard() {
   }, [isDbLoading, backups, devCreateBackup, toast, schoolId]);
 
   useEffect(() => {
-    if (categories?.length > 0 && !printCategoryId) {
+    if (categories && categories.length > 0 && !printCategoryId) {
       setPrintCategoryId(categories[0].id);
     }
   }, [categories, printCategoryId]);
@@ -272,7 +272,7 @@ function AdminDashboard() {
     setNewCategoryPoints('10');
   };
 
-  const handleAddPrintCategory = () => {
+  const handleAddPrintCategory = async () => {
     if (!newPrintCategoryName || !newPrintCategoryPoints) {
        toast({
         variant: 'destructive',
@@ -290,7 +290,7 @@ function AdminDashboard() {
       });
       return;
     }
-    const newCategory = addCategory({ name: newPrintCategoryName, points });
+    const newCategory = await addCategory({ name: newPrintCategoryName, points });
     if (newCategory) {
       setPrintCategoryId(newCategory.id);
     }
