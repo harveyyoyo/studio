@@ -45,6 +45,7 @@ import {
   deletePrize as dbDeletePrize,
   addCoupons as dbAddCoupons,
   redeemCoupon as dbRedeemCoupon,
+  redeemPrize as dbRedeemPrize,
   uploadStudents as dbUploadStudents,
 } from '@/lib/db';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -77,20 +78,21 @@ interface AppContextType {
   toggleAutoBackup: () => void;
 
   // Data mutation functions
-  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>) => Promise<void>;
+  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>) => void;
   updateStudent: (student: Student) => Promise<void>;
-  deleteStudent: (studentId: string) => Promise<void>;
-  addClass: (classData: { name: string }) => Promise<void>;
+  deleteStudent: (studentId: string) => void;
+  addClass: (classData: { name: string }) => void;
   deleteClass: (classId: string, students: Student[]) => Promise<void>;
-  addTeacher: (teacherData: { name: string }) => Promise<void>;
-  deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (categoryData: { name: string; points: number; }) => Promise<any>;
-  deleteCategory: (categoryId: string) => Promise<void>;
-  addPrize: (prizeData: Omit<Prize, 'id'>) => Promise<void>;
+  addTeacher: (teacherData: { name: string }) => void;
+  deleteTeacher: (teacherId: string) => void;
+  addCategory: (categoryData: { name: string; points: number; }) => Category;
+  deleteCategory: (categoryId: string) => void;
+  addPrize: (prizeData: Omit<Prize, 'id'>) => void;
   updatePrize: (updatedPrize: Prize) => Promise<void>;
-  deletePrize: (prizeId: string) => Promise<void>;
+  deletePrize: (prizeId: string) => void;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; }>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<number>;
+  redeemPrize: (studentId: string, prize: Prize) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[]; }>;
 }
 
@@ -202,8 +204,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               setLoginState('school');
               sessionStorage.setItem('loginState', 'school');
               sessionStorage.setItem('schoolId', lowerSchoolId);
-              // Grant admin role to any user who logs into a school.
-              // This is a simplification for the prototype environment.
               if (auth.currentUser) {
                 const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
                 await setDoc(adminRoleRef, { grantedAt: Date.now() });
@@ -458,30 +458,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [studentsToPrint, playSound]);
 
-  const addClass = useCallback(async (classData: { name: string; }) => {
-    if (!firestore || !schoolId) return;
-    dbAddClass(firestore, schoolId, classData);
-    toast({ title: 'Class added!' });
-  }, [firestore, schoolId, toast]);
-  
-  const deleteClass = useCallback(async (classId: string, students: Student[]) => {
-    if (!firestore || !schoolId) return;
-    await dbDeleteClass(firestore, schoolId, classId, students);
-    toast({ title: 'Class deleted' });
-  }, [firestore, schoolId, toast]);
-  
-  const addTeacher = useCallback(async (teacherData: { name: string; }) => {
-    if (!firestore || !schoolId) return;
-    dbAddTeacher(firestore, schoolId, teacherData);
-    toast({ title: 'Teacher added!' });
-  }, [firestore, schoolId, toast]);
-
-  const deleteStudent = useCallback(async (studentId: string) => {
-    if (!firestore || !schoolId) return;
-    await dbDeleteStudent(firestore, schoolId, studentId);
-    toast({ title: 'Student deleted' });
-  }, [firestore, schoolId, toast]);
-
   const value = useMemo(
     () => ({
       isInitialized, loginState, schoolId, syncStatus,
@@ -490,48 +466,80 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
       isAutoBackupEnabled, toggleAutoBackup,
       addStudent: (studentData) => {
-        if (!firestore || !schoolId) return Promise.resolve();
-        return dbAddStudent(firestore, schoolId, studentData);
+        if (!firestore || !schoolId) return;
+        dbAddStudent(firestore, schoolId, studentData);
+        toast({ title: 'Student added!' });
       },
       updateStudent: (studentData) => {
         if (!firestore || !schoolId) return Promise.resolve();
-        return dbUpdateStudent(firestore, schoolId, studentData);
+        return dbUpdateStudent(firestore, schoolId, studentData).then(() => {
+           toast({ title: 'Student updated!' });
+        });
       },
-      deleteStudent,
-      addClass,
-      deleteClass,
-      addTeacher,
-      deleteTeacher: (teacherId: string) => {
+      deleteStudent: (studentId) => {
+        if (!firestore || !schoolId) return;
+        dbDeleteStudent(firestore, schoolId, studentId);
+        toast({ title: 'Student deleted' });
+      },
+      addClass: (classData) => {
+        if (!firestore || !schoolId) return;
+        dbAddClass(firestore, schoolId, classData);
+        toast({ title: 'Class added!' });
+      },
+      deleteClass: (classId, students) => {
         if (!firestore || !schoolId) return Promise.resolve();
-        return dbDeleteTeacher(firestore, schoolId, teacherId);
+        return dbDeleteClass(firestore, schoolId, classId, students).then(() => {
+            toast({ title: 'Class deleted' });
+        });
+      },
+      addTeacher: (teacherData) => {
+        if (!firestore || !schoolId) return;
+        dbAddTeacher(firestore, schoolId, teacherData);
+        toast({ title: 'Teacher added!' });
+      },
+      deleteTeacher: (teacherId: string) => {
+        if (!firestore || !schoolId) return;
+        dbDeleteTeacher(firestore, schoolId, teacherId);
+        toast({ title: 'Teacher deleted' });
       },
       addCategory: (categoryData) => {
-         if (!firestore || !schoolId) return Promise.reject();
-        return dbAddCategory(firestore, schoolId, categoryData);
+         if (!firestore || !schoolId) throw new Error("Not logged in");
+        const newCategory = dbAddCategory(firestore, schoolId, categoryData);
+        toast({ title: 'Category added!' });
+        return newCategory;
       },
       deleteCategory: (categoryId: string) => {
-        if (!firestore || !schoolId) return Promise.resolve();
-        return dbDeleteCategory(firestore, schoolId, categoryId);
+        if (!firestore || !schoolId) return;
+        dbDeleteCategory(firestore, schoolId, categoryId);
+        toast({ title: 'Category deleted' });
       },
       addPrize: (prizeData) => {
-        if (!firestore || !schoolId) return Promise.resolve();
-        return dbAddPrize(firestore, schoolId, prizeData);
+        if (!firestore || !schoolId) return;
+        dbAddPrize(firestore, schoolId, prizeData);
+        toast({ title: 'Prize added!' });
       },
       updatePrize: (prizeData) => {
         if (!firestore || !schoolId) return Promise.resolve();
-        return dbUpdatePrize(firestore, schoolId, prizeData);
+        return dbUpdatePrize(firestore, schoolId, prizeData).then(() => {
+          toast({ title: 'Prize updated!' });
+        });
       },
       deletePrize: (prizeId) => {
-        if (!firestore || !schoolId) return Promise.resolve();
-        return dbDeletePrize(firestore, schoolId, prizeId);
+        if (!firestore || !schoolId) return;
+        dbDeletePrize(firestore, schoolId, prizeId);
+        toast({ title: 'Prize deleted' });
       },
       addCoupons: (coupons) => {
         if (!firestore || !schoolId) return Promise.resolve();
         return dbAddCoupons(firestore, schoolId, coupons);
       },
       redeemCoupon: (studentId, couponCode) => {
-        if (!firestore || !schoolId) return Promise.resolve({success: false, message: 'Not logged in'});
+        if (!firestore || !schoolId) return Promise.reject(new Error('Not logged in'));
         return dbRedeemCoupon(firestore, schoolId, studentId, couponCode);
+      },
+       redeemPrize: (studentId: string, prize: Prize) => {
+        if (!firestore || !schoolId) return Promise.reject(new Error('Not logged in'));
+        return dbRedeemPrize(firestore, schoolId, studentId, prize);
       },
       uploadStudents: (csvContent, currentStudents, allClasses) => {
         if (!firestore || !schoolId) return Promise.resolve({success: 0, failed: 0, errors:['Not logged in']});
@@ -542,8 +550,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, loginState, schoolId, syncStatus,
       login, logout, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup, firestore,
-      addClass, deleteClass, addTeacher, deleteStudent, playSound,
+      isAutoBackupEnabled, toggleAutoBackup, firestore, toast,
     ]
   );
 

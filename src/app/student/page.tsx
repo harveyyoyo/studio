@@ -155,25 +155,19 @@ function StudentDashboard({
     const code = (codeToRedeem || couponCode).toUpperCase();
     if (!code) return;
     resetTimer();
-    const result = await redeemCoupon(student.id, code);
+    
+    const value = await redeemCoupon(student.id, code);
 
-    if (result.success && result.value) {
-      toast({
+    toast({
         title: 'Coupon Redeemed!',
-        description: `You gained ${result.value} points.`,
-      });
-      animationKey.current += 1;
-      setAnimatedValue(result.value);
-      setTimeout(() => setAnimatedValue(null), 1500);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Redemption Failed',
-        description: result.message,
-      });
-    }
+        description: `You gained ${value} points.`,
+    });
+    animationKey.current += 1;
+    setAnimatedValue(value);
+    setTimeout(() => setAnimatedValue(null), 1500);
+
     setCouponCode('');
-  }, [couponCode, resetTimer, redeemCoupon, student, toast]);
+  }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
   
 useEffect(() => {
     if (activeTab !== 'camera' || !videoRef.current) {

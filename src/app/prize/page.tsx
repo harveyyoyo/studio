@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize } from '@/lib/types';
-import { redeemPrize } from '@/lib/db';
 import {
   Nfc,
   Type,
@@ -41,7 +40,7 @@ function PrizeDashboard({
   studentId: string;
   onDone: () => void;
 }) {
-    const { schoolId } = useAppContext();
+    const { schoolId, redeemPrize } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
     
@@ -74,21 +73,11 @@ function PrizeDashboard({
     }
 
     const handleRedeemReward = async (prize: Prize) => {
-        if (!schoolId) return;
-
-        try {
-            await redeemPrize(firestore, schoolId, student.id, prize);
-            toast({
-                title: 'Reward Redeemed!',
-                description: `You redeemed a ${prize.name} for ${prize.points} points.`,
-            });
-        } catch (e: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Redemption Failed',
-                description: e.message || 'An unknown error occurred.',
-            });
-        }
+        await redeemPrize(student.id, prize);
+        toast({
+            title: 'Reward Redeemed!',
+            description: `You redeemed a ${prize.name} for ${prize.points} points.`,
+        });
     };
 
     return (

@@ -272,7 +272,7 @@ function AdminDashboard() {
     setNewCategoryPoints('10');
   };
 
-  const handleAddPrintCategory = async () => {
+  const handleAddPrintCategory = () => {
     if (!newPrintCategoryName || !newPrintCategoryPoints) {
        toast({
         variant: 'destructive',
@@ -290,7 +290,7 @@ function AdminDashboard() {
       });
       return;
     }
-    const newCategory = await addCategory({ name: newPrintCategoryName, points });
+    const newCategory = addCategory({ name: newPrintCategoryName, points });
     if (newCategory) {
       setPrintCategoryId(newCategory.id);
     }
