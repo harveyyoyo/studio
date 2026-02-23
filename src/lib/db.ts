@@ -35,7 +35,7 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
     const pointsDifference = student.points - oldStudent.points;
     
     // Only add positive differences to lifetime points.
-    const newLifetimePoints = oldStudent.lifetimePoints + (pointsDifference > 0 ? pointsDifference : 0);
+    const newLifetimePoints = (oldStudent.lifetimePoints || oldStudent.points) + (pointsDifference > 0 ? pointsDifference : 0);
     
     const finalStudentData = { ...student, lifetimePoints: newLifetimePoints };
     
@@ -152,10 +152,12 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
                 amount: coupon.value,
                 date: Date.now(),
             };
+            
+            const newLifetimePoints = (currentStudent.lifetimePoints || 0) + coupon.value;
 
             transaction.update(studentRef, { 
                 points: currentStudent.points + coupon.value,
-                lifetimePoints: (currentStudent.lifetimePoints || 0) + coupon.value
+                lifetimePoints: newLifetimePoints
             });
             transaction.set(activityRef, newHistoryItem);
 

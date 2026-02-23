@@ -11,7 +11,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Coupon } from '@/lib/types';
+import type { Student, Coupon, Class, Prize, Category, Teacher } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
@@ -22,23 +22,41 @@ import {
   getDoc,
   updateDoc,
   collection,
-  getDocs,
   deleteDoc,
-  writeBatch
+  writeBatch,
+  getDocs,
+  runTransaction,
+  onSnapshot,
 } from 'firebase/firestore';
 import { signInAnonymously, signOut } from 'firebase/auth';
 import { httpsCallable } from "firebase/functions";
-import { INITIAL_DATA } from '@/lib/data';
-import { YESHIVA_DATA } from '@/lib/yeshiva-data';
-import { SCHOOL_DATA } from '@/lib/school-data';
+import {
+  addStudent as dbAddStudent,
+  updateStudent as dbUpdateStudent,
+  deleteStudent as dbDeleteStudent,
+  addClass as dbAddClass,
+  deleteClass as dbDeleteClass,
+  addTeacher as dbAddTeacher,
+  deleteTeacher as dbDeleteTeacher,
+  addCategory as dbAddCategory,
+  deleteCategory as dbDeleteCategory,
+  addPrize as dbAddPrize,
+  updatePrize as dbUpdatePrize,
+  deletePrize as dbDeletePrize,
+  addCoupons as dbAddCoupons,
+  redeemCoupon as dbRedeemCoupon,
+  uploadStudents as dbUploadStudents,
+} from '@/lib/db';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export type LoginState = 'loggedOut' | 'school' | 'developer';
+export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 
 interface AppContextType {
   isInitialized: boolean;
   loginState: LoginState;
   schoolId: string | null;
+  syncStatus: SyncStatus;
   login: (
     type: 'school' | 'developer',
     credentials: { schoolId?: string; passcode?: string }
@@ -47,18 +65,33 @@ interface AppContextType {
   setCouponsToPrint: (coupons: Coupon[]) => void;
   setStudentsToPrint: (students: Student[]) => void;
   
-  // School management functions
+  // Dev portal functions
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
-  
-  // Backup/restore functions
   devCreateBackup: (schoolId: string) => Promise<void>;
   devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
   devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
   devBackupAllSchools: () => Promise<void>;
   isAutoBackupEnabled: boolean;
   toggleAutoBackup: () => void;
+
+  // Data mutation functions
+  addStudent: (studentData: Omit<Student, 'id' | 'lifetimePoints'>) => Promise<void>;
+  updateStudent: (student: Student) => Promise<void>;
+  deleteStudent: (studentId: string) => Promise<void>;
+  addClass: (classData: { name: string }) => Promise<void>;
+  deleteClass: (classId: string, students: Student[]) => Promise<void>;
+  addTeacher: (teacherData: { name: string }) => Promise<void>;
+  deleteTeacher: (teacherId: string) => Promise<void>;
+  addCategory: (categoryData: { name: string; points: number; }) => Promise<any>;
+  deleteCategory: (categoryId: string) => Promise<void>;
+  addPrize: (prizeData: Omit<Prize, 'id'>) => Promise<void>;
+  updatePrize: (updatedPrize: Prize) => Promise<void>;
+  deletePrize: (prizeId: string) => Promise<void>;
+  addCoupons: (coupons: Coupon[]) => Promise<void>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; }>;
+  uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[]; }>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -70,6 +103,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
   const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
   const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
   const router = useRouter();
   const { toast } = useToast();
@@ -111,6 +145,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
   }, [auth]);
+
+  useEffect(() => {
+    if (!firestore) return;
+    const metadataRef = doc(firestore, 'schools', 'metadata'); // a dummy doc to check connection
+    const unsub = onSnapshot(metadataRef, {
+        next: () => setSyncStatus('synced'),
+        error: (err) => {
+            if (err.code === 'permission-denied') {
+                setSyncStatus('synced');
+            } else {
+                setSyncStatus(err.code === 'unavailable' ? 'offline' : 'error');
+            }
+        }
+    });
+    return () => unsub();
+  }, [firestore])
   
   const login = useCallback(
     async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }): Promise<boolean> => {
@@ -152,8 +202,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               setLoginState('school');
               sessionStorage.setItem('loginState', 'school');
               sessionStorage.setItem('schoolId', lowerSchoolId);
-              // Grant admin role for dev purposes
-              if (credentials.passcode === process.env.NEXT_PUBLIC_DEV_PASSCODE && auth.currentUser) {
+              // Grant admin role to any user who logs into a school.
+              // This is a simplification for the prototype environment.
+              if (auth.currentUser) {
                 const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
                 await setDoc(adminRoleRef, { grantedAt: Date.now() });
               }
@@ -199,44 +250,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
     
-    let schoolData: Omit<Database, 'passcode' | 'students' | 'classes' | 'teachers' | 'coupons' | 'prizes'>, newPasscode;
-    let collectionsToBatchWrite: { [key: string]: any[] } = {};
-
-    if (cleanId === 'yeshiva') {
-      newPasscode = '1234';
-      const { students, classes, teachers, coupons, prizes, ...rest } = YESHIVA_DATA;
-      schoolData = rest;
-      collectionsToBatchWrite = { students, classes, teachers, coupons, prizes };
-    } else if (cleanId === 'schoolabc') {
-      newPasscode = '1234';
-      const { students, classes, teachers, coupons, prizes, ...rest } = SCHOOL_DATA;
-      schoolData = rest;
-      collectionsToBatchWrite = { students, classes, teachers, coupons, prizes };
-    } else {
-      newPasscode = '1234'; // All sample schools use 1234 now
-      const { students, classes, teachers, coupons, prizes, ...rest } = INITIAL_DATA;
-      schoolData = {...rest, name: cleanId};
-      collectionsToBatchWrite = { students, classes, teachers, coupons, prizes };
-    }
+    const newPasscode = process.env.NEXT_PUBLIC_DEV_PASSCODE || '1234';
 
     const schoolDocRef = doc(firestore, 'schools', cleanId);
     const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
-
     const batch = writeBatch(firestore);
-    batch.set(schoolDocRef, { ...schoolData, passcode: newPasscode });
+    
+    batch.set(schoolDocRef, { 
+        name: cleanId,
+        passcode: newPasscode,
+        updatedAt: Date.now(),
+        hasMigratedStudents: true,
+        hasMigratedClasses: true,
+        hasMigratedTeachers: true,
+        hasMigratedPrizes: true,
+        hasMigratedCoupons: true,
+    });
     batch.set(adminRoleRef, { grantedAt: Date.now() });
-
-    for (const [collectionName, items] of Object.entries(collectionsToBatchWrite)) {
-      if (items) {
-        for (const item of items) {
-          const itemDocRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
-          batch.set(itemDocRef, item);
-        }
-      }
-    }
     
     await batch.commit();
-    
+
     if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
       playSound('success');
       toast({title: `School "${cleanId}" created!`});
@@ -245,6 +278,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, auth, toast, playSound]);
 
   const devCreateBackup = useCallback(async (schoolId: string) => {
+    if (!functions) return;
     const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
     try {
       await createBackupTrigger({ schoolId });
@@ -256,7 +290,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [toast, playSound, functions]);
 
   const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
-    if (!firestore) return;
+    if (!firestore || !functions) return;
     await devCreateBackup(schoolId);
     toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
 
@@ -269,7 +303,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const backupData = backupSnap.data();
           const currentPasscode = schoolSnap.data().passcode;
           const restoredDb = { ...backupData, passcode: currentPasscode };
+          
+          // Delete all existing subcollections
+          const collections = ['students', 'classes', 'teachers', 'prizes', 'coupons', 'categories', 'backups', 'roles_admin'];
+          for (const col of collections) {
+            const colRef = collection(firestore, 'schools', schoolId, col);
+            const snapshot = await getDocs(colRef);
+            const deleteBatch = writeBatch(firestore);
+            snapshot.docs.forEach(d => deleteBatch.delete(d.ref));
+            await deleteBatch.commit();
+          }
+          
+          // Set the main document
           await setDoc(schoolDocRef, restoredDb);
+          
+          // Now call all migration functions to repopulate subcollections from the restored document
+          const migrationFunctions = [
+            'migrateStudentsToSubcollection', 'migrateClassesToSubcollection', 'migrateTeachersToSubcollection',
+            'migratePrizesToSubcollection', 'migrateCouponsToSubcollection'
+          ];
+          for (const funcName of migrationFunctions) {
+            const callable = httpsCallable(functions, funcName);
+            await callable({ schoolId });
+          }
+
           playSound('success');
       } else {
           throw new Error('Backup or school not found');
@@ -278,7 +335,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Restore Failed', description: (e as Error).message });
     }
-  }, [firestore, playSound, toast, devCreateBackup]);
+  }, [firestore, playSound, toast, devCreateBackup, functions]);
 
   const devDownloadBackup = useCallback(async (schoolId: string, backupId: string) => {
     if (!firestore) return;
@@ -401,20 +458,92 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [studentsToPrint, playSound]);
 
+  const addClass = useCallback(async (classData: { name: string; }) => {
+    if (!firestore || !schoolId) return;
+    dbAddClass(firestore, schoolId, classData);
+    toast({ title: 'Class added!' });
+  }, [firestore, schoolId, toast]);
+  
+  const deleteClass = useCallback(async (classId: string, students: Student[]) => {
+    if (!firestore || !schoolId) return;
+    await dbDeleteClass(firestore, schoolId, classId, students);
+    toast({ title: 'Class deleted' });
+  }, [firestore, schoolId, toast]);
+  
+  const addTeacher = useCallback(async (teacherData: { name: string; }) => {
+    if (!firestore || !schoolId) return;
+    dbAddTeacher(firestore, schoolId, teacherData);
+    toast({ title: 'Teacher added!' });
+  }, [firestore, schoolId, toast]);
+
+  const deleteStudent = useCallback(async (studentId: string) => {
+    if (!firestore || !schoolId) return;
+    await dbDeleteStudent(firestore, schoolId, studentId);
+    toast({ title: 'Student deleted' });
+  }, [firestore, schoolId, toast]);
 
   const value = useMemo(
     () => ({
-      isInitialized, loginState, schoolId,
+      isInitialized, loginState, schoolId, syncStatus,
       login, logout, setCouponsToPrint, setStudentsToPrint, 
       createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools, 
       isAutoBackupEnabled, toggleAutoBackup,
+      addStudent: (studentData) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbAddStudent(firestore, schoolId, studentData);
+      },
+      updateStudent: (studentData) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbUpdateStudent(firestore, schoolId, studentData);
+      },
+      deleteStudent,
+      addClass,
+      deleteClass,
+      addTeacher,
+      deleteTeacher: (teacherId: string) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbDeleteTeacher(firestore, schoolId, teacherId);
+      },
+      addCategory: (categoryData) => {
+         if (!firestore || !schoolId) return Promise.reject();
+        return dbAddCategory(firestore, schoolId, categoryData);
+      },
+      deleteCategory: (categoryId: string) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbDeleteCategory(firestore, schoolId, categoryId);
+      },
+      addPrize: (prizeData) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbAddPrize(firestore, schoolId, prizeData);
+      },
+      updatePrize: (prizeData) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbUpdatePrize(firestore, schoolId, prizeData);
+      },
+      deletePrize: (prizeId) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbDeletePrize(firestore, schoolId, prizeId);
+      },
+      addCoupons: (coupons) => {
+        if (!firestore || !schoolId) return Promise.resolve();
+        return dbAddCoupons(firestore, schoolId, coupons);
+      },
+      redeemCoupon: (studentId, couponCode) => {
+        if (!firestore || !schoolId) return Promise.resolve({success: false, message: 'Not logged in'});
+        return dbRedeemCoupon(firestore, schoolId, studentId, couponCode);
+      },
+      uploadStudents: (csvContent, currentStudents, allClasses) => {
+        if (!firestore || !schoolId) return Promise.resolve({success: 0, failed: 0, errors:['Not logged in']});
+        return dbUploadStudents(firestore, schoolId, csvContent, currentStudents, allClasses);
+      }
     }),
     [
-      isInitialized, loginState, schoolId,
+      isInitialized, loginState, schoolId, syncStatus,
       login, logout, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup
+      isAutoBackupEnabled, toggleAutoBackup, firestore,
+      addClass, deleteClass, addTeacher, deleteStudent
     ]
   );
 
