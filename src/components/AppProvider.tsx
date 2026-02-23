@@ -14,7 +14,7 @@ import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } fr
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFunctions } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -30,7 +30,7 @@ import {
   writeBatch,
   where,
 } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { httpsCallable } from "firebase/functions";
 import { INITIAL_DATA } from '@/lib/data';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
@@ -125,6 +125,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const playSound = useArcadeSound();
 
   // Restore session & settings
@@ -336,7 +337,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createBackup = useCallback(async () => {
     if (!schoolId) return;
-    const functions = getFunctions();
     const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
     try {
       await createBackupTrigger({ schoolId });
@@ -345,10 +345,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
     }
-  }, [schoolId, toast, playSound]);
+  }, [schoolId, toast, playSound, functions]);
 
   const devCreateBackup = useCallback(async (schoolId: string) => {
-    const functions = getFunctions();
     const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
     try {
       await createBackupTrigger({ schoolId });
@@ -357,7 +356,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
     }
-  }, [toast, playSound]);
+  }, [toast, playSound, functions]);
 
   const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
     if (!firestore) return;
@@ -876,7 +875,6 @@ const uploadStudents = useCallback(async (csvContent: string): Promise<{success:
 }, [db, firestore, schoolId, schoolDocRef, toast, createBackup, playSound, safeUpdate]);
 
 const migrateFunction = useCallback(async (schoolId: string, functionName: string) => {
-    const functions = getFunctions();
     const callableFunction = httpsCallable(functions, functionName);
     try {
       const result = await callableFunction({ schoolId });
@@ -885,7 +883,7 @@ const migrateFunction = useCallback(async (schoolId: string, functionName: strin
       console.error(error);
       toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
     }
-  }, [toast]);
+  }, [toast, functions]);
 
 const migrateStudents = (schoolId: string) => migrateFunction(schoolId, 'migrateStudentsToSubcollection');
 const migrateClasses = (schoolId: string) => migrateFunction(schoolId, 'migrateClassesToSubcollection');
