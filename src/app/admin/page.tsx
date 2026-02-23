@@ -180,16 +180,16 @@ function AdminDashboard() {
       return <AdminDashboardSkeleton />;
   }
 
-  const handleAddClass = async () => {
+  const handleAddClass = () => {
     if (!newClassName) return;
-    await addClass({ name: newClassName });
+    addClass({ name: newClassName });
     setNewClassName('');
     toast({ title: 'Class Added' });
   };
   
-  const handleAddTeacher = async () => {
+  const handleAddTeacher = () => {
     if (!newTeacherName) return;
-    await addTeacher({ name: newTeacherName });
+    addTeacher({ name: newTeacherName });
     setNewTeacherName('');
     toast({ title: 'Teacher / Faculty Added' });
   };

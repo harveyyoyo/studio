@@ -15,7 +15,7 @@ import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } fr
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirebase } from '@/firebase';
+import { useFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -59,9 +59,9 @@ interface AppContextType {
   addStudent: (student: Omit<Student, 'id' | 'history'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
-  addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
+  addClass: (newClass: Omit<Class, 'id'>) => void;
   deleteClass: (classId: string) => Promise<void>;
-  addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
+  addTeacher: (newTeacher: Omit<Teacher, 'id'>) => void;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   deleteCategory: (categoryName: string) => Promise<void>;
@@ -497,17 +497,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return db.classes?.find((c) => c.id === classId)?.name || 'Unassigned';
   }, [db.classes]);
 
-  const safeUpdate = useCallback(async (update: Record<string, any>) => {
-    if (!schoolDocRef) throw new Error("Not logged in");
-    try {
-      await updateDoc(schoolDocRef, update)
-      playSound('success');
-    } catch (e) {
-      console.error("Update failed:", e);
-      toast({ variant: "destructive", title: "Database Error", description: (e as Error).message });
-      playSound('error');
-      throw e; // Re-throw to be caught by caller if needed
+  const safeUpdate = useCallback((update: Record<string, any>) => {
+    if (!schoolDocRef) {
+      toast({ variant: "destructive", title: "Database Error", description: "Not logged in." });
+      return;
     }
+    updateDoc(schoolDocRef, update)
+      .then(() => {
+        playSound('success');
+      })
+      .catch((e) => {
+        playSound('error');
+        const permissionError = new FirestorePermissionError({
+          path: schoolDocRef.path,
+          operation: 'update',
+          requestResourceData: update,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   }, [schoolDocRef, playSound, toast]);
   
 const addStudent = useCallback(async (studentData: Omit<Student, 'id' | 'history'>) => {
@@ -555,21 +562,30 @@ const deleteStudent = useCallback(async (studentId: string) => {
 }, [schoolId, firestore, db.hasMigratedStudents, db.students, safeUpdate, toast]);
 
 
-const addClass = useCallback(async (classData: Omit<Class, 'id'>) => {
+const addClass = useCallback((classData: Omit<Class, 'id'>) => {
     if (db.classes?.some((c) => c.name.toLowerCase() === classData.name.toLowerCase())) {
         toast({variant: 'destructive', title: 'Class with this name already exists.'});
         return;
     }
-    try {
-      const newClass: Class = { ...classData, id: 'c' + Date.now() };
-      if (db.hasMigratedClasses) {
-          if (!schoolId || !firestore) return;
-          await setDoc(doc(firestore, 'schools', schoolId, 'classes', newClass.id), newClass);
-      } else {
-          await safeUpdate({ classes: arrayUnion(newClass) });
-      }
-    } catch (e) { /* error handled by safeUpdate */ }
-}, [db.classes, db.hasMigratedClasses, safeUpdate, toast, schoolId, firestore]);
+    const newClass: Class = { ...classData, id: 'c' + Date.now() };
+    if (db.hasMigratedClasses) {
+        if (!schoolId || !firestore) return;
+        const classDocRef = doc(firestore, 'schools', schoolId, 'classes', newClass.id);
+        setDoc(classDocRef, newClass)
+          .then(() => playSound('success'))
+          .catch(e => {
+            playSound('error');
+            const permissionError = new FirestorePermissionError({
+                path: classDocRef.path,
+                operation: 'create',
+                requestResourceData: newClass,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
+    } else {
+        safeUpdate({ classes: arrayUnion(newClass) });
+    }
+}, [db.classes, db.hasMigratedClasses, safeUpdate, toast, schoolId, firestore, playSound]);
 
 const deleteClass = useCallback(async (classId: string) => {
     if (!schoolId || !firestore || !schoolDocRef) return;
@@ -596,21 +612,30 @@ const deleteClass = useCallback(async (classId: string) => {
 }, [db, schoolId, firestore, schoolDocRef, updateDb, playSound, toast]);
 
   
-const addTeacher = useCallback(async (teacherData: Omit<Teacher, 'id'>) => {
+const addTeacher = useCallback((teacherData: Omit<Teacher, 'id'>) => {
     if (db.teachers?.some((t) => t.name.toLowerCase() === teacherData.name.toLowerCase())) {
         toast({variant: 'destructive', title: 'Teacher with this name already exists.'});
         return;
     }
-    try {
-      const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
-      if (db.hasMigratedTeachers) {
-        if (!schoolId || !firestore) return;
-        await setDoc(doc(firestore, 'schools', schoolId, 'teachers', newTeacher.id), newTeacher);
-      } else {
-        await safeUpdate({ teachers: arrayUnion(newTeacher) });
-      }
-    } catch (e) { /* error handled by safeUpdate */ }
-}, [db.teachers, db.hasMigratedTeachers, safeUpdate, toast, schoolId, firestore]);
+    const newTeacher: Teacher = { ...teacherData, id: 't' + Date.now() };
+    if (db.hasMigratedTeachers) {
+      if (!schoolId || !firestore) return;
+      const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', newTeacher.id);
+      setDoc(teacherDocRef, newTeacher)
+        .then(() => playSound('success'))
+        .catch(e => {
+          playSound('error');
+          const permissionError = new FirestorePermissionError({
+              path: teacherDocRef.path,
+              operation: 'create',
+              requestResourceData: newTeacher,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+    } else {
+      safeUpdate({ teachers: arrayUnion(newTeacher) });
+    }
+}, [db.teachers, db.hasMigratedTeachers, safeUpdate, toast, schoolId, firestore, playSound]);
 
 const deleteTeacher = useCallback(async (teacherId: string) => {
     try {
