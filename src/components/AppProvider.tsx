@@ -14,7 +14,7 @@ import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize, Cat
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useMemoFirebase } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -51,7 +51,7 @@ interface AppContextType {
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
-  deleteClass: (classId: string) => Promise<void>;
+  deleteClass: (classId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: { name: string; points: number }) => Promise<Category | undefined>;
@@ -71,7 +71,7 @@ interface AppContextType {
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
-  uploadStudents: (csvContent: string) => Promise<{success: number, failed: number, errors: string[]}>;
+  uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{success: number, failed: number, errors: string[]}>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -147,8 +147,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                sessionStorage.setItem('loginState', 'school');
                sessionStorage.setItem('schoolId', lowerSchoolId);
                const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-               // Non-blocking write. If it fails due to rules not being ready, it's okay for dev.
-               setDoc(adminRoleRef, { role: 'admin' }).catch(e => console.warn("Could not set admin role, maybe already set?", e));
+               setDoc(adminRoleRef, { role: 'admin' }).catch(e => console.warn("Could not set admin role, maybe already set or rules are not ready?", e));
                return true;
             }
           } catch(e) {
@@ -269,9 +268,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
     if (!firestore) return;
-    await devCreateBackup(schoolId);
-    toast({ title: "Pre-Restore Backup Created", description: "A backup of the current state has been saved." });
-
+    
     const schoolDocRef = doc(firestore, 'schools', schoolId);
     const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
     try {
@@ -355,101 +352,83 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [firestore, playSound, toast]);
 
   const addStudent_ = useCallback((studentData: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddStudent(firestore, schoolId, studentData);
   }, [firestore, schoolId]);
 
   const updateStudent_ = useCallback((student: Student) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbUpdateStudent(firestore, schoolId, student);
   }, [firestore, schoolId]);
   
   const deleteStudent_ = useCallback((studentId: string) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbDeleteStudent(firestore, schoolId, studentId);
   }, [firestore, schoolId]);
 
   const addClass_ = useCallback((classData: Omit<Class, 'id'>) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddClass(firestore, schoolId, classData);
   }, [firestore, schoolId]);
 
-  const deleteClass_ = useCallback(() => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
-    // This needs the full student list, which the context doesn't have.
-    // This is a good candidate for moving logic into the component that calls it.
-    console.error("deleteClass from context is deprecated. Call it from the component.");
-    return Promise.resolve();
+  const deleteClass_ = useCallback((classId: string, students: Student[]) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbDeleteClass(firestore, schoolId, classId, students);
   }, [firestore, schoolId]);
 
   const addTeacher_ = useCallback((teacherData: Omit<Teacher, 'id'>) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddTeacher(firestore, schoolId, teacherData);
   }, [firestore, schoolId]);
   
   const deleteTeacher_ = useCallback((teacherId: string) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbDeleteTeacher(firestore, schoolId, teacherId);
   }, [firestore, schoolId]);
   
-  const addCategory_ = useCallback((categoryData: { name: string; points: number }) => {
-    if (!schoolId) return Promise.resolve(undefined);
-    return Promise.resolve(dbAddCategory(firestore, schoolId, categoryData));
+  const addCategory_ = useCallback(async (categoryData: { name: string; points: number }) => {
+    if (!firestore || !schoolId) return undefined;
+    return await dbAddCategory(firestore, schoolId, categoryData);
   }, [firestore, schoolId]);
   
   const deleteCategory_ = useCallback((categoryId: string) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbDeleteCategory(firestore, schoolId, categoryId);
   }, [firestore, schoolId]);
   
   const addCoupons_ = useCallback((newCoupons: Coupon[]) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddCoupons(firestore, schoolId, newCoupons);
   }, [firestore, schoolId]);
 
   const redeemCoupon_ = useCallback(async (studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
-    if (!schoolId) return { success: false, message: 'Not logged in.' };
-    try {
-      const value = await dbRedeemCoupon(firestore, schoolId, studentId, couponCode);
-      playSound('redeem');
-      return { success: true, message: 'Coupon redeemed!', value };
-    } catch(e) {
-      playSound('error');
-      return { success: false, message: (e as Error).message };
-    }
+    if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
+    return dbRedeemCoupon(firestore, schoolId, studentId, couponCode);
   }, [firestore, schoolId, playSound]);
 
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
-    try {
-      await dbRedeemPrize(firestore, schoolId, studentId, prize);
-      playSound('redeem');
-    } catch(e) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Redemption Failed', description: (e as Error).message });
-    }
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbRedeemPrize(firestore, schoolId, studentId, prize);
   }, [firestore, schoolId, playSound, toast]);
 
   const addPrize_ = useCallback((prizeData: Omit<Prize, 'id'>) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddPrize(firestore, schoolId, prizeData);
   }, [firestore, schoolId]);
 
   const updatePrize_ = useCallback((updatedPrize: Prize) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbUpdatePrize(firestore, schoolId, updatedPrize);
   }, [firestore, schoolId]);
   
   const deletePrize_ = useCallback((prizeId: string) => {
-    if (!schoolId) return Promise.reject("Not logged into a school.");
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbDeletePrize(firestore, schoolId, prizeId);
   }, [firestore, schoolId]);
 
-  const uploadStudents_ = useCallback((csvContent: string) => {
-    if (!schoolId) return Promise.resolve({success: 0, failed: 0, errors: ["Not logged in."]});
-    // This needs the full student/class list, move to component.
-    console.error("uploadStudents from context is deprecated. Call it from the component.");
-    return Promise.resolve({success: 0, failed: 0, errors: ["Function deprecated."]});
+  const uploadStudents_ = useCallback((csvContent: string, currentStudents: Student[], allClasses: Class[]) => {
+    if (!firestore || !schoolId) return Promise.resolve({success: 0, failed: 0, errors: ["Not logged in."]});
+    return dbUploadStudents(firestore, schoolId, csvContent, currentStudents, allClasses);
   }, [firestore, schoolId]);
 
   const toggleAutoBackup = useCallback(() => {
@@ -549,7 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <AppContext.Provider value={value as any}>
+    <AppContext.Provider value={value}>
       {children}
       {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
       {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} />}

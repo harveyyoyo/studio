@@ -153,6 +153,7 @@ export default function LoginPage() {
                   <div className="space-y-1">
                     <div className="flex justify-between"><span>ID: schoolabc</span><span>Pass: 1234</span></div>
                     <div className="flex justify-between"><span>ID: yeshiva</span><span>Pass: 1234</span></div>
+                     <div className="flex justify-between"><span>ID: elisheva</span><span>Pass: 1234</span></div>
                   </div>
                 </AlertDescription>
               </Alert>

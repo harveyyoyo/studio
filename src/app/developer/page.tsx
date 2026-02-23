@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDoc, query, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, HelpCircle, LifeBuoy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 interface SchoolInfo {
@@ -160,6 +161,10 @@ export default function DeveloperPage() {
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
+  
+  const [orphanSchoolId, setOrphanSchoolId] = useState('');
+  const [latestBackup, setLatestBackup] = useState<{id: string} | null>(null);
+  const [isFindingBackup, setIsFindingBackup] = useState(false);
 
   const schoolsQuery = useMemoFirebase(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
@@ -190,6 +195,36 @@ export default function DeveloperPage() {
     createSampleSchoolIfNeeded('yeshiva');
     createSampleSchoolIfNeeded('schoolabc');
   }, [loginState, firestore, createSchool]);
+  
+  const handleFindLatestBackup = async () => {
+    if (!firestore || !orphanSchoolId) return;
+    setIsFindingBackup(true);
+    setLatestBackup(null);
+    try {
+        const backupsRef = collection(firestore, 'schools', orphanSchoolId, 'backups');
+        const q = query(backupsRef, orderBy('__name__', 'desc'), limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            toast({ variant: 'destructive', title: 'No Backups Found', description: `No backups were found for school ID "${orphanSchoolId}". A backup must exist to restore data.` });
+        } else {
+            const backupDoc = snapshot.docs[0];
+            setLatestBackup({ id: backupDoc.id });
+        }
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Error Finding Backup', description: (e as Error).message });
+    } finally {
+        setIsFindingBackup(false);
+    }
+  }
+
+  const handleRestoreOrphan = async () => {
+    if (!orphanSchoolId || !latestBackup) return;
+    await devRestoreFromBackup(orphanSchoolId, latestBackup.id);
+    toast({ title: 'Restore Complete!', description: `The school "${orphanSchoolId}" should now appear in the main list below.`});
+    setOrphanSchoolId('');
+    setLatestBackup(null);
+  }
 
   const handleCreateSchool = async () => {
       if(!newSchoolId) {
@@ -284,6 +319,55 @@ export default function DeveloperPage() {
                   <p className="text-slate-400 text-sm">Manage all school databases.</p>
               </div>
           </Card>
+          
+          <Alert variant="destructive" className="border-2">
+            <LifeBuoy className="h-4 w-4" />
+            <AlertTitle className="font-bold">Emergency Data Recovery</AlertTitle>
+            <AlertDescription>
+                If a school was accidentally deleted, you can attempt to restore it here. This will only work if a backup exists. A backup is automatically created before any deletion.
+            </AlertDescription>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 items-start">
+              <div className="flex-grow w-full sm:w-auto">
+                <Label htmlFor="orphan-id" className="font-bold">Orphaned School ID</Label>
+                <Input 
+                  id="orphan-id" 
+                  placeholder="e.g. elisheva" 
+                  value={orphanSchoolId} 
+                  onChange={e => setOrphanSchoolId(e.target.value.trim().toLowerCase())}
+                />
+              </div>
+              <div className="self-end h-full">
+                <Button onClick={handleFindLatestBackup} disabled={!orphanSchoolId || isFindingBackup}>
+                  {isFindingBackup ? "Searching..." : "Find Latest Backup"}
+                </Button>
+              </div>
+            </div>
+            {latestBackup && (
+              <div className="mt-4 p-4 bg-secondary rounded-lg flex flex-col sm:flex-row justify-between items-center">
+                <div>
+                  <p className="font-bold">Latest Backup Found!</p>
+                  <p className="text-sm font-code">Date: {new Date(parseInt(latestBackup.id)).toLocaleString()}</p>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button>Restore This Backup</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will restore the school '{orphanSchoolId}' using the backup from {new Date(parseInt(latestBackup.id)).toLocaleString()}. The school will reappear in the list below.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleRestoreOrphan}>Restore</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </Alert>
 
           <Card>
             <CardHeader>
@@ -403,7 +487,7 @@ export default function DeveloperPage() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{school.id}</span>.
+                                        This action cannot be undone. This will permanently delete the school database for <span className="font-bold font-code">{school.id}</span>. A final backup will be created automatically.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
