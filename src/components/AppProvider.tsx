@@ -141,7 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // We have a stored app session, ensure we have a Firebase session too.
         try {
           if (!auth.currentUser) {
-            // await signInAnonymously(auth);
+            await signInAnonymously(auth);
           }
           // Now that Firebase auth is confirmed, set the app's state from session storage
           setLoginState(savedState as LoginState);
@@ -286,7 +286,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const performAuth = async () => {
         try {
           if (!auth.currentUser) {
-            // await signInAnonymously(auth);
+            await signInAnonymously(auth);
           }
           return true;
         } catch (error) {
