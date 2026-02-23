@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -108,7 +108,7 @@ function StudentDashboard({
   onDone,
 }: {
   studentId: string;
-  onDone: () => void;
+  onDone: () => void
 }) {
   const { redeemCoupon, schoolId } = useAppContext();
   const firestore = useFirestore();
@@ -182,32 +182,32 @@ function StudentDashboard({
     if (activeTab !== 'camera') {
       return;
     }
-    
+
     const codeReader = new BrowserMultiFormatReader();
     let controls: IScannerControls | null = null;
-    
+
     const startScan = async () => {
       try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
-            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
+        const rearCamera = videoInputDevices.find(device => /back|rear|environment/i.test(device.label)) 
+            || videoInputDevices[0];
             
-        const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
-
-        if (!deviceId) {
+        if (!rearCamera) {
+          setHasCameraPermission(false);
           throw new Error("No camera device found.");
         }
 
         if (videoRef.current) {
-            controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error) => {
+          controls = await codeReader.decodeFromVideoDevice(rearCamera.deviceId, videoRef.current, (result, error) => {
             if (result) {
-                handleRedeemCoupon(result.getText());
+              handleRedeemCoupon(result.getText());
             }
+            // NotFoundException is thrown when no barcode is found in a frame. This is normal.
             if (error && error.name !== 'NotFoundException') {
-                console.error(error);
+              console.error('Coupon scan error:', error);
             }
-            });
-            setHasCameraPermission(true);
+          });
+          setHasCameraPermission(true);
         }
       } catch (error: any) {
         console.error('Camera setup failed:', error);
@@ -222,7 +222,7 @@ function StudentDashboard({
           toast({
             variant: 'destructive',
             title: 'Camera Error',
-            description: 'Could not initialize the camera. It might be in use by another application.',
+            description: 'Could not initialize camera. It may be in use or not supported.',
           });
         }
         setActiveTab('manual');
@@ -232,7 +232,9 @@ function StudentDashboard({
     startScan();
 
     return () => {
-      controls?.stop();
+      if (controls) {
+        controls.stop();
+      }
     };
   }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
   
@@ -506,19 +508,18 @@ export default function StudentLoginPage() {
     const startScan = async () => {
        try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
-            || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
-            
-        const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
+        const rearCamera = videoInputDevices.find(device => /back|rear|environment/i.test(device.label)) 
+            || videoInputDevices[0];
 
-        if (!deviceId) {
+        if (!rearCamera) {
+          setHasCameraPermission(false);
           throw new Error("No camera device found.");
         }
 
         if (videoRef.current) {
-            controls = await codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error) => {
+            controls = await codeReader.decodeFromVideoDevice(rearCamera.deviceId, videoRef.current, (result, error) => {
                 if (result) {
-                handleNfcSubmit(result.getText());
+                  handleNfcSubmit(result.getText());
                 }
                 if (error && error.name !== 'NotFoundException') {
                     console.error('Login scan error:', error);
@@ -539,7 +540,7 @@ export default function StudentLoginPage() {
              toast({
                 variant: 'destructive',
                 title: 'Camera Error',
-                description: 'Could not initialize the camera. It might be in use by another application.',
+                description: 'Could not initialize camera. It may be in use or not supported.',
             });
         }
         setLoginTab('nfc');
@@ -549,7 +550,9 @@ export default function StudentLoginPage() {
     startScan();
 
     return () => {
-      controls?.stop();
+      if (controls) {
+        controls.stop();
+      }
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast, setLoginTab]);
 
@@ -680,3 +683,5 @@ export default function StudentLoginPage() {
     </TooltipProvider>
   );
 }
+
+    
