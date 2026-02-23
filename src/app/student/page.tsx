@@ -132,6 +132,8 @@ function StudentDashboard({
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const codeReaderRef = useRef(new BrowserMultiFormatReader());
+
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
@@ -182,52 +184,72 @@ function StudentDashboard({
     if (activeTab !== 'camera') {
       return;
     }
+    
+    let stream: MediaStream | null = null;
+    let isMounted = true;
 
-    const codeReader = new BrowserMultiFormatReader();
-    const controlsPromise = (async (): Promise<IScannerControls | null> => {
+    const startScan = async () => {
       try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
             || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
-            
-        const selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
+        
+        const selectedDeviceId = rearCamera?.deviceId || videoInputDevices[0]?.deviceId;
 
         if (!selectedDeviceId) {
             throw new Error("No video input devices found.");
         }
-        
-        if (!videoRef.current) {
-            return null;
-        }
 
-        setHasCameraPermission(true);
-        return codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
-          if (result) {
-            handleRedeemCoupon(result.getText());
-          }
-          if (error && error.name !== 'NotFoundException') {
-            console.error('Coupon scan error:', error);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: selectedDeviceId },
+            facingMode: 'environment'
           }
         });
+        
+        if (videoRef.current && isMounted) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = async () => {
+            if (videoRef.current && isMounted) {
+               try {
+                await videoRef.current.play();
+                codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
+                  if (result && isMounted) {
+                    handleRedeemCoupon(result.getText());
+                  }
+                  if (error && error.name !== 'NotFoundException') {
+                    console.error('Coupon scan error:', error);
+                  }
+                });
+               } catch (e) {
+                 console.error("Video play failed", e)
+               }
+            }
+          };
+          setHasCameraPermission(true);
+        }
       } catch (err: any) {
         console.error('Coupon scan failed:', err);
         setHasCameraPermission(false);
-        if (activeTab === 'camera') setActiveTab('manual');
-        toast({
-          variant: 'destructive',
-          title: 'Camera Error',
-          description: err.message || 'Could not access the camera. Please check permissions.',
-        });
-        return null;
+        if (isMounted) {
+          if (activeTab === 'camera') setActiveTab('manual');
+          toast({
+            variant: 'destructive',
+            title: 'Camera Error',
+            description: err.message || 'Could not access the camera. Please check permissions.',
+          });
+        }
       }
-    })();
+    };
+    
+    startScan();
 
     return () => {
-      controlsPromise.then(controls => {
-        if (controls) {
-          controls.stop();
-        }
-      });
+      isMounted = false;
+      codeReaderRef.current.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [activeTab, handleRedeemCoupon, toast]);
   
@@ -446,6 +468,8 @@ export default function StudentLoginPage() {
   const [loginTab, setLoginTab] = useState('nfc');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
+  const codeReaderRef = useRef(new BrowserMultiFormatReader());
+
 
   useEffect(() => {
     if (isInitialized && loginState !== 'school') {
@@ -495,51 +519,71 @@ export default function StudentLoginPage() {
       return;
     }
     
-    const codeReader = new BrowserMultiFormatReader();
-    const controlsPromise = (async (): Promise<IScannerControls | null> => {
+    let stream: MediaStream | null = null;
+    let isMounted = true;
+
+    const startScan = async () => {
        try {
         const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) 
             || videoInputDevices.find(device => device.label.toLowerCase().includes('environment'));
             
-        const selectedDeviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0]?.deviceId;
+        const selectedDeviceId = rearCamera?.deviceId || videoInputDevices[0]?.deviceId;
 
         if (!selectedDeviceId) {
             throw new Error("No video input devices found.");
         }
-        
-        if (!videoRef.current) {
-            return null;
-        }
 
-        setHasCameraPermission(true);
-        return codeReader.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
-          if (result) {
-            handleNfcSubmit(result.getText());
-          }
-          if (error && error.name !== 'NotFoundException') {
-            console.error('Login scan error:', error);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: { exact: selectedDeviceId },
+            facingMode: 'environment'
           }
         });
+        
+        if (videoRef.current && isMounted) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = async () => {
+            if(videoRef.current && isMounted) {
+              try {
+                await videoRef.current.play();
+                codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
+                  if (result && isMounted) {
+                    handleNfcSubmit(result.getText());
+                  }
+                  if (error && error.name !== 'NotFoundException') {
+                    console.error('Login scan error:', error);
+                  }
+                });
+              } catch(e) {
+                console.error("Video play failed", e);
+              }
+            }
+          };
+          setHasCameraPermission(true);
+        }
       } catch (err: any) {
         console.error("Login camera initialization error:", err);
         setHasCameraPermission(false);
-        if(loginTab === 'camera') setLoginTab('nfc');
-        toast({
-            variant: 'destructive',
-            title: 'Camera Error',
-            description: err.message || 'Could not access the camera. Please check permissions.',
-        });
-        return null;
+        if (isMounted) {
+            if(loginTab === 'camera') setLoginTab('nfc');
+            toast({
+                variant: 'destructive',
+                title: 'Camera Error',
+                description: err.message || 'Could not access the camera. Please check permissions.',
+            });
+        }
       }
-    })();
+    };
+
+    startScan();
     
     return () => {
-      controlsPromise.then(controls => {
-        if (controls) {
-          controls.stop();
-        }
-      });
+      isMounted = false;
+      codeReaderRef.current.reset();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
 
@@ -670,3 +714,5 @@ export default function StudentLoginPage() {
     </TooltipProvider>
   );
 }
+
+    
