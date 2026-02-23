@@ -17,21 +17,30 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 
 // --- Student Mutations ---
-export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'lifetimePoints'>) => {
-  const newStudent: Student = { ...studentData, lifetimePoints: studentData.points };
-  const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
-  setDoc(studentDocRef, newStudent)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: studentDocRef.path,
-          operation: 'create',
-          requestResourceData: newStudent,
-        })
-      )
-    });
+export const addStudent = (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
+    const newStudentId = Math.floor(10000000 + Math.random() * 90000000).toString();
+    const newStudent: Student = { 
+        ...studentData, 
+        id: newStudentId, 
+        nfcId: studentData.nfcId || newStudentId, 
+        points: studentData.points || 0,
+        lifetimePoints: studentData.points || 0,
+        history: [],
+    };
+    const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
+    setDoc(studentDocRef, newStudent)
+        .catch(error => {
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+            path: studentDocRef.path,
+            operation: 'create',
+            requestResourceData: newStudent,
+            })
+        )
+        });
 };
+
 
 export const updateStudent = async (firestore: Firestore, schoolId: string, student: Student) => {
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
@@ -156,7 +165,7 @@ export const deleteTeacher = (firestore: Firestore, schoolId: string, teacherId:
 };
 
 // --- Category Mutations ---
-export const addCategory = (firestore: Firestore, schoolId: string, categoryData: { name: string, points: number }): Category => {
+export const addCategory = (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number }): Category => {
     const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const newCategory: Category = { ...categoryData, id: newId };
     const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);
@@ -258,7 +267,7 @@ export const addCoupons = async (firestore: Firestore, schoolId: string, newCoup
     }
 };
 
-export const redeemCoupon = async (firestore: Firestore, schoolId: string, studentId: string, couponCode: string): Promise<number> => {
+export const redeemCoupon = async (firestore: Firestore, schoolId: string, studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
     const couponRef = doc(firestore, 'schools', schoolId, 'coupons', couponCode.toUpperCase());
     const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
 
@@ -301,8 +310,8 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
 
             return coupon.value;
         });
-        return couponValue;
-    } catch (e) {
+        return { success: true, message: "Redeemed successfully", value: couponValue };
+    } catch (e: any) {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
@@ -311,7 +320,7 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
           requestResourceData: { studentId, couponCode },
         })
       );
-      throw e;
+      return { success: false, message: e.message || 'An error occurred.' };
     }
 };
 
@@ -388,6 +397,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
         do {
             newStudentId = Math.floor(10000000 + Math.random() * 90000000).toString();
         } while (existingNfcIds.has(newStudentId));
+        existingNfcIds.add(newStudentId);
 
         const classObj = allClasses.find(c => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase());
 
@@ -405,7 +415,6 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
         const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
         batch.set(studentDocRef, newStudent);
         
-        existingNfcIds.add(newStudent.id);
         successCount++;
     });
 

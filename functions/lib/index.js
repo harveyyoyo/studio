@@ -227,4 +227,42 @@ exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, cont
         throw new functions.https.HttpsError("internal", "An unexpected error occurred during migration.");
     }
 });
+exports.migrateCategoriesToSubcollection = functions.https.onCall(async (data, context) => {
+    const schoolId = data.schoolId;
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    if (typeof schoolId !== "string" || schoolId.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
+    }
+    const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
+    try {
+        const schoolSnap = await schoolDocRef.get();
+        if (!schoolSnap.exists) {
+            throw new functions.https.HttpsError("not-found", "School not found.");
+        }
+        const schoolData = schoolSnap.data();
+        if (schoolData.hasMigratedCategories) {
+            return { success: true, message: "Categories have already been migrated." };
+        }
+        const categories = schoolData.categories || [];
+        if (categories.length === 0) {
+            await schoolDocRef.update({ hasMigratedCategories: true });
+            return { success: true, message: "No categories to migrate." };
+        }
+        const batch = admin.firestore().batch();
+        const categoriesCollectionRef = schoolDocRef.collection("categories");
+        categories.forEach((c) => {
+            const categoryDocRef = categoriesCollectionRef.doc(c.id);
+            batch.set(categoryDocRef, c);
+        });
+        batch.update(schoolDocRef, { hasMigratedCategories: true, categories: admin.firestore.FieldValue.delete() });
+        await batch.commit();
+        return { success: true, message: `Migrated ${categories.length} categories.` };
+    }
+    catch (error) {
+        console.error("Migration failed:", error);
+        throw new functions.https.HttpsError("internal", "An unexpected error occurred during migration.");
+    }
+});
 //# sourceMappingURL=index.js.map

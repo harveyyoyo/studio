@@ -72,6 +72,7 @@ interface AppContextType {
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{success: number, failed: number, errors: string[]}>;
+  devMigrateSchoolData: (schoolId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -286,7 +287,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Restore Failed', description: (e as Error).message });
     }
-  }, [firestore, playSound, toast, devCreateBackup]);
+  }, [firestore, playSound, toast]);
 
   const devDownloadBackup = useCallback(async (schoolId: string, backupId: string) => {
     if (!firestore) return;
@@ -440,6 +441,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [toast]);
 
+  const devMigrateSchoolData = useCallback(async (schoolId: string) => {
+    if (!functions) return;
+    
+    const migrationFunctions = [
+        'migrateStudentsToSubcollection',
+        'migrateClassesToSubcollection',
+        'migrateTeachersToSubcollection',
+        'migratePrizesToSubcollection',
+        'migrateCouponsToSubcollection',
+        'migrateCategoriesToSubcollection'
+    ];
+
+    toast({ title: `Starting data migration for ${schoolId}...`, description: "This may take a moment." });
+
+    try {
+        for (const funcName of migrationFunctions) {
+            const callable = httpsCallable(functions, funcName);
+            const result = await callable({ schoolId });
+            console.log(`${funcName} result:`, result.data);
+        }
+        toast({ title: "Migration Complete!", description: `Data for ${schoolId} has been migrated to the new structure.` });
+        playSound('success');
+    } catch (error) {
+        console.error("Data migration failed:", error);
+        toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
+        playSound('error');
+    }
+  }, [functions, toast, playSound]);
+
   useEffect(() => {
     if (loginState !== 'developer' || !isAutoBackupEnabled) return;
 
@@ -515,6 +545,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updatePrize: updatePrize_,
       deletePrize: deletePrize_,
       uploadStudents: uploadStudents_,
+      devMigrateSchoolData,
     }),
     [
       isInitialized, loginState, schoolId, syncStatus,
@@ -523,7 +554,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addClass_, deleteClass_, addTeacher_, deleteTeacher_, addCategory_, deleteCategory_, addCoupons_,
       redeemCoupon_, redeemPrize_, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup, addPrize_, updatePrize_, deletePrize_, uploadStudents_
+      isAutoBackupEnabled, toggleAutoBackup, addPrize_, updatePrize_, deletePrize_, uploadStudents_,
+      devMigrateSchoolData
     ]
   );
 

@@ -5,7 +5,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, getDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, HelpCircle, LifeBuoy,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, HelpCircle, LifeBuoy, RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -147,7 +147,7 @@ export default function DeveloperPage() {
   const { 
       loginState, isInitialized, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup
+      isAutoBackupEnabled, toggleAutoBackup, devMigrateSchoolData
     } = useAppContext();
   const firestore = useFirestore();
   const router = useRouter();
@@ -221,7 +221,7 @@ export default function DeveloperPage() {
   const handleRestoreOrphan = async () => {
     if (!orphanSchoolId || !latestBackup) return;
     await devRestoreFromBackup(orphanSchoolId, latestBackup.id);
-    toast({ title: 'Restore Complete!', description: `The school "${orphanSchoolId}" should now appear in the main list below.`});
+    toast({ title: 'Restore Complete!', description: `The school "${orphanSchoolId}" should now appear in the main list below. You may need to run the data migration tool on it.`});
     setOrphanSchoolId('');
     setLatestBackup(null);
   }
@@ -324,7 +324,7 @@ export default function DeveloperPage() {
             <LifeBuoy className="h-4 w-4" />
             <AlertTitle className="font-bold">Emergency Data Recovery</AlertTitle>
             <AlertDescription>
-                If a school was accidentally deleted, you can attempt to restore it here. This will only work if a backup exists. A backup is automatically created before any deletion.
+                If a school was accidentally deleted or its data overwritten, you can attempt to restore it here. This will restore the main school document from its most recent backup. You may then need to use the "Migrate Data" tool on the school.
             </AlertDescription>
             <div className="mt-4 flex flex-col sm:flex-row gap-2 items-start">
               <div className="flex-grow w-full sm:w-auto">
@@ -356,7 +356,7 @@ export default function DeveloperPage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will restore the school '{orphanSchoolId}' using the backup from {new Date(parseInt(latestBackup.id)).toLocaleString()}. The school will reappear in the list below.
+                        This will restore the school document '{orphanSchoolId}' using the backup from {new Date(parseInt(latestBackup.id)).toLocaleString()}. The school will reappear in the list below.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -450,6 +450,32 @@ export default function DeveloperPage() {
                                 <p className="text-sm text-muted-foreground">{school.name}</p>
                               </div>
                               <div className="flex items-center gap-0.5">
+                                 <AlertDialog>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <RefreshCw className="w-4 h-4 text-orange-500" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Migrate school data to new structure.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Migrate Data for {school.id}?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will run scripts to move data from the main document to subcollections. Run this if the school's data is not showing up correctly after a restore. This action is safe to run multiple times.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => devMigrateSchoolData(school.id)}>Migrate</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenBackupModal(school)}>
