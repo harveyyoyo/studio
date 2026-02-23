@@ -11,7 +11,7 @@ import React, {
   useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize } from '@/lib/types';
+import type { Database, Student, Class, Coupon, HistoryItem, Teacher, Prize, Category } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
@@ -63,8 +63,8 @@ interface AppContextType {
   deleteClass: (classId: string) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => void;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: string) => Promise<void>;
-  deleteCategory: (categoryName: string) => Promise<void>;
+  addCategory: (category: { name: string; points: number; }) => Promise<Category | null>;
+  deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
@@ -655,21 +655,30 @@ const deleteTeacher = useCallback(async (teacherId: string) => {
     }
 }, [db.teachers, db.hasMigratedTeachers, safeUpdate, schoolId, firestore, toast]);
 
-  const addCategory = useCallback(async (newCategory: string) => {
-    if (db.categories?.map((c) => c.toLowerCase()).includes(newCategory.toLowerCase())) {
-        toast({ variant: 'destructive', title: 'Category already exists.' });
-        return;
+  const addCategory = useCallback(async (categoryData: { name: string; points: number }): Promise<Category | null> => {
+    if (db.categories?.some((c) => c.name.toLowerCase() === categoryData.name.toLowerCase())) {
+        toast({variant: 'destructive', title: 'Category with this name already exists.'});
+        return null;
     }
+    const newCategory: Category = { ...categoryData, id: 'cat' + Date.now() };
     try {
       await safeUpdate({ categories: arrayUnion(newCategory) });
-    } catch(e) { /* error handled by safeUpdate */ }
+      return newCategory;
+    } catch(e) { /* error handled by safeUpdate */ 
+      return null;
+    }
   }, [db.categories, safeUpdate, toast]);
 
-  const deleteCategory = useCallback(async (categoryName: string) => {
+  const deleteCategory = useCallback(async (categoryId: string) => {
     try {
-      await safeUpdate({ categories: arrayRemove(categoryName) });
+      const categoryToDelete = db.categories.find(c => c.id === categoryId);
+      if (!categoryToDelete) {
+          toast({ variant: 'destructive', title: 'Category not found.' });
+          return;
+      }
+      await safeUpdate({ categories: arrayRemove(categoryToDelete) });
     } catch(e) { /* error handled by safeUpdate */ }
-  }, [safeUpdate]);
+  }, [db.categories, safeUpdate, toast]);
 
 const addCoupons = useCallback(async (newCoupons: Coupon[]) => {
     if (!schoolId || !firestore) return;

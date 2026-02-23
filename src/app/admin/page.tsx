@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Database as DbInfo } from '@/lib/types';
+import type { Student, Prize, Coupon, Database as DbInfo, Category } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -137,6 +137,7 @@ function AdminDashboard() {
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryPoints, setNewCategoryPoints] = useState('10');
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -145,11 +146,12 @@ function AdminDashboard() {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   const [printTeacher, setPrintTeacher] = useState('Admin');
-  const [printCategory, setPrintCategory] = useState('');
+  const [printCategoryId, setPrintCategoryId] = useState('');
   const [printValue, setPrintValue] = useState('10');
   
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
+  const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
   const [uploadReport, setUploadReport] = useState<{success: number, failed: number, errors: string[]} | null>(null);
 
@@ -171,41 +173,99 @@ function AdminDashboard() {
   }, [isDbLoading, backups, createBackup, toast]);
 
   useEffect(() => {
-    if (db.categories?.length > 0 && !printCategory) {
-      setPrintCategory(db.categories[0]);
+    if (db.categories?.length > 0 && !printCategoryId) {
+      setPrintCategoryId(db.categories[0].id);
     }
-  }, [db.categories, printCategory]);
+  }, [db.categories, printCategoryId]);
+
+  useEffect(() => {
+    const category = db.categories?.find(c => c.id === printCategoryId);
+    if(category) {
+        setPrintValue(category.points.toString());
+    }
+  }, [printCategoryId, db.categories]);
+
 
   if (isDbLoading) {
       return <AdminDashboardSkeleton />;
   }
 
   const handleAddClass = () => {
-    if (!newClassName) return;
+    if (!newClassName) {
+      toast({
+        variant: 'destructive',
+        title: 'Class Name Required',
+        description: 'Please enter a name for the new class.',
+      });
+      return;
+    }
     addClass({ name: newClassName });
     setNewClassName('');
     toast({ title: 'Class Added' });
   };
   
   const handleAddTeacher = () => {
-    if (!newTeacherName) return;
+    if (!newTeacherName) {
+      toast({
+        variant: 'destructive',
+        title: 'Teacher Name Required',
+        description: 'Please enter a name for the new teacher.',
+      });
+      return;
+    }
     addTeacher({ name: newTeacherName });
     setNewTeacherName('');
     toast({ title: 'Teacher / Faculty Added' });
   };
 
   const handleAddCategory = async () => {
-    if (!newCategoryName) return;
-    await addCategory(newCategoryName);
+    if (!newCategoryName || !newCategoryPoints) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please provide a name and point value for the category.',
+      });
+      return;
+    }
+    const points = parseInt(newCategoryPoints);
+     if (isNaN(points) || points <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Points',
+        description: 'Points must be a positive number.',
+      });
+      return;
+    }
+    await addCategory({ name: newCategoryName, points });
     setNewCategoryName('');
+    setNewCategoryPoints('10');
     toast({ title: 'Category Added' });
   };
 
   const handleAddPrintCategory = async () => {
-    if (!newPrintCategoryName) return;
-    await addCategory(newPrintCategoryName);
-    setPrintCategory(newPrintCategoryName);
+    if (!newPrintCategoryName || !newPrintCategoryPoints) {
+       toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please provide a name and point value for the category.',
+      });
+      return;
+    }
+    const points = parseInt(newPrintCategoryPoints);
+    if (isNaN(points) || points <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Points',
+        description: 'Points must be a positive number.',
+      });
+      return;
+    }
+    const newCategory = await addCategory({ name: newPrintCategoryName, points });
+    if (newCategory) {
+      setPrintCategoryId(newCategory.id);
+    }
     setNewPrintCategoryName('');
+    setNewPrintCategoryPoints('10');
     setIsPrintCategoryDialogOpen(false);
     toast({ title: 'Category Added' });
   };
@@ -234,12 +294,21 @@ function AdminDashboard() {
       });
       return;
     }
+    const selectedCategory = db.categories.find(c => c.id === printCategoryId);
+    if (!selectedCategory) {
+      toast({
+        variant: 'destructive',
+        title: 'Category Not Found',
+        description: 'Please select a valid category.',
+      });
+      return;
+    }
     const coupons = Array.from({ length: 24 }, () => {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       return {
         code,
         value: value,
-        category: printCategory,
+        category: selectedCategory.name,
         teacher: printTeacher,
         used: false,
         createdAt: Date.now(),
@@ -320,10 +389,11 @@ function AdminDashboard() {
   const totalPointsOnCards = db.students.reduce((sum, s) => sum + s.points, 0);
   const prizesRedeemed = db.students.flatMap(s => s.history).filter(h => h.desc.startsWith('Redeemed:')).length;
 
+  const selectedCategoryForPreview = db.categories.find(c => c.id === printCategoryId);
   const previewCoupon: Coupon = {
       code: 'PREVIEW',
       value: parseInt(printValue) || 0,
-      category: printCategory,
+      category: selectedCategoryForPreview?.name || 'Category',
       teacher: printTeacher,
       used: false,
       createdAt: Date.now(),
@@ -483,12 +553,24 @@ function AdminDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2 mb-4">
-                <Input
-                  placeholder="Category Name"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                />
+              <div className="flex items-end gap-2 mb-4">
+                <div className='flex-grow'>
+                  <Label>Name</Label>
+                  <Input
+                    placeholder="Category Name"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                </div>
+                <div className='w-24'>
+                  <Label>Points</Label>
+                  <Input
+                    type="number"
+                    placeholder="Pts"
+                    value={newCategoryPoints}
+                    onChange={(e) => setNewCategoryPoints(e.target.value)}
+                  />
+                </div>
                  <Tooltip>
                   <TooltipTrigger asChild>
                      <Button onClick={handleAddCategory}>Add</Button>
@@ -499,10 +581,13 @@ function AdminDashboard() {
               <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {db.categories?.map((c) => (
                   <li
-                    key={c}
+                    key={c.id}
                     className="flex justify-between items-center bg-secondary p-2 rounded border"
                   >
-                    <span className="text-sm">{c}</span>
+                    <div>
+                      <span className="font-bold text-sm">{c.name}</span>
+                      <p className="text-xs text-muted-foreground">{c.points} pts</p>
+                    </div>
                     <AlertDialog>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -516,7 +601,7 @@ function AdminDashboard() {
                       </Tooltip>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete category "{c}"?</AlertDialogTitle>
+                          <AlertDialogTitle>Delete category "{c.name}"?</AlertDialogTitle>
                           <AlertDialogDescription>
                             This action cannot be undone.
                           </AlertDialogDescription>
@@ -524,7 +609,7 @@ function AdminDashboard() {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction onClick={async () => {
-                             await deleteCategory(c);
+                             await deleteCategory(c.id);
                              toast({ title: 'Category Deleted' });
                           }}>Continue</AlertDialogAction>
                         </AlertDialogFooter>
@@ -723,14 +808,14 @@ function AdminDashboard() {
                 <div>
                   <Label>Category</Label>
                   <div className="flex items-center gap-2">
-                    <Select value={printCategory} onValueChange={setPrintCategory}>
+                    <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category..."/>
                       </SelectTrigger>
                       <SelectContent>
                         {db.categories?.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -749,9 +834,12 @@ function AdminDashboard() {
                                 <DialogTitle>Add New Category</DialogTitle>
                                 <DialogDescription>Create a new category for coupons.</DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <Label htmlFor="new-print-category-name">Category Name</Label>
-                                <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                            <div className="grid grid-cols-3 items-center gap-4 py-4">
+                                <Label htmlFor="new-print-category-name" className="text-right">Name</Label>
+                                <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className="col-span-2" />
+
+                                 <Label htmlFor="new-print-category-points" className="text-right">Points</Label>
+                                <Input id="new-print-category-points" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className="col-span-2" />
                             </div>
                             <DialogFooter>
                                 <Button onClick={handleAddPrintCategory}>Save Category</Button>

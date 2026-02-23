@@ -28,23 +28,50 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
     const { db, addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
     const { toast } = useToast();
 
-    const [printCategory, setPrintCategory] = useState(db.categories?.[0] || '');
+    const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
     
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
+    const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
     useEffect(() => {
-        if (db.categories?.length > 0 && !printCategory) {
-          setPrintCategory(db.categories[0]);
+        if (db.categories?.length > 0 && !printCategoryId) {
+          setPrintCategoryId(db.categories[0].id);
         }
-    }, [db.categories, printCategory]);
+    }, [db.categories, printCategoryId]);
+
+     useEffect(() => {
+        const category = db.categories?.find(c => c.id === printCategoryId);
+        if (category) {
+            setPrintValue(category.points.toString());
+        }
+    }, [printCategoryId, db.categories]);
 
     const handleAddPrintCategory = async () => {
-        if (!newPrintCategoryName) return;
-        await addCategory(newPrintCategoryName);
-        setPrintCategory(newPrintCategoryName);
+        if (!newPrintCategoryName || !newPrintCategoryPoints) {
+            toast({
+                variant: 'destructive',
+                title: 'Missing Information',
+                description: 'Please provide a name and point value for the category.',
+            });
+            return;
+        }
+        const points = parseInt(newPrintCategoryPoints);
+        if (isNaN(points) || points <= 0) {
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Points',
+                description: 'Points must be a positive number.',
+            });
+            return;
+        }
+        const newCategory = await addCategory({ name: newPrintCategoryName, points });
+        if (newCategory) {
+            setPrintCategoryId(newCategory.id);
+        }
         setNewPrintCategoryName('');
+        setNewPrintCategoryPoints('10');
         setIsPrintCategoryDialogOpen(false);
         toast({ title: 'Category Added' });
     };
@@ -63,12 +90,21 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
           });
           return;
         }
+        const selectedCategory = db.categories.find(c => c.id === printCategoryId);
+        if (!selectedCategory) {
+            toast({
+                variant: 'destructive',
+                title: 'Category Not Found',
+                description: 'Please select a valid category.',
+            });
+            return;
+        }
         const coupons: Coupon[] = Array.from({ length: 24 }, () => {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           return {
             code,
             value: value,
-            category: printCategory,
+            category: selectedCategory.name,
             teacher: teacherName,
             used: false,
             createdAt: Date.now(),
@@ -78,10 +114,11 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
         setCouponsToPrint(coupons);
     };
 
+    const selectedCategoryForPreview = db.categories.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
       code: 'PREVIEW',
       value: parseInt(printValue) || 0,
-      category: printCategory,
+      category: selectedCategoryForPreview?.name || 'Category',
       teacher: teacherName,
       used: false,
       createdAt: Date.now(),
@@ -125,10 +162,10 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                                 <div>
                                     <Label>Category</Label>
                                     <div className="flex items-center gap-2">
-                                        <Select value={printCategory} onValueChange={setPrintCategory}>
+                                        <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
                                         <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
                                         <SelectContent>
-                                            {db.categories?.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                            {db.categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                         </SelectContent>
                                         </Select>
                                         <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
@@ -147,9 +184,12 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
                                                     <DialogTitle>Add New Category</DialogTitle>
                                                     <DialogDescription>Create a new category for coupons.</DialogDescription>
                                                 </DialogHeader>
-                                                <div className="grid gap-4 py-4">
-                                                    <Label htmlFor="new-print-category-name">Category Name</Label>
-                                                    <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddPrintCategory()} />
+                                                 <div className="grid grid-cols-3 items-center gap-4 py-4">
+                                                    <Label htmlFor="new-print-category-name" className="text-right">Name</Label>
+                                                    <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className="col-span-2" />
+
+                                                    <Label htmlFor="new-print-category-points" className="text-right">Points</Label>
+                                                    <Input id="new-print-category-points" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className="col-span-2" />
                                                 </div>
                                                 <DialogFooter>
                                                     <Button onClick={handleAddPrintCategory}>Save Category</Button>
