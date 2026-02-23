@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
@@ -179,32 +179,25 @@ function StudentDashboard({
   }, [couponCode, resetTimer, redeemCoupon, student, toast]);
   
   useEffect(() => {
-    // This effect handles the camera scanning tab.
     if (activeTab !== 'camera') {
       return;
     }
     
-    // Using 'any' for controls because IScannerControls is often not exported.
     let controls: any;
 
-    // decodeFromVideoDevice handles the stream and continuous scanning.
     codeReader.decodeFromVideoDevice(undefined, 'barcode-scanner-video', (result, err) => {
         if (result) {
-            // A barcode was successfully found
             playSound('redeem');
             handleRedeemCoupon(result.getText());
-            setActiveTab('manual'); // Switch back to manual tab after scan
+            setActiveTab('manual');
         }
-        if (err && !(err instanceof NotFoundException)) {
-            // Log errors other than 'barcode not found'.
+        if (err && err.name !== 'NotFoundException') {
             console.error('Zxing Decode Error:', err);
         }
     }).then(c => {
-        // Successfully started the camera
         setHasCameraPermission(true);
         controls = c;
     }).catch(err => {
-        // Failed to start the camera (e.g., permission denied)
         console.error('Camera permission error:', err);
         setHasCameraPermission(false);
         toast({
@@ -215,8 +208,6 @@ function StudentDashboard({
         setActiveTab('manual');
     });
 
-    // Cleanup function to stop the scanner when the component unmounts
-    // or the tab is changed.
     return () => {
         if (controls) {
             controls.stop();
