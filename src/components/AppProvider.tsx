@@ -15,7 +15,7 @@ import type { Student, Coupon, Class, Prize, Category, Teacher } from '@/lib/typ
 import { useToast } from '@/hooks/use-toast';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
-import { useFirebase } from '@/firebase';
+import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import {
   doc,
   setDoc,
@@ -204,10 +204,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               setLoginState('school');
               sessionStorage.setItem('loginState', 'school');
               sessionStorage.setItem('schoolId', lowerSchoolId);
+              
               if (auth.currentUser) {
                 const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-                await setDoc(adminRoleRef, { grantedAt: Date.now() });
+                setDoc(adminRoleRef, { grantedAt: Date.now() })
+                  .catch(error => {
+                    // This is a critical background failure, emit a contextual error for debugging
+                    console.error("Failed to set admin role, this may cause permission issues:", error);
+                    errorEmitter.emit('permission-error', new FirestorePermissionError({
+                        path: adminRoleRef.path,
+                        operation: 'create',
+                        requestResourceData: { grantedAt: "timestamp" }
+                    }));
+                    // We can still let the login succeed optimistically, but the error will show in dev overlay
+                });
               }
+
               return true;
             }
           }
@@ -550,7 +562,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isInitialized, loginState, schoolId, syncStatus,
       login, logout, createSchool, deleteSchool, updateSchool,
       devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-      isAutoBackupEnabled, toggleAutoBackup, firestore, toast,
+      isAutoBackupEnabled, toggleAutoBackup, firestore, toast, playSound,
     ]
   );
 

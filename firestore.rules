@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -61,9 +62,11 @@ service cloud.firestore {
         allow delete: if isAdmin(schoolId);
       }
       
-      // Admin roles can only be managed by other admins.
+      // Admin roles can be created by the user themselves upon login.
+      // Only existing admins can read, update, or delete other admin roles.
       match /roles_admin/{uid} {
-        allow read, write: if isAdmin(schoolId);
+        allow read, update, delete: if isAdmin(schoolId);
+        allow create: if isAuth() && request.auth.uid == uid;
       }
 
       // Backups subcollection
