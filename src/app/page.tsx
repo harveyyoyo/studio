@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import {
@@ -79,6 +78,25 @@ export default function LoginPage() {
     }
   };
 
+  const handleSampleLogin = async (id: string) => {
+    playSound('click');
+    const success = await login('school', {
+      schoolId: id,
+      passcode: '1234', // All sample schools use this passcode
+    });
+    if (success) {
+      playSound('login');
+      router.push('/portal');
+    } else {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: `Could not log into sample school '${id}'. It may need to be recreated in the developer portal.`,
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-10 space-y-6">
        <Dialog>
@@ -148,11 +166,11 @@ export default function LoginPage() {
             <CardContent className="space-y-4">
               <Alert className="bg-green-50 dark:bg-green-900/20 border-green-500 text-green-900 dark:text-green-200 [&>svg]:text-green-700 dark:[&>svg]:text-green-300">
                 <Info className="h-4 w-4" />
-                <AlertTitle className="font-bold">Try It Out!</AlertTitle>
-                <AlertDescription className="font-code text-xs">
-                  <div className="space-y-1">
-                    <div className="flex justify-between"><span>ID: schoolabc</span><span>Pass: 1234</span></div>
-                    <div className="flex justify-between"><span>ID: yeshiva</span><span>Pass: 1234</span></div>
+                <AlertTitle className="font-bold">Quick Logins for Sample Schools</AlertTitle>
+                <AlertDescription>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Button variant="outline" size="sm" onClick={() => handleSampleLogin('schoolabc')} className="bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/30">Log in to School ABC</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleSampleLogin('yeshiva')} className="bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/30">Log in to Yeshiva</Button>
                   </div>
                 </AlertDescription>
               </Alert>
