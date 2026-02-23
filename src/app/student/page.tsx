@@ -183,31 +183,38 @@ function StudentDashboard({
       return;
     }
 
-    let controls: IScannerControls | null = null;
     const codeReader = new BrowserMultiFormatReader();
+    let controls: IScannerControls | null = null;
 
     const startScan = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        setHasCameraPermission(true);
-        
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+          controls = await codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
             if (result) {
               handleRedeemCoupon(result.getText());
             }
             if (err && err.name !== 'NotFoundException') {
               console.error('Barcode scan error:', err);
+              if (err.name === 'NotAllowedError') {
+                 setHasCameraPermission(false);
+                 toast({
+                  variant: 'destructive',
+                  title: 'Camera Access Denied',
+                  description: 'Please allow camera access in your browser settings to use this feature.',
+                });
+                setActiveTab('manual');
+              }
             }
           });
+          setHasCameraPermission(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         setHasCameraPermission(false);
-        toast({
+        console.error("Camera initialization error:", err);
+         toast({
           variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please allow camera access in your browser settings to use this feature.',
+          title: 'Camera Error',
+          description: err.message || 'Could not initialize camera.',
         });
         setActiveTab('manual');
       }
@@ -218,6 +225,7 @@ function StudentDashboard({
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
       }
     };
   }, [activeTab, handleRedeemCoupon, toast, setActiveTab]);
@@ -488,28 +496,36 @@ export default function StudentLoginPage() {
 
     const codeReader = new BrowserMultiFormatReader();
     let controls: IScannerControls | null = null;
-
+    
     const startScan = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        setHasCameraPermission(true);
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          controls = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+          controls = await codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
             if (result) {
               handleNfcSubmit(result.getText());
             }
             if (err && err.name !== 'NotFoundException') {
-              console.error(err);
+              console.error('Login scan error:', err);
+              if (err.name === 'NotAllowedError') {
+                 setHasCameraPermission(false);
+                 toast({
+                  variant: 'destructive',
+                  title: 'Camera Access Denied',
+                  description: 'Please allow camera access in your browser settings.',
+                });
+                setLoginTab('nfc');
+              }
             }
           });
+           setHasCameraPermission(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         setHasCameraPermission(false);
+        console.error("Login camera initialization error:", err);
         toast({
           variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please allow camera access in your browser settings.',
+          title: 'Camera Error',
+          description: err.message || 'Could not initialize camera.',
         });
         setLoginTab('nfc');
       }
@@ -520,9 +536,10 @@ export default function StudentLoginPage() {
     return () => {
       if (controls) {
         controls.stop();
+        controls = null;
       }
     };
-  }, [loginTab, activeStudentId, handleNfcSubmit, toast]);
+  }, [loginTab, activeStudentId, handleNfcSubmit, toast, setLoginTab]);
 
 
   const handleDone = useCallback(() => {
