@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import {
   Card,
@@ -45,10 +45,10 @@ function PrizeDashboard({
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    const studentDocRef = useMemo(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
+    const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
 
-    const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+    const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
     useEffect(() => {
@@ -159,7 +159,7 @@ export default function PrizePage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const studentsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
+    const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
     const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);

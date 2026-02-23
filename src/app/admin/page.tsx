@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState, useRef, ChangeEvent, useMemo } from 'react';
+import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
   ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
@@ -139,25 +139,25 @@ function AdminDashboard() {
   const backupTriggeredRef = useRef(false);
   
   // Data fetching hooks
-  const studentsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
+  const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
-  const classesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
+  const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
   const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
-  const teachersQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
+  const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
   const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
 
-  const categoriesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+  const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
-  const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+  const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
-  const couponsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
+  const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
   const { data: coupons, isLoading: couponsLoading } = useCollection<Coupon>(couponsQuery);
   
-  const backupsQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
+  const backupsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
   const { data: backups, isLoading: backupsLoading } = useCollection<{id: string}>(backupsQuery);
 
 
@@ -404,6 +404,10 @@ function AdminDashboard() {
       used: false,
       createdAt: Date.now(),
   };
+  
+  const handleStudentCsvUpload = () => {
+    studentCsvInputRef.current?.click();
+  }
 
   return (
     <TooltipProvider>

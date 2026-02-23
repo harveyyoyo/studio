@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { ArrowLeft, Trophy } from 'lucide-react';
@@ -62,7 +62,7 @@ export default function HallOfFamePage() {
         }
     }, [isInitialized, loginState, router]);
 
-    const studentsQuery = useMemo(() => 
+    const studentsQuery = useMemoFirebase(() => 
         schoolId 
             ? query(
                 collection(firestore, 'schools', schoolId, 'students'), 
@@ -73,10 +73,10 @@ export default function HallOfFamePage() {
     [firestore, schoolId]);
     const { data: topStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
-    const classesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
+    const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
     
-    const classesMap = useMemo(() => {
+    const classesMap = useMemoFirebase(() => {
         if (!classes) return new Map();
         return new Map(classes.map(c => [c.id, c.name]));
     }, [classes]);

@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, getDoc, query, getDocs } from 'firebase/firestore';
 import {
   Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck,
@@ -54,7 +54,7 @@ export default function DeveloperPage() {
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
 
-  const schoolsQuery = useMemo(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
+  const schoolsQuery = useMemoFirebase(() => loginState === 'developer' ? collection(firestore, 'schools') : null, [loginState, firestore]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
 
   useEffect(() => {

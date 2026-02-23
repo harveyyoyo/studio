@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -32,7 +32,7 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
     const { toast } = useToast();
     const firestore = useFirestore();
 
-    const categoriesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+    const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
     const [printCategoryId, setPrintCategoryId] = useState('');
@@ -252,7 +252,7 @@ export default function TeacherPage() {
     const [loggedInTeacher, setLoggedInTeacher] = useState<string | null>(null);
     const [selectedLoginName, setSelectedLoginName] = useState('Admin');
 
-    const teachersQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
+    const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
     const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
 
 

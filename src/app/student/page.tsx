@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -8,8 +8,8 @@ import { BrowserMultiFormatReader, NotFoundException } from '@zxing/browser';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 
 import {
   Card,
@@ -53,7 +53,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
     const firestore = useFirestore();
-    const activitiesQuery = useMemo(() => (
+    const activitiesQuery = useMemoFirebase(() => (
         query(
         collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
         orderBy('date', 'desc'),
@@ -113,10 +113,10 @@ function StudentDashboard({
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const studentDocRef = useMemo(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
+  const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
   
-  const prizesQuery = useMemo(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+  const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
   const [couponCode, setCouponCode] = useState('');
@@ -131,7 +131,7 @@ function StudentDashboard({
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const codeReader = useMemo(() => new BrowserMultiFormatReader(), []);
+  const codeReader = useMemoFirebase(() => new BrowserMultiFormatReader(), []);
 
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
