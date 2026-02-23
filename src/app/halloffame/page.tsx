@@ -11,6 +11,13 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import type { Student, Class } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 function HallOfFameSkeleton() {
   return (
@@ -129,6 +136,20 @@ export default function HallOfFamePage() {
                             <p className="font-bold text-xl md:text-2xl truncate">{podium[0].firstName} {podium[0].lastName}</p>
                             <p className="text-muted-foreground">{getClassName(podium[0].classId)}</p>
                             <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{(podium[0].lifetimePoints || 0).toLocaleString()} pts</p>
+                            <div className="mt-4 border-t pt-4">
+                                <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
+                                <div className="flex flex-wrap gap-1 justify-center">
+                                    {podium[0].categoryPoints && Object.keys(podium[0].categoryPoints).length > 0 ? (
+                                        Object.entries(podium[0].categoryPoints).sort(([, a], [, b]) => b - a).slice(0, 3).map(([category, points]) => (
+                                            <Badge key={category} variant="secondary" className="font-normal text-xs">
+                                                {category}: <span className="font-bold ml-1">{points}</span>
+                                            </Badge>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground italic">No categories</p>
+                                    )}
+                                </div>
+                            </div>
                         </Card>
                     </div>
 
@@ -143,6 +164,20 @@ export default function HallOfFamePage() {
                                 <p className="font-bold text-xl truncate">{podium[1].firstName} {podium[1].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[1].classId)}</p>
                                 <p className="text-2xl font-bold text-primary mt-2">{(podium[1].lifetimePoints || 0).toLocaleString()} pts</p>
+                                 <div className="mt-3 border-t pt-3">
+                                    <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                        {podium[1].categoryPoints && Object.keys(podium[1].categoryPoints).length > 0 ? (
+                                            Object.entries(podium[1].categoryPoints).sort(([, a], [, b]) => b - a).slice(0, 3).map(([category, points]) => (
+                                                <Badge key={category} variant="secondary" className="font-normal text-xs">
+                                                    {category}: <span className="font-bold ml-1">{points}</span>
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground italic">No categories</p>
+                                        )}
+                                    </div>
+                                </div>
                             </Card>
                         </div>
                     )}
@@ -158,6 +193,20 @@ export default function HallOfFamePage() {
                                 <p className="font-bold text-lg truncate">{podium[2].firstName} {podium[2].lastName}</p>
                                 <p className="text-muted-foreground text-sm">{getClassName(podium[2].classId)}</p>
                                 <p className="text-xl font-bold text-primary mt-2">{(podium[2].lifetimePoints || 0).toLocaleString()} pts</p>
+                                <div className="mt-3 border-t pt-3">
+                                    <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
+                                    <div className="flex flex-wrap gap-1 justify-center">
+                                        {podium[2].categoryPoints && Object.keys(podium[2].categoryPoints).length > 0 ? (
+                                            Object.entries(podium[2].categoryPoints).sort(([, a], [, b]) => b - a).slice(0, 2).map(([category, points]) => (
+                                                <Badge key={category} variant="secondary" className="font-normal text-xs">
+                                                    {category}: <span className="font-bold ml-1">{points}</span>
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground italic">No categories</p>
+                                        )}
+                                    </div>
+                                </div>
                             </Card>
                         </div>
                     )}
@@ -170,23 +219,41 @@ export default function HallOfFamePage() {
                         <CardTitle>Leaderboard</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ul className="space-y-2">
+                       <Accordion type="single" collapsible className="w-full space-y-2">
                             {others.map((student, index) => (
-                                <li key={student.id} className="flex items-center justify-between p-3 rounded-md bg-secondary border">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 4}</div>
-                                        <Avatar className="w-10 h-10">
-                                            <AvatarFallback className="bg-background">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-bold">{student.firstName} {student.lastName}</p>
-                                            <p className="text-xs text-muted-foreground">{getClassName(student.classId)}</p>
+                                <AccordionItem value={`item-${index}`} key={student.id} className="bg-secondary border rounded-md px-3">
+                                    <AccordionTrigger className="w-full hover:no-underline py-3">
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 4}</div>
+                                                <Avatar className="w-10 h-10">
+                                                    <AvatarFallback className="bg-background">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-bold text-left">{student.firstName} {student.lastName}</p>
+                                                    <p className="text-xs text-muted-foreground text-left">{getClassName(student.classId)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-lg font-bold text-primary">{(student.lifetimePoints || 0).toLocaleString()} pts</div>
                                         </div>
-                                    </div>
-                                    <div className="text-lg font-bold text-primary">{(student.lifetimePoints || 0).toLocaleString()} pts</div>
-                                </li>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pb-3">
+                                        <p className="text-sm font-semibold mb-2">Points by Category:</p>
+                                        {student.categoryPoints && Object.keys(student.categoryPoints).length > 0 ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {Object.entries(student.categoryPoints).sort(([, a], [, b]) => b - a).map(([category, points]) => (
+                                                    <Badge key={category} variant="outline" className="font-normal">
+                                                        {category}: <span className="font-bold ml-1.5">{points.toLocaleString()}</span>
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground italic">No category data available.</p>
+                                        )}
+                                    </AccordionContent>
+                                </AccordionItem>
                             ))}
-                        </ul>
+                        </Accordion>
                     </CardContent>
                 </Card>
             )}

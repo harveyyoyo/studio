@@ -222,12 +222,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
             if (collectionName === 'students' && item.history) {
                 const { history, ...studentData } = item;
-                 // Calculate lifetimePoints based on positive transactions in history
+                
+                const currentPoints = history.reduce((acc: number, activity: HistoryItem) => acc + activity.amount, 0);
+
                 const lifetimePoints = history.reduce((acc: number, activity: HistoryItem) => {
                     return activity.amount > 0 ? acc + activity.amount : acc;
                 }, 0);
+
+                const categoryPoints = history.reduce((acc: { [key: string]: number }, activity: HistoryItem) => {
+                    if (activity.amount > 0 && activity.desc.includes('coupon:')) {
+                        const match = activity.desc.match(/\(([^)]+)\)/);
+                        if (match && match[1]) {
+                            const category = match[1];
+                            acc[category] = (acc[category] || 0) + activity.amount;
+                        }
+                    }
+                    return acc;
+                }, {});
                 
-                const finalStudentData = { ...studentData, lifetimePoints };
+                const finalStudentData = { ...studentData, points: currentPoints, lifetimePoints, categoryPoints };
                 batch.set(itemRef, finalStudentData);
 
                 for(const historyItem of history) {

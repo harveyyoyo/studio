@@ -8,11 +8,17 @@
       "properties": {
         "firstName": { "type": "string", "description": "The first name of the student." },
         "lastName": { "type": "string", "description": "The last name of the student." },
+        "nfcId": { "type": "string", "description": "The student's unique ID for NFC/barcode scanning." },
         "points": { "type": "number", "description": "The current points balance." },
         "lifetimePoints": { "type": "number", "description": "The total points ever earned by the student." },
-        "classId": { "type": "string", "description": "Reference to the student's assigned Class." }
+        "classId": { "type": "string", "description": "Reference to the student's assigned Class." },
+        "categoryPoints": {
+            "type": "object",
+            "description": "A map of points earned per category, where keys are category names and values are points.",
+            "additionalProperties": { "type": "number" }
+        }
       },
-      "required": ["firstName", "lastName", "points", "lifetimePoints"]
+      "required": ["firstName", "lastName", "nfcId", "points", "lifetimePoints"]
     },
     "Teacher": {
       "$schema": "http://json-schema.org/draft-07/schema#",

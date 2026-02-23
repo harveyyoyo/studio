@@ -295,10 +295,14 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
             };
             
             const newLifetimePoints = (currentStudent.lifetimePoints || 0) + coupon.value;
+            const categoryPoints = currentStudent.categoryPoints || {};
+            categoryPoints[coupon.category] = (categoryPoints[coupon.category] || 0) + coupon.value;
+
 
             transaction.update(studentRef, { 
                 points: currentStudent.points + coupon.value,
-                lifetimePoints: newLifetimePoints
+                lifetimePoints: newLifetimePoints,
+                categoryPoints: categoryPoints
             });
             transaction.set(activityRef, newHistoryItem);
 

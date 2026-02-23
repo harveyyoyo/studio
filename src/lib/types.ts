@@ -29,6 +29,7 @@ export interface Student {
   classId?: string;
   nfcId: string;
   history: HistoryItem[];
+  categoryPoints?: { [key: string]: number };
 }
 
 export interface Coupon {
