@@ -1,0 +1,305 @@
+{
+  "entities": {
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student in the school's reward system, holding their current points balance and activity history.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Student entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the student."
+        },
+        "nfcId": {
+          "type": "string",
+          "description": "The NFC card ID associated with the student for quick login. This must be unique across all students."
+        },
+        "points": {
+          "type": "number",
+          "description": "The current points balance accumulated by the student."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher who is assigned to this student. (Relationship: Teacher 1:N Student)"
+        },
+        "history": {
+          "type": "array",
+          "description": "A chronological log of all points earned or spent by the student.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "nfcId",
+        "points",
+        "teacherId",
+        "history"
+      ]
+    },
+    "Teacher": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Teacher",
+      "type": "object",
+      "description": "Represents a teacher who can generate coupons and manage assigned students.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Teacher entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the teacher."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Defines a classification for coupon types, such as 'Good Behavior' or 'Academic Achievement'.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The descriptive name of the category (e.g., 'Good Behavior')."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Coupon": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Coupon",
+      "type": "object",
+      "description": "Represents a digital coupon that students can redeem for points. Each coupon has a unique code and value.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Coupon entity, typically its barcode code."
+        },
+        "value": {
+          "type": "number",
+          "description": "The point value awarded when this coupon is redeemed."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to the Category this coupon belongs to. (Relationship: Category 1:N Coupon)"
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to the Teacher who issued this coupon. (Relationship: Teacher 1:N Coupon)"
+        },
+        "used": {
+          "type": "boolean",
+          "description": "Indicates whether the coupon has been redeemed by a student."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the coupon was generated.",
+          "format": "date-time"
+        },
+        "redeemedByStudentId": {
+          "type": "string",
+          "description": "Optional reference to the Student who redeemed this coupon. Only present if 'used' is true. (Relationship: Student 1:N Coupon)"
+        },
+        "redeemedAt": {
+          "type": "string",
+          "description": "Optional timestamp when the coupon was redeemed. Only present if 'used' is true.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "value",
+        "categoryId",
+        "teacherId",
+        "used",
+        "createdAt"
+      ]
+    },
+    "RewardItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RewardItem",
+      "type": "object",
+      "description": "Represents an item available for purchase in the student rewards shop.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RewardItem entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The display name of the reward item (e.g., 'Candy Bar')."
+        },
+        "cost": {
+          "type": "number",
+          "description": "The number of points required for a student to redeem this reward."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the reward item."
+        },
+        "iconName": {
+          "type": "string",
+          "description": "The name of a Lucide icon associated with the reward item for UI display."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "cost"
+      ]
+    },
+    "StudentActivity": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudentActivity",
+      "type": "object",
+      "description": "Represents a single entry in a student's activity history, detailing point changes.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudentActivity entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the Student who performed this activity. (Relationship: Student 1:N StudentActivity)"
+        },
+        "description": {
+          "type": "string",
+          "description": "A textual description of the activity (e.g., 'Redeemed coupon', 'Bought Candy Bar')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The change in points for this activity (+ for earned, - for spent)."
+        },
+        "date": {
+          "type": "string",
+          "description": "Timestamp of when the activity occurred.",
+          "format": "date-time"
+        },
+        "couponId": {
+          "type": "string",
+          "description": "Optional reference to the Coupon redeemed, if applicable. (Relationship: Coupon 1:N StudentActivity)"
+        },
+        "rewardItemId": {
+          "type": "string",
+          "description": "Optional reference to the RewardItem purchased, if applicable. (Relationship: RewardItem 1:N StudentActivity)"
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "description",
+        "amount",
+        "date"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/schools/{schoolId}",
+        "definition": {
+          "entityName": "School",
+          "schema": {
+            "$ref": "#/backend/entities/School"
+          },
+          "description": "The root collection for all data associated with a specific school. Document ID is the school's unique identifier. The document contains metadata about the school, acting as a security boundary."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Student profiles. Each document includes denormalized 'authUid' (Firebase Auth UID) for direct student login and 'teacherId' for assignment to a teacher, ensuring authorization independence. The 'history' array from the schema is conceptually moved to a subcollection for scalability."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/students/{studentId}/activities/{activityId}",
+        "definition": {
+          "entityName": "StudentActivity",
+          "schema": {
+            "$ref": "#/backend/entities/StudentActivity"
+          },
+          "description": "Detailed chronological log of point changes for a specific student. Documents include denormalized 'studentId' and 'teacherId' (of the assigned teacher) for robust authorization independence, allowing teachers to query their students' activities directly (QAPs)."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/teachers/{teacherId}",
+        "definition": {
+          "entityName": "Teacher",
+          "schema": {
+            "$ref": "#/backend/entities/Teacher"
+          },
+          "description": "Teacher profiles. Each document includes denormalized 'authUid' (Firebase Auth UID) for direct teacher login and authorization checks."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Definitions for coupon categories, managed by administrators for selection in coupon generation."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/coupons/{couponId}",
+        "definition": {
+          "entityName": "Coupon",
+          "schema": {
+            "$ref": "#/backend/entities/Coupon"
+          },
+          "description": "Details of generated coupons, identified by a unique barcode/ID. Includes 'teacherId' (issuer) and 'redeemedByStudentId' (if used) for authorization independence and tracking."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/rewardItems/{rewardItemId}",
+        "definition": {
+          "entityName": "RewardItem",
+          "schema": {
+            "$ref": "#/backend/entities/RewardItem"
+          },
+          "description": "Items available for purchase in the student rewards shop, managed by administrators and publicly readable by students."
+        }
+      },
+      {
+        "path": "/schools/{schoolId}/roles_admin/{adminUid}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/AdminRole"
+          },
+          "description": "Used for Database Access Control (DBAC). The existence of a document at `{adminUid}` path grants full admin privileges for that specific school to the corresponding Firebase Auth UID."
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure for the 'Arcade Rewards Hub' is designed to be multi-tenant, with all data logically isolated per school under a top-level `/schools/{schoolId}` collection. This ensures that each school's data is entirely separate and access is scoped to authenticated users within that school.\n\n**Authorization Independence (CRITICAL):**\nThis design achieves Authorization Independence by denormalizing key authorization fields directly into relevant documents, eliminating the need for `get()` calls in Firestore Security Rules. Specifically:\n\n1.  **Student Documents (`/schools/{schoolId}/students/{studentId}`):** Each student document will contain an `authUid` field, which stores the Firebase Authentication User ID of the logged-in student. This allows a student to directly access their own student profile using `request.auth.uid == resource.data.authUid` without needing to perform a `get()` on a separate user profile document.\n2.  **Teacher Documents (`/schools/{schoolId}/teachers/{teacherId}`):** Similarly, each teacher document will include an `authUid` field (where `teacherId` is ideally the `authUid` itself) for direct authentication and rule evaluation using `request.auth.uid == resource.data.authUid`.\n3.  **StudentActivity Documents (`/schools/{schoolId}/students/{studentId}/activities/{activityId}`):** To enable teachers to efficiently list the activity history of *their* students, each `StudentActivity` document will denormalize the `teacherId` of the student's assigned teacher. This means a teacher can query `activities` documents where `resource.data.teacherId == request.auth.uid` (assuming `teacherId` is the teacher's `authUid`) without performing a `get()` on the parent `student` document.\n4.  **Coupon Documents (`/schools/{schoolId}/coupons/{couponId}`):** These already include `teacherId` (the issuer's ID) and `redeemedByStudentId` (if used). This denormalization supports teachers listing their own generated coupons and students being able to verify/redeem specific coupons atomically.\n\n**QAPs (Rules are not Filters):**\nThis structure directly supports QAPs by ensuring that `list` operations can be secured with conditions that match the query. For instance:\n\n*   **Student Self-Access:** A student can query their own activities at `/schools/{schoolId}/students/{request.auth.uid}/activities` where the `studentId` wildcard implicitly matches their UID, and further secured by `resource.data.studentId == request.auth.uid` or the path directly containing their UID.\n*   **Teacher Student Management:** A teacher can query for *their* students by using a query like `collection('students').where('teacherId', '==', request.auth.uid)`. The security rule for `/schools/{schoolId}/students` can then allow `list` if `resource.data.teacherId == request.auth.uid` (assuming the teacher's document ID or `authUid` is stored in `teacherId`), making it QAP-compliant.\n*   **Teacher Activity View:** A teacher can list activities for all their students by querying `/schools/{schoolId}/students/{studentId}/activities` where `resource.data.teacherId == request.auth.uid`. The denormalized `teacherId` in each activity document makes this a direct and efficient query that can be secured with a `list` rule.\n*   **Global Readable Data:** Collections like `categories` and `rewardItems` are designed for broad read access (e.g., by any student or teacher for dropdowns/shop display) but restricted write access (only admins), making `list` operations inherently secure and QAP-compliant by allowing universal reads.\n\nThis robust denormalization strategy, coupled with clear path segregation and the `schools/{schoolId}` root, ensures that security rules are simple, efficient, atomic, and debuggable, adhering to all core design principles."
+  }
+}
