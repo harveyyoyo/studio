@@ -132,7 +132,6 @@ function StudentDashboard({
   const [activeTab, setActiveTab] = useState('manual');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
-  const codeReaderRef = useRef(new BrowserMultiFormatReader());
 
 
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
@@ -185,6 +184,7 @@ function StudentDashboard({
       return;
     }
     
+    const codeReader = new BrowserMultiFormatReader();
     let stream: MediaStream | null = null;
     let isMounted = true;
 
@@ -213,7 +213,7 @@ function StudentDashboard({
             if (videoRef.current && isMounted) {
                try {
                 await videoRef.current.play();
-                codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
+                codeReader.decodeFromVideoElement(videoRef.current, (result, error) => {
                   if (result && isMounted) {
                     handleRedeemCoupon(result.getText());
                   }
@@ -246,7 +246,7 @@ function StudentDashboard({
 
     return () => {
       isMounted = false;
-      codeReaderRef.current.reset();
+      codeReader.reset();
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -468,7 +468,6 @@ export default function StudentLoginPage() {
   const [loginTab, setLoginTab] = useState('nfc');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
-  const codeReaderRef = useRef(new BrowserMultiFormatReader());
 
 
   useEffect(() => {
@@ -519,6 +518,7 @@ export default function StudentLoginPage() {
       return;
     }
     
+    const codeReader = new BrowserMultiFormatReader();
     let stream: MediaStream | null = null;
     let isMounted = true;
 
@@ -547,7 +547,7 @@ export default function StudentLoginPage() {
             if(videoRef.current && isMounted) {
               try {
                 await videoRef.current.play();
-                codeReaderRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
+                codeReader.decodeFromVideoElement(videoRef.current, (result, error) => {
                   if (result && isMounted) {
                     handleNfcSubmit(result.getText());
                   }
@@ -580,7 +580,7 @@ export default function StudentLoginPage() {
     
     return () => {
       isMounted = false;
-      codeReaderRef.current.reset();
+      codeReader.reset();
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
