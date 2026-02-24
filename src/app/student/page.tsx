@@ -234,192 +234,101 @@ function StudentDashboardInner({
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        {/* Left Section: Content Tabs */}
+        {/* Left Section: Content */}
         <div className="lg:col-span-2 space-y-5">
-          <Tabs defaultValue="redeem" className="w-full">
-            <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12 mb-4">
-              <TabsTrigger value="redeem" className="rounded-lg font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Redeem</TabsTrigger>
-              {settings.enableAchievements && (
-                <TabsTrigger value="achievements" className="rounded-lg font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Badges</TabsTrigger>
+          <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
+            <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                  </div>
+                  Redeem Coupon Code
+                </CardTitle>
+                <div className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-100 dark:border-amber-800 animate-pulse">
+                  Auto-logout in {logoutTimer}s
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
+                  <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                    <Type className="w-4 h-4" /> Manual / USB
+                  </TabsTrigger>
+                  <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                    <Camera className="w-4 h-4" /> Webcam Scan
+                  </TabsTrigger>
+                </TabsList>
+
+                {activeTab === 'manual' ? (
+                  <div className="space-y-6">
+                    <div className="flex gap-3">
+                      <Input
+                        placeholder="Scan or type barcode now..."
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                        className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
+                        autoFocus
+                      />
+                      <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-[#8b91c8] hover:bg-[#7a80b7] text-white transition-all active:scale-95 uppercase tracking-widest">
+                        Redeem
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
+                    <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
+                    </div>
+                  </div>
+                )}
+              </Tabs>
+
+              {animatedValue !== null && (
+                <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
+                  <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
+                </div>
               )}
-            </TabsList>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="redeem" className="space-y-5">
-              <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
-                <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                      </div>
-                      Redeem Coupon Code
-                    </CardTitle>
-                    <div className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-100 dark:border-amber-800 animate-pulse">
-                      Auto-logout in {logoutTimer}s
+          {/* Eligible Rewards - Bottom Wide Section */}
+          <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
+                  <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { name: 'Sticker Pack', cost: 50, icon: '😊', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                  { name: 'Homework Pass', cost: 100, icon: '📝', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                  { name: 'Eraser Collection', cost: 25, icon: '🧹', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                ].map((reward) => (
+                  <div key={reward.name} className={`${reward.color} p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300`}>
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner">
+                      <span className="text-2xl">{reward.icon}</span>
                     </div>
+                    <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{reward.name}</p>
+                    <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {reward.cost} PTS
+                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
-                      <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                        <Type className="w-4 h-4" /> Manual / USB
-                      </TabsTrigger>
-                      <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                        <Camera className="w-4 h-4" /> Webcam Scan
-                      </TabsTrigger>
-                    </TabsList>
-
-                    {activeTab === 'manual' ? (
-                      <div className="space-y-6">
-                        <div className="flex gap-3">
-                          <Input
-                            placeholder="Scan or type barcode now..."
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                            className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
-                            autoFocus
-                          />
-                          <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-[#8b91c8] hover:bg-[#7a80b7] text-white transition-all active:scale-95 uppercase tracking-widest">
-                            Redeem
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
-                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
-                        </div>
-                      </div>
-                    )}
-                  </Tabs>
-
-                  {animatedValue !== null && (
-                    <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
-                      <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
-                      <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Eligible Rewards - Bottom Wide Section */}
-              <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
-                      <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      { name: 'Sticker Pack', cost: 50, icon: '😊', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                      { name: 'Homework Pass', cost: 100, icon: '📝', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                      { name: 'Eraser Collection', cost: 25, icon: '🧹', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                    ].map((reward) => (
-                      <div key={reward.name} className={`${reward.color} p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300`}>
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner">
-                          <span className="text-2xl">{reward.icon}</span>
-                        </div>
-                        <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{reward.name}</p>
-                        <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                          {reward.cost} PTS
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {settings.enableAchievements && (
-              <TabsContent value="achievements">
-                <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                        <Trophy className="w-4 h-4 text-amber-500" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base font-black text-slate-800 dark:text-white">Badges & Achievements</CardTitle>
-                        <CardDescription className="text-xs font-medium dark:text-slate-400">Unlock special badges and earn bonus points.</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {achievements?.sort((a, b) => {
-                        const aEarned = (student?.earnedAchievements || []).some(ea => ea.achievementId === a.id);
-                        const bEarned = (student?.earnedAchievements || []).some(ea => ea.achievementId === b.id);
-                        if (aEarned && !bEarned) return -1;
-                        if (!aEarned && bEarned) return 1;
-                        return 0;
-                      }).map(ach => {
-                        const earned = (student?.earnedAchievements || []).find(ea => ea.achievementId === ach.id);
-
-                        let progress = 0;
-                        if (!earned) {
-                          if (ach.criteria.type === 'points') {
-                            if (ach.criteria.categoryId) {
-                              progress = Math.min(100, ((student?.categoryPoints?.[ach.criteria.categoryId] || 0) / ach.criteria.threshold) * 100);
-                            } else {
-                              progress = Math.min(100, ((student?.points || 0) / ach.criteria.threshold) * 100);
-                            }
-                          } else if (ach.criteria.type === 'lifetimePoints') {
-                            progress = Math.min(100, ((student?.lifetimePoints || 0) / ach.criteria.threshold) * 100);
-                          }
-                        }
-
-                        return (
-                          <div key={ach.id} className={cn(
-                            "relative p-4 rounded-2xl border transition-all flex flex-col items-center text-center gap-2",
-                            earned ? "bg-amber-50/40 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/40" : "bg-slate-50/50 border-slate-100 opacity-60 grayscale-[0.5]"
-                          )}>
-                            <div className={cn(
-                              "w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border",
-                              earned ? "bg-white border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
-                            )}>
-                              <DynamicIcon name={ach.icon} className="w-7 h-7" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{ach.name}</p>
-                              {earned ? (
-                                <p className="text-[9px] font-bold text-amber-600 mt-0.5 uppercase tracking-tighter">Unlocked!</p>
-                              ) : (
-                                <div className="w-full mt-1.5 space-y-1">
-                                  <Progress value={progress} className="h-1" />
-                                  <p className="text-[8px] font-medium text-slate-500">{Math.floor(progress)}% Complete</p>
-                                </div>
-                              )}
-                            </div>
-                            {ach.bonusPoints && earned && (
-                              <Badge className="absolute -top-2 -right-2 bg-amber-500 text-white border-2 border-white text-[8px] h-5 min-w-5 flex items-center justify-center rounded-full px-1">
-                                +{ach.bonusPoints}
-                              </Badge>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {(!achievements || achievements.length === 0) && (
-                      <div className="text-center py-12 opacity-30">
-                        <Trophy className="w-12 h-12 mx-auto mb-2" />
-                        <p className="text-sm font-bold">No achievements to unlock yet.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </Tabs>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Section: Activity */}
