@@ -1,6 +1,6 @@
-# Welcome to the Student Reward System!
+# Welcome to NextGen Rewards!
 
-The Student Reward System is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
+NextGen Rewards is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
 
 ## How to Use the App
 
@@ -23,7 +23,7 @@ Once you've logged into a school, you can choose from several portals:
         *   See your transaction history.
         *   View the prizes you are eligible to redeem.
 
-*   **Teacher Portal:**
+*   **Print Coupons:**
     *   **How to Log In:** Teachers select their name from a dropdown list to log in.
     *   **What you can do:**
         *   Generate and print sheets of reward coupons.

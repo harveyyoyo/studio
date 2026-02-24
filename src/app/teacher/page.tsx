@@ -148,7 +148,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                 <Link href="/portal"><ArrowLeft className="w-5 h-5 mr-2" /> Back to portal</Link>
                             </Button>
                             <div>
-                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Teacher Portal</h1>
+                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Print Coupons</h1>
                                 <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-amber-400' : 'text-primary'}`}>{teacherName}</p>
                                 <p className={`text-xs mt-0.5 ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
                             </div>
@@ -313,7 +313,7 @@ export default function TeacherPage() {
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Print Coupons</CardTitle>
                             <CardDescription className={isGraphic ? 'text-slate-400' : ''}>Select your name to start granting rewards.</CardDescription>
                         </div>
                     </CardHeader>
