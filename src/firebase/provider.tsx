@@ -112,6 +112,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     };
   }, [firebaseApp, firestore, auth, functions, userAuthState]);
 
+  // Block the entire tree until anonymous auth resolves.
+  // This guarantees every downstream hook/effect has an authenticated user,
+  // preventing "missing permissions" errors from racing ahead of auth.
+  if (userAuthState.isUserLoading) {
+    return null;
+  }
+
   return (
     <FirebaseContext.Provider value={contextValue}>
       <FirebaseErrorListener />

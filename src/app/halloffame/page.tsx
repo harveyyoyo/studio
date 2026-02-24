@@ -114,13 +114,14 @@ export default function HallOfFamePage() {
                     <Card className="bg-card border-b-4 border-amber-400 dark:border-amber-500 p-6 shadow-lg">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
+                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-0.5">School: {schoolId?.replace(/_/g, ' ')}</p>
                                 <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
                                     <Trophy className="text-amber-500" /> Hall of Fame
                                 </h2>
-                                <CardDescription>Top all-time point earners at {schoolId?.replace(/_/g, ' ')}</CardDescription>
+                                <CardDescription>Top all-time point earners</CardDescription>
                             </div>
                             <Button asChild variant="secondary" size="sm">
-                                <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal</Link>
+                                <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
                             </Button>
                         </div>
                         <div className="mt-4 pt-4 border-t">
@@ -285,7 +286,7 @@ export default function HallOfFamePage() {
                             </div>
                         </div>
                         <Button asChild variant="ghost" size="sm" className="text-white/50 hover:text-white hover:bg-white/10">
-                            <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back</Link>
+                            <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
                         </Button>
                     </div>
 

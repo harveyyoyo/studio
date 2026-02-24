@@ -13,10 +13,9 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import {
     doc,
-    setDoc,
-    getDoc,
     onSnapshot,
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -43,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
-    const { auth, firestore, isUserLoading } = useFirebase();
+    const { auth, firestore, functions, isUserLoading } = useFirebase();
     const playSound = useArcadeSound();
     const router = useRouter();
 
@@ -122,20 +121,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } catch (e) {
                     console.error("Developer login error", e);
                 }
-            } else if (type === 'school' && credentials.schoolId && firestore && auth.currentUser) {
+            } else if (type === 'school' && credentials.schoolId) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
-                const schoolLoginDocRef = doc(firestore, 'schools', lowerSchoolId);
                 try {
-                    const docSnap = await getDoc(schoolLoginDocRef);
-                    if (docSnap.exists() && docSnap.data().passcode === credentials.passcode) {
-                        setSchoolId(lowerSchoolId);
-                        setLoginState('school');
-                        sessionStorage.setItem('loginState', 'school');
-                        sessionStorage.setItem('schoolId', lowerSchoolId);
-                        const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
-                        setDoc(adminRoleRef, { role: 'admin' }).catch(e => console.warn("Could not set admin role, maybe already set or rules are not ready?", e));
-                        return true;
-                    }
+                    const verify = httpsCallable(functions, 'verifySchoolPasscode');
+                    await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
+                    setSchoolId(lowerSchoolId);
+                    setLoginState('school');
+                    sessionStorage.setItem('loginState', 'school');
+                    sessionStorage.setItem('schoolId', lowerSchoolId);
+                    return true;
                 } catch (e) {
                     console.error("School login error", e);
                     return false;
@@ -143,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return false;
         },
-        [firestore, auth]
+        [firestore, functions]
     );
 
     const logout = useCallback(() => {

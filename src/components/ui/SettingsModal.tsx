@@ -95,6 +95,31 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
+                            {/* Display Mode - Web vs App */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center gap-3 mb-3">
+                                    {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-slate-600 dark:text-slate-400" /> : <Monitor className="w-5 h-5 text-slate-600 dark:text-slate-400" />}
+                                    <div>
+                                        <h4 className="font-bold text-slate-800 dark:text-white">Display Mode</h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">UI layout style</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                                    <button
+                                        onClick={() => handleToggle('displayMode', 'web')}
+                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'web' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                                    >
+                                        Web
+                                    </button>
+                                    <button
+                                        onClick={() => handleToggle('displayMode', 'app')}
+                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'app' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                                    >
+                                        App
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Advanced Button */}
                             <Button
                                 variant="outline"
@@ -110,31 +135,6 @@ export function SettingsModal() {
                         </>
                     ) : (
                         <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                            {/* Display Mode - Web vs App */}
-                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
-                                <div className="flex items-center gap-3 mb-3">
-                                    {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-slate-600 dark:text-slate-400" /> : <Monitor className="w-5 h-5 text-slate-600 dark:text-slate-400" />}
-                                    <div>
-                                        <h4 className="font-bold text-slate-800 dark:text-white">Display Mode</h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">UI layout style</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                                    <button
-                                        onClick={() => handleToggle('displayMode', 'web')}
-                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'web' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-                                    >
-                                        Web
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggle('displayMode', 'app')}
-                                        className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'app' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
-                                    >
-                                        App
-                                    </button>
-                                </div>
-                            </div>
-
                             {/* Sound Effects */}
                             <div className="flex items-center justify-between py-2 px-2">
                                 <div className="flex items-center gap-3">

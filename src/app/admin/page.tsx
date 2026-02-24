@@ -416,14 +416,16 @@ function AdminDashboardInner() {
       <div className="space-y-6">
         <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-0.5">School: {schoolId?.replace(/_/g, ' ')}</p>
             <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
               <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
             </h2>
+            <p className="text-sm text-muted-foreground mt-1">Manage students, classes, categories, prizes, and backups.</p>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Portal
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to portal
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -432,6 +434,7 @@ function AdminDashboardInner() {
           </Tooltip>
         </Card>
 
+        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">People</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="border-t-4 border-chart-1">
             <CardHeader>
@@ -551,6 +554,7 @@ function AdminDashboardInner() {
             </CardContent>
           </Card>
 
+          <h3 className="col-span-full text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">Rewards</h3>
           <Card className="border-t-4 border-chart-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -696,6 +700,7 @@ function AdminDashboardInner() {
             </CardContent>
           </Card>
 
+          <h3 className="col-span-full text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">Data</h3>
           <Card className="border-t-4 border-chart-4">
             <CardHeader>
               <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">

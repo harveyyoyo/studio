@@ -8,7 +8,8 @@ import React, {
   useMemo,
 } from 'react';
 import type { Student, Class, Coupon, Teacher, Prize, Category } from '@/lib/types';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory,
   addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon,

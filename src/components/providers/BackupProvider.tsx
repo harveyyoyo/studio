@@ -58,7 +58,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const createSchool = useCallback(async (schoolId: string): Promise<{ passcode: string; cleanId: string } | null> => {
-        if (!firestore) return null;
+        if (!firestore || !auth.currentUser) return null;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!cleanId) {
             playSound('error');
@@ -104,7 +104,6 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
         const finalSchoolDocData = {
             ...schoolDocData,
-            passcode: newPasscode,
             name: schoolData.name,
             hasMigratedStudents: true,
             hasMigratedClasses: true,
@@ -114,9 +113,13 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             hasMigratedCategories: true,
         };
 
-        // Chunk batch operations to respect the 500-operation Firestore limit
         const allOps: Array<{ ref: any; data: any }> = [];
         allOps.push({ ref: schoolDocRef, data: finalSchoolDocData });
+        const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
+        allOps.push({ ref: adminRoleRef, data: { role: 'admin' } });
+        // Store passcode in a secrets subcollection that clients cannot read
+        const secretsRef = doc(firestore, 'schools', cleanId, 'secrets', 'config');
+        allOps.push({ ref: secretsRef, data: { passcode: newPasscode } });
 
         const collectItems = (list: any[] | undefined, collectionName: string) => {
             if (!list) return;
@@ -157,10 +160,18 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         collectItems(prizes, 'prizes');
         collectItems(coupons, 'coupons');
 
-        // Commit in chunks of 499 (leaving room for safety)
+        // First commit: school doc + roles_admin only. Rules evaluate per-operation against
+        // pre-commit state, so we must commit this so the user is admin before writing subcollections.
+        const firstBatch = writeBatch(firestore);
+        firstBatch.set(schoolDocRef, finalSchoolDocData);
+        firstBatch.set(adminRoleRef, { role: 'admin' });
+        await firstBatch.commit();
+
+        // Commit remaining ops (secrets + data subcollections) in chunks of 499
         const BATCH_LIMIT = 499;
-        for (let i = 0; i < allOps.length; i += BATCH_LIMIT) {
-            const chunk = allOps.slice(i, i + BATCH_LIMIT);
+        const restOps = allOps.slice(2);
+        for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
+            const chunk = restOps.slice(i, i + BATCH_LIMIT);
             const batch = writeBatch(firestore);
             for (const op of chunk) {
                 batch.set(op.ref, op.data);
@@ -173,7 +184,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             toast({ title: `School "${cleanId}" created!` });
         }
         return { passcode: newPasscode, cleanId };
-    }, [firestore, toast, playSound]);
+    }, [firestore, auth, toast, playSound]);
 
     const devCreateBackup = useCallback(async (schoolId: string) => {
         const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
@@ -262,7 +273,13 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     const updateSchool = useCallback(async (schoolId: string, updates: { name?: string; passcode?: string }) => {
         if (!firestore) return;
         try {
-            await updateDoc(doc(firestore, 'schools', schoolId), updates);
+            const { passcode, ...schoolDocUpdates } = updates;
+            if (Object.keys(schoolDocUpdates).length > 0) {
+                await updateDoc(doc(firestore, 'schools', schoolId), schoolDocUpdates);
+            }
+            if (passcode) {
+                await setDoc(doc(firestore, 'schools', schoolId, 'secrets', 'config'), { passcode });
+            }
             playSound('success');
         } catch (e) {
             toast({ variant: 'destructive', title: "School update failed", description: (e as Error).message });

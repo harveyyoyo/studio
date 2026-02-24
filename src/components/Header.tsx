@@ -98,7 +98,7 @@ export default function Header() {
               </Link>
               <Link href="/halloffame" className="flex flex-col items-center text-slate-500 hover:text-slate-800 transition-colors px-2 py-1">
                 <Trophy className="w-5 h-5" />
-                <span className="text-[10px] font-bold mt-0.5">Fame</span>
+                <span className="text-[10px] font-bold mt-0.5">Hall of Fame</span>
               </Link>
             </div>
           </nav>

@@ -21,17 +21,18 @@ export default function PortalPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-400'}`}>
-                Loading...
+            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-500'}`}>
+                <p className="font-medium">Just a moment…</p>
+                <p className="text-sm">Loading your school.</p>
             </div>
         );
     }
 
     const portals = [
         { href: '/student', label: 'Student Portal', desc: 'Check points, redeem coupons & prizes', icon: GraduationCap, color: 'chart-1' },
+        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
         { href: '/teacher', label: 'Teacher Portal', desc: 'Log in as a teacher to generate and print coupon sheets.', icon: Printer, color: 'chart-2' },
         { href: '/admin', label: 'Admin Portal', desc: 'Manage all school data and settings.', icon: UserCog, color: 'destructive' },
-        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
         { href: '/halloffame', label: 'Hall of Fame', desc: 'View the top student point earners.', icon: Trophy, color: 'chart-5' },
     ];
 
@@ -73,6 +74,9 @@ export default function PortalPage() {
 
                 {/* Portal Header */}
                 <div className="text-center space-y-2">
+                    <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>
+                        School: {schoolId?.replace(/_/g, ' ') || 'School Reward System'}
+                    </p>
                     <h2 className={`text-3xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>
                         Welcome to <span className="text-primary">{schoolId?.replace(/_/g, ' ') || 'School Reward System'}</span>
                     </h2>
@@ -125,25 +129,36 @@ export default function PortalPage() {
                 </div>
             </div>
 
-            {/* Persistent Bottom Nav - Matched to Login/Home */}
-            <nav className={`fixed bottom-0 left-0 right-0 py-3 z-50 transition-all border-t ${isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'
-                }`}>
-                <div className="max-w-md mx-auto flex justify-around items-center px-4">
-                    <Link href="/" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Home className="w-6 h-6" />
-                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Home</span>
+            {/* Persistent Bottom Nav - all portals reachable */}
+            <nav className={`fixed bottom-0 left-0 right-0 py-2 z-50 transition-all border-t ${isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
+                <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-x-3 gap-y-1 items-center px-2">
+                    <Link href="/" title="Return to login" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Home className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Leave</span>
                     </Link>
-                    <div className={`flex flex-col items-center ${isGraphic ? 'text-primary' : 'text-indigo-600'}`}>
-                        <Star className="w-6 h-6" />
-                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Portal</span>
+                    <div className={`flex flex-col items-center py-1 ${isGraphic ? 'text-primary' : 'text-indigo-600'}`}>
+                        <Star className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Portal</span>
                     </div>
-                    <Link href="/prize" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Gift className="w-6 h-6" />
-                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Prizes</span>
+                    <Link href="/student" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <GraduationCap className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Student</span>
                     </Link>
-                    <Link href="/halloffame" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Trophy className="w-6 h-6" />
-                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Fame</span>
+                    <Link href="/teacher" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Printer className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Teacher</span>
+                    </Link>
+                    <Link href="/prize" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Gift className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Prizes</span>
+                    </Link>
+                    <Link href="/admin" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <UserCog className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Admin</span>
+                    </Link>
+                    <Link href="/halloffame" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Trophy className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Hall of Fame</span>
                     </Link>
                 </div>
             </nav>

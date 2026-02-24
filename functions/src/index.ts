@@ -4,6 +4,68 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 
+/**
+ * Verifies a school passcode server-side so the client never sees the real value.
+ * On success, grants the caller admin role for the school.
+ */
+exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Must be authenticated."
+    );
+  }
+
+  const { schoolId, passcode } = data;
+
+  if (typeof schoolId !== "string" || !schoolId.trim()) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "A valid schoolId is required."
+    );
+  }
+  if (typeof passcode !== "string" || !passcode) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "A passcode is required."
+    );
+  }
+
+  const db = admin.firestore();
+  const cleanId = schoolId.trim().toLowerCase();
+  const schoolDocRef = db.collection("schools").doc(cleanId);
+  const schoolSnap = await schoolDocRef.get();
+
+  if (!schoolSnap.exists) {
+    throw new functions.https.HttpsError("not-found", "School not found.");
+  }
+
+  // Read passcode from secrets subcollection (preferred) or fall back to
+  // the school doc itself for schools that haven't been migrated yet.
+  let storedPasscode: string | undefined;
+  const secretsSnap = await schoolDocRef.collection("secrets").doc("config").get();
+  if (secretsSnap.exists) {
+    storedPasscode = secretsSnap.data()?.passcode;
+  } else {
+    storedPasscode = schoolSnap.data()?.passcode;
+  }
+
+  if (!storedPasscode || storedPasscode !== passcode) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "Incorrect passcode."
+    );
+  }
+
+  // Grant admin role to the caller
+  await schoolDocRef
+    .collection("roles_admin")
+    .doc(context.auth.uid)
+    .set({ role: "admin" });
+
+  return { success: true, schoolName: schoolSnap.data()?.name || cleanId };
+});
+
 exports.createBackupTrigger = functions.https.onCall(async (data, context) => {
   const schoolId = data.schoolId;
 

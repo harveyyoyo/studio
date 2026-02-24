@@ -144,12 +144,13 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-[#0c1a3a] border-b border-indigo-500/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                            <Button variant="ghost" onClick={onLogout} className={isGraphic ? 'text-white/60 hover:text-white hover:bg-white/5' : ''}>
-                                <ArrowLeft className="w-5 h-5 mr-2" /> Back
+                            <Button variant="ghost" asChild className={isGraphic ? 'text-white/60 hover:text-white hover:bg-white/5' : ''}>
+                                <Link href="/portal"><ArrowLeft className="w-5 h-5 mr-2" /> Back to portal</Link>
                             </Button>
                             <div>
                                 <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Teacher Portal</h1>
                                 <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-amber-400' : 'text-primary'}`}>{teacherName}</p>
+                                <p className={`text-xs mt-0.5 ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
                             </div>
                         </div>
                         {isGraphic && (
@@ -162,46 +163,6 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
                 <div className="max-w-4xl mx-auto px-6 -mt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                        {/* Quick Points Section */}
-                        <Card className={`border-t-4 transition-all ${isGraphic
-                            ? 'bg-slate-800/50 backdrop-blur-md border-indigo-500 shadow-2xl border-t-indigo-500'
-                            : 'bg-white border-chart-2 shadow-lg'
-                            }`}>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Plus className={isGraphic ? 'text-indigo-400' : 'text-chart-2'} />
-                                    Quick Points
-                                </CardTitle>
-                                <CardDescription className={isGraphic ? 'text-slate-400' : ''}>
-                                    Instantly award points for positive behavior.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {[
-                                        { label: 'Helpful', points: 5 },
-                                        { label: 'Homework', points: 10 },
-                                        { label: 'Participated', points: 5 },
-                                        { label: 'Effort', points: 10 },
-                                        { label: 'Cleaned', points: 5 },
-                                        { label: 'Star', points: 20 },
-                                    ].map((item) => (
-                                        <Button
-                                            key={item.label}
-                                            variant="outline"
-                                            className={`h-auto flex-col items-start p-4 transition-all active:scale-95 ${isGraphic
-                                                ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
-                                                : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'
-                                                }`}
-                                        >
-                                            <span className={`font-black text-lg ${isGraphic ? 'text-indigo-400' : 'text-primary'}`}>+{item.points}</span>
-                                            <span className="font-bold text-[10px] uppercase tracking-wider opacity-60">{item.label}</span>
-                                        </Button>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
 
                         {/* Coupon Printer Section */}
                         <Card className={`border-t-4 transition-all ${isGraphic
@@ -265,7 +226,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                             </div>
                                         </div>
 
-                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 ${isGraphic ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-slate-800 hover:bg-slate-700'
+                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-slate-800 hover:bg-slate-700'
                                             }`}>
                                             <Printer className="w-5 h-5 mr-3" /> Generate Sheet
                                         </Button>
@@ -392,7 +353,7 @@ export default function TeacherPage() {
                             </div>
                         )}
 
-                        <Button onClick={handleLogin} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
+                        <Button onClick={handleLogin} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
                             }`} disabled={teachersLoading}>
                             <LogIn className="mr-3 w-6 h-6" /> Login
                         </Button>

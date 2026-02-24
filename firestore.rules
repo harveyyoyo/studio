@@ -3,7 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
     function isAuth() {
       return request.auth != null;
     }
@@ -12,72 +11,59 @@ service cloud.firestore {
       return isAuth() && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid));
     }
     
-    // School metadata document
+    // School document: any auth user can read (needed for passcode login flow)
+    // and create (for sample school seeding). Only admins can modify or delete.
     match /schools/{schoolId} {
       allow read: if isAuth();
-      allow write: if isAdmin(schoolId);
+      allow create: if isAuth();
+      allow update, delete: if isAdmin(schoolId);
       
-      // Students: admins have full control. Authenticated users can only update
-      // specific fields on student docs (points, lifetimePoints, categoryPoints)
-      // via transactional coupon/prize redemption. They cannot create or delete students.
+      // Everything below is scoped to admins of THIS school only.
+      // The school login flow creates roles_admin/{uid} on successful passcode,
+      // so kiosk and redemption sessions already have admin status.
+
       match /students/{studentId} {
-        allow read: if isAuth();
-        allow create, delete: if isAdmin(schoolId);
-        allow update: if isAdmin(schoolId)
-          || (isAuth() && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['points', 'lifetimePoints', 'categoryPoints']));
-        
-        // Activity logs: any authenticated user can read or create (for redemptions).
-        // Only admins can update or delete activity records.
+        allow read, write: if isAdmin(schoolId);
+
         match /activities/{activityId} {
-          allow read: if isAuth();
-          allow create: if isAuth();
-          allow update, delete: if isAdmin(schoolId);
+          allow read, write: if isAdmin(schoolId);
         }
       }
       
-      // Teachers and Classes can only be managed by admins, but read by any authenticated user.
       match /teachers/{teacherId} {
-        allow read: if isAuth();
-        allow write: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId);
       }
       
       match /classes/{classId} {
-        allow read: if isAuth();
-        allow write: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId);
       }
       
-      // Categories can only be managed by admins, but read by any authenticated user.
       match /categories/{categoryId} {
-        allow read: if isAuth();
-        allow write: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId);
       }
 
-      // Prizes (Reward Items) can only be managed by admins, but read by any authenticated user.
       match /prizes/{prizeId} {
-          allow read: if isAuth();
-          allow write: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId);
       }
       
-      // Coupons: admins can create/delete. Any authenticated user can read or update
-      // (to mark a coupon as redeemed), but only specific fields are allowed on update.
       match /coupons/{couponId} {
-        allow read: if isAuth();
-        allow create: if isAdmin(schoolId);
-        allow update: if isAuth()
-          && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['used', 'usedAt', 'usedBy']);
-        allow delete: if isAdmin(schoolId);
+        allow read, write: if isAdmin(schoolId);
       }
       
-      // Admin roles can be created by the user themselves upon login.
-      // Only existing admins can read, update, or delete other admin roles.
+      // A user can grant themselves admin by creating their own uid doc
+      // (happens during passcode login). Only existing admins can manage others.
       match /roles_admin/{uid} {
         allow read, update, delete: if isAdmin(schoolId);
         allow create: if isAuth() && request.auth.uid == uid;
       }
 
-      // Backups subcollection
+      // Passcode stored here; only writable by admins, never readable by clients.
+      // The Cloud Function verifySchoolPasscode reads this via the admin SDK.
+      match /secrets/{docId} {
+        allow read: if false;
+        allow write: if isAdmin(schoolId);
+      }
+
       match /backups/{backupId} {
         allow read, write: if isAdmin(schoolId);
       }

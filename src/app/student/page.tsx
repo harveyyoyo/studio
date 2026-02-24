@@ -8,8 +8,10 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { useFirestore, useFunctions, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { lookupStudentId } from '@/lib/db';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem } from '@/lib/types';
 import {
+  ArrowLeft,
   Nfc,
   Type,
   Camera,
@@ -105,13 +108,14 @@ function StudentDashboardInner({
   const router = useRouter();
   const { redeemCoupon, schoolId } = useAppContext();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const { toast } = useToast();
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
 
   const [couponCode, setCouponCode] = useState('');
-  const [logoutTimer, setLogoutTimer] = useState(60);
+  const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
   const animationKey = useRef(0);
   const playSound = useArcadeSound();
@@ -141,7 +145,7 @@ function StudentDashboardInner({
     setHasCameraPermission(hookHasPermission);
   }, [hookHasPermission]);
 
-  const resetTimer = useCallback(() => setLogoutTimer(60), []);
+  const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
   useEffect(() => {
     const handleDone = () => onDone();
@@ -177,22 +181,17 @@ function StudentDashboardInner({
   const handleLogoutConfirm = useCallback(async () => {
     if (!schoolId) return;
     try {
-      const schoolDocRef = doc(firestore, 'schools', schoolId);
-      const schoolSnap = await getDoc(schoolDocRef);
-      if (schoolSnap.exists() && schoolSnap.data().passcode === logoutPasscode) {
-        onDone();
-        toast({ title: "Logged Out", description: "You have been successfully logged out." });
-      } else {
-        playSound('error');
-        toast({ variant: 'destructive', title: 'Incorrect Passcode', description: 'The passcode you entered is incorrect.' });
-      }
+      const verify = httpsCallable(functions, 'verifySchoolPasscode');
+      await verify({ schoolId, passcode: logoutPasscode });
+      onDone();
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch {
       playSound('error');
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not verify passcode.' });
+      toast({ variant: 'destructive', title: 'Incorrect Passcode', description: 'The passcode you entered is incorrect.' });
     }
     setLogoutPasscode('');
     setIsLogoutDialogOpen(false);
-  }, [schoolId, firestore, logoutPasscode, onDone, playSound, toast]);
+  }, [schoolId, functions, logoutPasscode, onDone, playSound, toast]);
 
   if (studentLoading || !student || !schoolId) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>
@@ -409,6 +408,7 @@ export default function StudentLoginPage() {
     }
   }, [isInitialized, loginState, router]);
 
+
   useEffect(() => {
     if (!activeStudentId && loginTab === 'nfc') {
       setTimeout(() => nfcInputRef.current?.focus(), 100);
@@ -417,41 +417,10 @@ export default function StudentLoginPage() {
 
   const handleNfcSubmit = useCallback(async (scannedId?: string) => {
     const rawId = scannedId || nfcId;
-    if (!rawId || !schoolId) return;
-    const idToSubmit = rawId.trim();
+    if (!rawId?.trim() || !schoolId) return;
 
     try {
-      let finalStudentId: string | null = null;
-
-      const { getDocs, where, collection, query } = await import('firebase/firestore');
-      const studentsRef = collection(firestore, 'schools', schoolId, 'students');
-
-      // 1. Primary lookup: Query by nfcId (string)
-      const qStr = query(studentsRef, where('nfcId', '==', idToSubmit));
-      const querySnap = await getDocs(qStr);
-
-      if (!querySnap.empty) {
-        finalStudentId = querySnap.docs[0].id;
-      } else {
-        // 2. If input looks like a number, try nfcId stored as number (e.g. 100)
-        const asNum = /^\d+$/.test(idToSubmit) ? parseInt(idToSubmit, 10) : NaN;
-        if (!Number.isNaN(asNum)) {
-          const qNum = query(studentsRef, where('nfcId', '==', asNum));
-          const numSnap = await getDocs(qNum);
-          if (!numSnap.empty) {
-            finalStudentId = numSnap.docs[0].id;
-          }
-        }
-      }
-
-      if (finalStudentId == null) {
-        // 3. Fallback: Try direct lookup by document ID
-        const studentSnap = await getDoc(doc(firestore, 'schools', schoolId, 'students', idToSubmit));
-        if (studentSnap.exists()) {
-          finalStudentId = studentSnap.id;
-        }
-      }
-
+      const finalStudentId = await lookupStudentId(firestore, schoolId, rawId.trim());
       if (finalStudentId) {
         playSound('login');
         setActiveStudentId(finalStudentId);
@@ -558,8 +527,9 @@ export default function StudentLoginPage() {
                         placeholder="e.g. 100"
                         autoFocus
                       />
+                      <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
                     </div>
-                    <Button onClick={() => handleNfcSubmit()} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all active:scale-95 ${isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700'}`}>
+                    <Button onClick={() => handleNfcSubmit()} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all active:scale-95 text-white ${isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700'}`}>
                       Login
                     </Button>
                   </div>
@@ -587,9 +557,9 @@ export default function StudentLoginPage() {
             </div>
 
             <div className="bg-slate-50 p-6 border-t flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-              <p className="text-muted-foreground">Connected: <span className="text-slate-800">{schoolId}</span></p>
+              <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
               <Link href="/portal" className="text-primary hover:underline flex items-center gap-1 group">
-                Exit Kiosk <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                <ArrowLeft className="w-3 h-3" /> Back to portal <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>

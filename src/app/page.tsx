@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { SettingsModal } from '@/components/ui/SettingsModal';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -89,6 +90,13 @@ export default function LoginPage() {
   return (
     <div className={`min-h-screen relative overflow-hidden font-sans pb-24 flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-slate-50 text-slate-900'}`}>
 
+      {/* Settings - top right */}
+      <div className="fixed top-4 right-4 z-[100] no-print">
+        <div className={`rounded-xl shadow-lg border p-1 ${isGraphic ? 'bg-white/10 backdrop-blur-md border-white/20' : 'bg-card border-border'}`}>
+          <SettingsModal />
+        </div>
+      </div>
+
       {/* Background Decor - Only for Graphic Mode */}
       {isGraphic && (
         <div className="absolute inset-0 z-0 opacity-10">
@@ -112,13 +120,13 @@ export default function LoginPage() {
               {isDeveloper ? 'Developer Mode' : 'School Login'}
             </h2>
             <p className={`text-xs font-medium ${isGraphic ? 'text-white/80' : 'text-slate-500'}`}>
-              {isDeveloper ? 'Enter system dev passcode.' : 'Select a sample or enter your details.'}
+              {isDeveloper ? 'Enter system dev passcode.' : 'Enter your school ID and passcode to continue.'}
             </p>
           </div>
 
           {!isDeveloper && (
             <div className="mb-8 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-100 italic">
-              <p className={`text-center text-[10px] font-black uppercase tracking-tighter mb-2 ${isGraphic ? 'text-white/60' : 'text-slate-400'}`}>Quick Access Samples</p>
+              <p className={`text-center text-[10px] font-black uppercase tracking-tighter mb-2 ${isGraphic ? 'text-white/60' : 'text-slate-400'}`}>Try a demo school</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSampleLogin('schoolabc')}
@@ -164,18 +172,25 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="pt-4">
+            <div className="pt-4 flex flex-col gap-3">
               <button
                 onClick={isDeveloper ? handleDeveloperLogin : handleSchoolLogin}
                 className={`w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl ${isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
               >
                 {isDeveloper ? 'Dev Login' : 'Login'}
               </button>
+              <button
+                type="button"
+                onClick={() => setIsDeveloper(!isDeveloper)}
+                className={`text-xs font-medium ${isGraphic ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Footer Links & Instructions */}
+        {/* Footer - developer toggle (repeated for visibility) */}
         <div className="mt-12 flex flex-col gap-6 text-center">
           <div className={`w-full border-t pt-6 ${isGraphic ? 'border-white/10' : 'border-slate-200'}`} />
           <button
