@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
+import { useFirestore, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, HelpCircle, LifeBuoy, RefreshCw,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,18 +26,15 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+import type { BackupInfo } from '@/lib/types';
 
 
 interface SchoolInfo {
   id: string;
   name: string;
-}
-
-interface BackupInfo {
-  id: string;
 }
 
 interface SchoolStats {
@@ -148,14 +145,16 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    isAutoBackupEnabled, toggleAutoBackup, devMigrateSchoolData
+    devVerifyBackup, devMigrateSchoolData
   } = useAppContext();
   const firestore = useFirestore();
+  const { auth } = useFirebase();
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
 
-  const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string, passcode: string } | null>(null);
+  const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string; passcode: string } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
   const [newSchoolName, setNewSchoolName] = useState('');
   const [newPasscode, setNewPasscode] = useState('');
@@ -175,6 +174,18 @@ export default function DeveloperPage() {
       router.replace('/');
     }
   }, [isInitialized, loginState, router]);
+
+  // Ensure the developer has admin access to every school (needed for Firestore rules)
+  useEffect(() => {
+    if (loginState !== 'developer' || !firestore || !allSchools || schoolsLoading) return;
+    const user = auth?.currentUser;
+    if (!user) return;
+
+    allSchools.forEach((school) => {
+      const adminRoleRef = doc(firestore, 'schools', school.id, 'roles_admin', user.uid);
+      setDoc(adminRoleRef, { role: 'admin' }).catch(() => {});
+    });
+  }, [loginState, firestore, allSchools, schoolsLoading, auth]);
 
   // Automatically create the sample schools once on developer login
   useEffect(() => {
@@ -275,9 +286,15 @@ export default function DeveloperPage() {
     if (!firestore) return;
     setBackupSchool(school);
     const backupsColRef = collection(firestore, 'schools', school.id, 'backups');
-    const q = query(backupsColRef);
-    const snapshot = await getDocs(q);
-    const backupList = snapshot.docs.map(doc => ({ id: doc.id })).sort((a, b) => parseInt(b.id) - parseInt(a.id));
+    const snapshot = await getDocs(query(backupsColRef));
+    const backupList: BackupInfo[] = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    } as BackupInfo)).sort((a, b) => {
+      const timeA = a.createdAt || 0;
+      const timeB = b.createdAt || 0;
+      return timeB - timeA;
+    });
     setSchoolBackups(backupList);
   }
 
@@ -302,8 +319,39 @@ export default function DeveloperPage() {
   const handleBackupAll = async () => {
     if (!allSchools) return;
     await devBackupAllSchools();
-    toast({ title: "Backup process complete", description: "All schools have been backed up." });
   }
+
+  const handleVerifyBackup = async (backupId: string) => {
+    if (!backupSchool) return;
+    toast({ title: "Verifying...", description: "Checking backup integrity via SHA-256 hash." });
+    const result = await devVerifyBackup(backupSchool.id, backupId);
+    toast({
+      title: result.verified ? "Backup Verified" : "Verification Failed",
+      description: result.reason,
+      variant: result.verified ? "default" : "destructive",
+    });
+  }
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const getSchoolUrl = (id: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/s/${id}`;
+  };
+
+  const handleCopyUrl = async (id: string) => {
+    const url = getSchoolUrl(id);
+    await navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    toast({ title: 'Link copied!' });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   if (!isInitialized || loginState !== 'developer' || isUserLoading) {
     return <p>Loading...</p>;
@@ -401,18 +449,12 @@ export default function DeveloperPage() {
             </div>
             <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
               <div>
-                <h3 className="font-bold flex items-center gap-2"><ShieldCheck />Automatic Daily Backups</h3>
-                <p className="text-sm text-muted-foreground mt-1">If enabled, a backup of all schools will be created automatically once every 24 hours.</p>
+                <h3 className="font-bold flex items-center gap-2"><ShieldCheck />Scheduled Daily Backups</h3>
+                <p className="text-sm text-muted-foreground mt-1">Full-depth backups of all schools run automatically every 24 hours via Cloud Scheduler. Includes all students, classes, teachers, prizes, coupons, categories, and activity history. Old backups are automatically pruned after 30 days.</p>
               </div>
-              <div className="flex items-center space-x-2 mt-4">
-                <Switch
-                  id="auto-backup-switch"
-                  checked={isAutoBackupEnabled}
-                  onCheckedChange={toggleAutoBackup}
-                />
-                <Label htmlFor="auto-backup-switch" className="font-normal">
-                  {isAutoBackupEnabled ? "Enabled" : "Disabled"}
-                </Label>
+              <div className="mt-4 text-xs text-muted-foreground bg-background p-2 rounded flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>Each backup is signed with a SHA-256 integrity hash for verification.</span>
               </div>
             </div>
           </CardContent>
@@ -449,6 +491,13 @@ export default function DeveloperPage() {
                     <div onClick={() => setStatsSchool(school)} className="flex-grow cursor-pointer rounded -m-2 p-2 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
+                        className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
+                      >
+                        {copiedId === school.id ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                        {copiedId === school.id ? 'Copied!' : 'Copy school link'}
+                      </button>
                     </div>
                     <div className="flex items-center gap-0.5">
                       <AlertDialog>
@@ -545,14 +594,23 @@ export default function DeveloperPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>School Created Successfully!</AlertDialogTitle>
               <AlertDialogDescription>
-                The school <span className="font-bold font-code">{createdSchoolInfo?.id}</span> has been created. Here is the passcode. Please store it securely, as it will not be shown again.
+                Send the school their unique link and passcode below.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 text-center my-4">
-              <p className="text-sm text-muted-foreground">School ID</p>
-              <p className="font-code font-bold text-lg">{createdSchoolInfo?.id}</p>
-              <p className="text-sm text-muted-foreground mt-2">New School Passcode</p>
-              <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.passcode}</p>
+            <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-4 text-center my-4 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">School Link</p>
+                <div className="bg-white dark:bg-slate-900 rounded-md p-2 flex items-center gap-2">
+                  <code className="text-xs break-all flex-1 text-left">{createdSchoolInfo && getSchoolUrl(createdSchoolInfo.id)}</code>
+                  <Button size="sm" variant="outline" onClick={() => createdSchoolInfo && handleCopyUrl(createdSchoolInfo.id)}>
+                    {copiedId === createdSchoolInfo?.id ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground">Passcode</p>
+                <p className="font-code font-bold text-3xl tracking-widest text-primary">{createdSchoolInfo?.passcode}</p>
+              </div>
             </div>
             <AlertDialogFooter>
               <AlertDialogAction onClick={() => setCreatedSchoolInfo(null)}>Close</AlertDialogAction>
@@ -601,43 +659,92 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Manage Backups for <span className="font-code">{backupSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Create, download, or restore backups for this school instance.
+                Full-depth backups include all students, classes, teachers, prizes, coupons, categories, and activity history. Scheduled backups run daily via Cloud Scheduler.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Button onClick={handleCreateBackup} className="mb-4"><Plus className="mr-2" />Create New Backup</Button>
-              <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
+              <Button onClick={handleCreateBackup} className="mb-4"><Plus className="mr-2" />Create Full Backup</Button>
+              <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {schoolBackups.length > 0 ? schoolBackups.map(backup => (
-                  <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
-                    <div className="flex gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => devDownloadBackup(backupSchool!.id, backup.id)}><Download className="h-4 w-4" /></Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Download</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Restore</p></TooltipContent>
-                        </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
-                            <AlertDialogDescription>This will overwrite all current data for {backupSchool?.id} with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleRestoreBackup(backup.id)}>Restore</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                  <li key={backup.id} className="bg-secondary p-3 rounded border space-y-1.5">
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="min-w-0">
+                        <span className="font-code text-sm">
+                          {backup.createdAt ? new Date(backup.createdAt).toLocaleString() : 'Unknown date'}
+                        </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {backup.type && (
+                            <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium",
+                              backup.type === 'manual' && 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+                              backup.type === 'scheduled' && 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                              backup.type === 'pre-delete' && 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+                              backup.type === 'pre-restore' && 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+                            )}>
+                              {backup.type}
+                            </span>
+                          )}
+                          {backup.status && (
+                            <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium",
+                              backup.status === 'complete' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+                              backup.status === 'failed' && 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+                            )}>
+                              {backup.status}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        {backup.status !== 'failed' && (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="outline" onClick={() => devDownloadBackup(backupSchool!.id, backup.id)}><Download className="h-4 w-4" /></Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Download</p></TooltipContent>
+                            </Tooltip>
+                            <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Full Restore</p></TooltipContent>
+                              </Tooltip>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will fully restore {backupSchool?.id} from the backup taken on {backup.createdAt ? new Date(backup.createdAt).toLocaleString() : 'unknown date'}. All current data (students, classes, teachers, prizes, coupons, categories, and activities) will be replaced. A safety backup will be created first.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleRestoreBackup(backup.id)}>Restore</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            {backup.storagePath && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="sm" variant="outline" onClick={() => handleVerifyBackup(backup.id)}><ShieldCheck className="h-4 w-4" /></Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Verify SHA-256 Integrity</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
+                    {backup.totalDocs != null && backup.totalDocs > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {backup.totalDocs.toLocaleString()} docs &middot; {formatBytes(backup.sizeBytes || 0)}
+                        {backup.collections && ` (${backup.collections.students || 0} students, ${backup.collections.activities || 0} activities)`}
+                      </p>
+                    )}
+                    {backup.error && (
+                      <p className="text-xs text-red-500 dark:text-red-400">{backup.error}</p>
+                    )}
                   </li>
                 )) : <p className="text-center text-sm text-muted-foreground italic py-4">No backups found for this school.</p>}
               </ul>

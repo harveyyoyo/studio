@@ -9,7 +9,8 @@ import { getFunctions } from 'firebase/functions';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  if (!getApps().length) {
+  const apps = getApps();
+  if (!apps.length) {
     // Important! initializeApp() is called without any arguments because Firebase App Hosting
     // integrates with the initializeApp() function to provide the environment variables needed to
     // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
@@ -38,20 +39,19 @@ export function initializeFirebase() {
   }
 
   // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+  return getSdks(apps[0]);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
   let firestore;
   try {
-    // Attempt to initialize Firestore with offline persistence
     const isBrowser = typeof window !== 'undefined';
+    // Attempt initializeFirestore first only if it hasn't been done
     firestore = initializeFirestore(firebaseApp, {
       ...(isBrowser ? { localCache: persistentLocalCache() } : {}),
     });
   } catch (e: any) {
-    // Fall back to getFirestore() on ANY error (e.g., indexedDB blocked in incognito, fast refresh, etc.)
-    console.warn("Firestore initialization error, falling back to non-persistent:", e);
+    // If already initialized OR other error, use getFirestore which returns the existing instance
     firestore = getFirestore(firebaseApp);
   }
 

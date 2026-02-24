@@ -4,21 +4,23 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { SchoolGate } from '@/components/SchoolGate';
 import {
-  ArrowLeft, BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
-  FileSpreadsheet, Printer, Settings, Edit, History, Users, User, Gift, UploadCloud, IdCard,
+  BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
+  Printer, Edit, History, Users, User, Gift, UploadCloud,
+  Trophy, ShieldCheck, LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { PrizeModal } from '@/components/PrizeModal';
+import { AchievementModal } from '@/components/AchievementModal';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,79 +54,52 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function AdminDashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6 animate-pulse p-4 md:p-8">
       <Card className="bg-card p-6 shadow-lg flex justify-between items-center">
         <div>
           <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
         </div>
         <Skeleton className="h-9 w-36" />
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((i) => (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
             <CardHeader>
               <Skeleton className="h-6 w-24" />
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Skeleton className="h-10 flex-grow" />
-                <Skeleton className="h-10 w-16" />
-              </div>
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
+            <CardContent>
+              <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <Skeleton className="h-10" />
-          <Skeleton className="h-10" />
-          <Skeleton className="h-10" />
-          <Skeleton className="h-10" />
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader className="flex flex-row justify-between items-center">
           <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-10 w-32" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-16" />
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Database Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24" />
-          <Skeleton className="h-24 col-span-2" />
-          <Skeleton className="h-24 col-span-2" />
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
 function AdminDashboardInner() {
   const {
@@ -132,36 +107,38 @@ function AdminDashboardInner() {
     addClass, deleteClass, deleteCategory, addCategory, addCoupons,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
+    deleteAchievement,
   } = useAppContext();
   const firestore = useFirestore();
-  const router = useRouter();
   const { toast } = useToast();
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
-  const backupTriggeredRef = useRef(false);
+  const { settings, updateSettings } = useSettings();
 
   // Data fetching hooks
   const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
-  const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: students, isLoading: studentsLoading, error: studentsError } = useCollection<Student>(studentsQuery);
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
-  const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
+  const { data: classes, isLoading: classesLoading, error: classesError } = useCollection<Class>(classesQuery);
 
   const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
-  const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
+  const { data: teachers, isLoading: teachersLoading, error: teachersError } = useCollection<Teacher>(teachersQuery);
 
   const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
-  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useCollection<Category>(categoriesQuery);
 
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
-  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+  const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
 
   const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
-  const { data: coupons, isLoading: couponsLoading } = useCollection<Coupon>(couponsQuery);
+  const { data: coupons, isLoading: couponsLoading, error: couponsError } = useCollection<Coupon>(couponsQuery);
 
   const backupsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
-  const { data: backups, isLoading: backupsLoading } = useCollection<{ id: string }>(backupsQuery);
+  const { data: backups, isLoading: backupsLoading, error: backupsError } = useCollection<BackupInfo>(backupsQuery);
 
+  const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
+  const { data: achievements, isLoading: achievementsLoading, error: achievementsError } = useCollection<Achievement>(achievementsQuery);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -171,6 +148,8 @@ function AdminDashboardInner() {
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
+  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
+  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
@@ -184,28 +163,22 @@ function AdminDashboardInner() {
 
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
 
-  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
+  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading || achievementsLoading;
+
+  const collectionErrors = [
+    { name: 'Students', error: studentsError },
+    { name: 'Classes', error: classesError },
+    { name: 'Teachers', error: teachersError },
+    { name: 'Categories', error: categoriesError },
+    { name: 'Prizes', error: prizesError },
+    { name: 'Coupons', error: couponsError },
+    { name: 'Backups', error: backupsError },
+    { name: 'Achievements', error: achievementsError },
+  ].filter(c => c.error);
 
   const getClassName = (classId: string) => {
     return classes?.find((c) => c.id === classId)?.name || 'Unassigned';
   };
-
-  useEffect(() => {
-    if (isDbLoading || !schoolId || backupTriggeredRef.current || !backups) return;
-
-    const lastBackupTime = backups.length > 0 ? parseInt(backups[0].id) : 0;
-    const oneDay = 24 * 60 * 60 * 1000;
-
-    if (Date.now() - lastBackupTime > oneDay) {
-      backupTriggeredRef.current = true;
-      devCreateBackup(schoolId).then(() => {
-        toast({
-          title: "Automatic Backup Created",
-          description: "A backup was created as the last one was over 24 hours ago."
-        });
-      });
-    }
-  }, [isDbLoading, backups, devCreateBackup, toast, schoolId]);
 
   useEffect(() => {
     if (categories && categories.length > 0 && !printCategoryId) {
@@ -220,18 +193,35 @@ function AdminDashboardInner() {
     }
   }, [printCategoryId, categories]);
 
-
   if (isDbLoading) {
     return <AdminDashboardSkeleton />;
   }
 
+  if (collectionErrors.length > 0) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-4">
+        <Alert variant="destructive">
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>Data Fetch Error</AlertTitle>
+          <AlertDescription>
+            Some school data could not be loaded. This may be due to temporary network issues or missing permissions.
+            <ul className="mt-2 text-xs font-code list-disc pl-4">
+              {collectionErrors.map((c, i) => (
+                <li key={i}>{c.name}: {c.error?.message}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => window.location.reload()} className="rounded-full">
+          <History className="mr-2 h-4 w-4" /> Retry Loading
+        </Button>
+      </div>
+    );
+  }
+
   const handleAddClass = () => {
     if (!newClassName) {
-      toast({
-        variant: 'destructive',
-        title: 'Class Name Required',
-        description: 'Please enter a name for the new class.',
-      });
+      toast({ variant: 'destructive', title: 'Class Name Required', description: 'Please enter a name for the new class.' });
       return;
     }
     addClass({ name: newClassName });
@@ -240,11 +230,7 @@ function AdminDashboardInner() {
 
   const handleAddTeacher = () => {
     if (!newTeacherName) {
-      toast({
-        variant: 'destructive',
-        title: 'Teacher Name Required',
-        description: 'Please enter a name for the new teacher.',
-      });
+      toast({ variant: 'destructive', title: 'Teacher Name Required', description: 'Please enter a name for the new teacher.' });
       return;
     }
     addTeacher({ name: newTeacherName });
@@ -253,20 +239,12 @@ function AdminDashboardInner() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName || !newCategoryPoints) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please provide a name and point value for the category.',
-      });
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
       return;
     }
     const points = parseInt(newCategoryPoints);
     if (isNaN(points) || points <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Points',
-        description: 'Points must be a positive number.',
-      });
+      toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
       return;
     }
     await addCategory({ name: newCategoryName, points });
@@ -276,20 +254,12 @@ function AdminDashboardInner() {
 
   const handleAddPrintCategory = async () => {
     if (!newPrintCategoryName || !newPrintCategoryPoints) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please provide a name and point value for the category.',
-      });
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
       return;
     }
     const points = parseInt(newPrintCategoryPoints);
     if (isNaN(points) || points <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Points',
-        description: 'Points must be a positive number.',
-      });
+      toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
       return;
     }
     const newCategory = await addCategory({ name: newPrintCategoryName, points });
@@ -311,6 +281,11 @@ function AdminDashboardInner() {
     setIsPrizeModalOpen(true);
   }
 
+  const handleOpenAchievementModal = (achievement: Achievement | null) => {
+    setEditingAchievement(achievement);
+    setIsAchievementModalOpen(true);
+  };
+
   const handleOpenActivityModal = (student: Student) => {
     setActivityStudent(student);
   };
@@ -318,20 +293,12 @@ function AdminDashboardInner() {
   const handlePrintSheet = async () => {
     const value = parseInt(printValue);
     if (!value || value <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Value',
-        description: 'Coupon value must be a positive number.',
-      });
+      toast({ variant: 'destructive', title: 'Invalid Value', description: 'Coupon value must be a positive number.' });
       return;
     }
     const selectedCategory = categories?.find(c => c.id === printCategoryId);
     if (!selectedCategory) {
-      toast({
-        variant: 'destructive',
-        title: 'Category Not Found',
-        description: 'Please select a valid category.',
-      });
+      toast({ variant: 'destructive', title: 'Category Not Found', description: 'Please select a valid category.' });
       return;
     }
     const couponsToCreate = Array.from({ length: 24 }, () => {
@@ -367,10 +334,6 @@ function AdminDashboardInner() {
     await devDownloadBackup(schoolId, backupId);
   }
 
-  const handleRestoreFromFile = () => {
-    backupFileInputRef.current?.click();
-  };
-
   const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -390,11 +353,8 @@ function AdminDashboardInner() {
     if (studentCsvInputRef.current) studentCsvInputRef.current.value = '';
   }
 
-
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
-  const totalPointsAwarded = coupons
-    ?.filter((c) => c.used)
-    .reduce((sum, c) => sum + c.value, 0) || 0;
+  const totalPointsAwarded = coupons?.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0) || 0;
 
   const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
   const previewCoupon: Coupon = {
@@ -413,610 +373,723 @@ function AdminDashboardInner() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-0.5">School: {schoolId?.replace(/_/g, ' ')}</p>
-            <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-              <Settings /> Admin Portal: <span className="text-primary">{schoolId}</span>
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">Manage students, classes, categories, prizes, and backups.</p>
+      <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
+        <Tabs defaultValue="all" className="space-y-6">
+          <div className="flex justify-center overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm">
+              <TabsTrigger value="all" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <LayoutDashboard className="w-4 h-4" /> All
+              </TabsTrigger>
+              <TabsTrigger value="classes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <BookOpen className="w-4 h-4" /> Classes
+              </TabsTrigger>
+              <TabsTrigger value="teachers" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <User className="w-4 h-4" /> Teachers
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Tag className="w-4 h-4" /> Categories
+              </TabsTrigger>
+              <TabsTrigger value="students" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Users className="w-4 h-4" /> Students
+              </TabsTrigger>
+              <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Gift className="w-4 h-4" /> Prizes
+              </TabsTrigger>
+              {settings.enableAchievements && (
+                <TabsTrigger value="achievements" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Trophy className="w-4 h-4" /> Achievements
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Printer className="w-4 h-4" /> Coupons
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <ShieldCheck className="w-4 h-4" /> Stats
+              </TabsTrigger>
+              <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Database className="w-4 h-4" /> Backups
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button onClick={() => router.push('/portal')} variant="secondary" size="sm">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to portal
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Return to the main portal selection screen.</p>
-            </TooltipContent>
-          </Tooltip>
-        </Card>
 
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">People</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-t-4 border-chart-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="text-chart-1" /> Classes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-4">
-                <Input
-                  placeholder="Class Name"
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleAddClass}>Add</Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add a new class to the school.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {classes?.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex justify-between items-center bg-secondary p-2 rounded border"
-                  >
-                    <span className="font-bold text-sm">{c.name}</span>
-                    <AlertDialog>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Delete Class</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete {c.name}?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. Students in this class will become unassigned.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteClass(c.id, students || [])}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </li>
+          <TabsContent value="all" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+            {/* Stats */}
+            <Card className="border-t-4 border-slate-800 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><ShieldCheck className="w-5 h-5" /> System Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 lg:grid-cols-6 gap-4 text-center">
+                {[
+                  { label: 'Students', val: students?.length || 0 },
+                  { label: 'Classes', val: classes?.length || 0 },
+                  { label: 'Teachers', val: teachers?.length || 0 },
+                  { label: 'Coupons', val: coupons?.length || 0 },
+                  { label: 'Used', val: usedCouponsCount },
+                  { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-secondary/30 border p-4 rounded-2xl">
+                    <p className="text-2xl font-bold font-code">{stat.val}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter opacity-70 mt-1">{stat.label}</p>
+                  </div>
                 ))}
-              </ul>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-t-4 border-purple-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="text-purple-500" /> Teachers / Faculty
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2 mb-4">
-                <Input
-                  placeholder="Teacher/Faculty Name"
-                  value={newTeacherName}
-                  onChange={(e) => setNewTeacherName(e.target.value)}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleAddTeacher}>Add</Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add a new teacher or faculty member.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {teachers?.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex justify-between items-center bg-secondary p-2 rounded border"
-                  >
-                    <span className="font-bold text-sm">{t.name}</span>
-                    <AlertDialog>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Delete Teacher</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete {t.name}?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteTeacher(t.id)}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+            {/* Classes */}
+            <Card className="border-t-4 border-chart-1 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-chart-1" /> Classes</CardTitle>
+                <CardDescription>Manage class groups for your school.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-6">
+                  <Input placeholder="New class name..." value={newClassName} onChange={(e) => setNewClassName(e.target.value)} className="rounded-xl" />
+                  <Button onClick={handleAddClass} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                </div>
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {classes?.map((c) => (
+                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
+                      <span className="font-bold">{c.name}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteClass(c.id, students || [])}><Trash2 className="w-4 h-4" /></Button>
+                    </li>
+                  ))}
+                  {(!classes || classes.length === 0) && <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No classes yet.</p>}
+                </ul>
+              </CardContent>
+            </Card>
 
-          <h3 className="col-span-full text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">Rewards</h3>
-          <Card className="border-t-4 border-chart-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tag className="text-chart-2" /> Categories
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-end gap-2 mb-4">
-                <div className='flex-grow'>
-                  <Label>Name</Label>
-                  <Input
-                    placeholder="Category Name"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                  />
+            {/* Teachers */}
+            <Card className="border-t-4 border-purple-500 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-purple-500" /> Teachers</CardTitle>
+                <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-6">
+                  <Input placeholder="New teacher name..." value={newTeacherName} onChange={(e) => setNewTeacherName(e.target.value)} className="rounded-xl" />
+                  <Button onClick={handleAddTeacher} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
                 </div>
-                <div className='w-24'>
-                  <Label>Points</Label>
-                  <Input
-                    type="number"
-                    placeholder="Pts"
-                    value={newCategoryPoints}
-                    onChange={(e) => setNewCategoryPoints(e.target.value)}
-                  />
-                </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleAddCategory}>Add</Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Add a new reward category.</p></TooltipContent>
-                </Tooltip>
-              </div>
-              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                {categories?.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex justify-between items-center bg-secondary p-2 rounded border"
-                  >
-                    <div>
-                      <span className="font-bold text-sm">{c.name}</span>
-                      <p className="text-xs text-muted-foreground">{c.points} pts</p>
-                    </div>
-                    <AlertDialog>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Delete Category</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete category "{c.name}"?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteCategory(c.id)}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {teachers?.map((t) => (
+                    <li key={t.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors">
+                      <span className="font-bold">{t.name}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteTeacher(t.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </li>
+                  ))}
+                  {(!teachers || teachers.length === 0) && <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No teachers yet.</p>}
+                </ul>
+              </CardContent>
+            </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="border-t-4 border-chart-3 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Gift className="text-chart-3" /> Manage Prizes
+            {/* Categories */}
+            <Card className="border-t-4 border-chart-2 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-chart-2" /> Reward Categories</CardTitle>
+                <CardDescription>Define categories and point values for coupons.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 mb-6">
+                  <Input placeholder="Category Name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="rounded-xl" />
+                  <div className="flex gap-2">
+                    <Input type="number" placeholder="Points" value={newCategoryPoints} onChange={(e) => setNewCategoryPoints(e.target.value)} className="rounded-xl" />
+                    <Button onClick={handleAddCategory} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                  </div>
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={() => handleOpenPrizeModal(null)} size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Add Prize
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Add a new prize to the prize shop.</p></TooltipContent>
-                </Tooltip>
-              </CardTitle>
-              <CardDescription>Add, edit, or delete prizes available in the prize shop.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                {prizes && prizes.length > 0 ? [...prizes].sort((a, b) => a.points - b.points).map(prize => (
-                  <li key={prize.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <div className='flex items-center gap-3'>
-                      <Switch
-                        checked={prize.inStock}
-                        onCheckedChange={(checked) => updatePrize({ ...prize, inStock: checked })}
-                        aria-label="In Stock"
-                      />
-                      <DynamicIcon name={prize.icon} className={cn("w-5 h-5 text-primary", !prize.inStock && "opacity-40")} />
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {categories?.map((c) => (
+                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-chart-2/20 transition-colors">
                       <div>
-                        <span className={cn("font-bold text-sm", !prize.inStock && "line-through opacity-60")}>{prize.name}</span>
-                        <p className="text-xs text-muted-foreground">{prize.points} pts</p>
+                        <p className="font-bold">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">{c.points} pts</p>
                       </div>
-                    </div>
-                    <div className="flex gap-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenPrizeModal(prize)}>
-                            <Edit className="h-4 w-4 text-blue-500" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Edit Prize</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8">
-                                <Trash2 className="h-4 h-4 text-red-500" />
-                              </Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Delete Prize</p></TooltipContent>
-                        </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete prize "{prize.name}"?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deletePrize(prize.id)}>Continue</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </li>
-                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No prizes found. Add one to get started!</p>}
-              </ul>
-            </CardContent>
-          </Card>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteCategory(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </li>
+                  ))}
+                  {(!categories || categories.length === 0) && <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No categories yet.</p>}
+                </ul>
+              </CardContent>
+            </Card>
 
-          <h3 className="col-span-full text-sm font-bold uppercase tracking-wider text-muted-foreground mt-8 mb-2">Data</h3>
-          <Card className="border-t-4 border-chart-4">
-            <CardHeader>
-              <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Database className="text-chart-4" /> System Backups
+            {/* Students */}
+            <Card className="border-t-4 border-primary shadow-md overflow-hidden">
+              <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-2"><Users className="text-primary w-6 h-6" /> Students</CardTitle>
+                  <CardDescription>Manage your enrollments and view student activity.</CardDescription>
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={handleCreateBackup} size="sm">
-                      <Plus className="mr-2 h-4 w-4" /> Create Backup
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Save a snapshot of the current school database.</p></TooltipContent>
-                </Tooltip>
-              </CardTitle>
-              <CardDescription>Create a manual backup of the current database state.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 max-h-60 overflow-y-auto pr-2 mb-4">
-                {backups && backups.length > 0 ? backups.map(backup => (
-                  <li key={backup.id} className="flex justify-between items-center bg-secondary p-2 rounded border">
-                    <span className="font-code text-sm break-all">{new Date(parseInt(backup.id)).toLocaleString()}</span>
-                    <div className="flex gap-1">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => handleDownloadBackup(backup.id)}><Download className="h-4 w-4" /></Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Download this backup as a JSON file.</p></TooltipContent>
-                      </Tooltip>
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="outline"><Upload className="h-4 w-4" /></Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Restore the database to this state.</p></TooltipContent>
-                        </Tooltip>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Restore from this backup?</AlertDialogTitle>
-                            <AlertDialogDescription>This will overwrite all current data with the data from {new Date(parseInt(backup.id)).toLocaleString()}. This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleRestoreFromBackup(backup.id)}>Restore</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </li>
-                )) : <p className="text-center text-sm text-muted-foreground italic py-2">No backups found.</p>}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border-t-4 border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Printer className="text-primary" /> Master Coupon Printer
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col md:flex-row gap-6">
-            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <Label>Issue By</Label>
-                <Select value={printTeacher} onValueChange={setPrintTeacher}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Admin">Admin/General</SelectItem>
-                    {teachers?.map((t) => (
-                      <SelectItem key={t.id} value={t.name}>
-                        {t.name}
-                      </SelectItem>
+                <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
+                  <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-full px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
+                  <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
+                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="relative mb-6">
+                  <Input placeholder="Search students by name or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
+                  <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+                </div>
+                <ScrollArea className="h-[500px]">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
+                    {students?.filter(s =>
+                      `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                      (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase())
+                    ).sort((a, b) => a.lastName.localeCompare(b.lastName)).map(s => (
+                      <li key={s.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-all hover:bg-background shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">{s.firstName[0]}{s.lastName[0]}</div>
+                          <div>
+                            <p className="font-bold text-lg">{s.lastName}, {s.firstName}</p>
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5">{getClassName(s.classId || '')} | ID: <span className="font-code">{s.nfcId || '---'}</span></p>
+                            <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
+                        </div>
+                      </li>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Category</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                        </DialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Add a new category on the fly.</p></TooltipContent>
-                    </Tooltip>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Category</DialogTitle>
-                        <DialogDescription>Create a new category for coupons.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid grid-cols-3 items-center gap-4 py-4">
-                        <Label htmlFor="new-print-category-name" className="text-right">Name</Label>
-                        <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className="col-span-2" />
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
 
-                        <Label htmlFor="new-print-category-points" className="text-right">Points</Label>
-                        <Input id="new-print-category-points" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className="col-span-2" />
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleAddPrintCategory}>Save Category</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+            {/* Prizes */}
+            <Card className="border-t-4 border-chart-3 shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><Gift className="text-chart-3 w-5 h-5" /> Prize Shop</CardTitle>
+                  <CardDescription>Items available for student redemption.</CardDescription>
                 </div>
-              </div>
-              <div>
-                <Label>Value</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 25"
-                  value={printValue}
-                  onChange={(e) => setPrintValue(e.target.value)}
-                />
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2 md:col-span-3">
-                    <Printer /> Print Sheet (24 Coupons)
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>Generate and print a full sheet of 24 coupons with these settings.</p></TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="w-full md:w-1/3 flex flex-col items-center">
-              <Label className="font-semibold text-muted-foreground">Live Preview</Label>
-              <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
-                <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>All Students</CardTitle>
-              <CardDescription>{students?.length || 0} students in the database.</CardDescription>
-            </div>
-            <div className='flex flex-col sm:flex-row gap-2 w-full sm:w-auto'>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={handleStudentCsvUpload} variant="outline" className="flex-1">
-                    <UploadCloud className="mr-2 h-4 w-4" /> Upload CSV
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Bulk upload students from a CSV file. <br />Format: `firstName,lastName` or `firstName,lastName,className`. No header row needed.</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="flex-1">
-                    <Printer className="mr-2 h-4 w-4" /> Print ID Cards
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>Print physical ID cards for all students in the database.</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={() => handleOpenStudentModal(null)} className="flex-1">
-                    <Plus className="mr-2 h-4 w-4" /> Add Student
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent><p>Manually add a new student to the database.</p></TooltipContent>
-              </Tooltip>
-              <input
-                type="file"
-                ref={studentCsvInputRef}
-                onChange={onStudentCsvFileChange}
-                className="hidden"
-                accept=".csv"
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4">
-              <Input
-                placeholder="Search students by name..."
-                value={studentSearchTerm}
-                onChange={(e) => setStudentSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            <ScrollArea className="h-96">
-              <ul className="space-y-2 pr-4">
-                {students && [...students]
-                  .filter(s =>
-                    s.firstName.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                    s.lastName.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
-                    (s.nfcId || s.id).toLowerCase().includes(studentSearchTerm.toLowerCase())
-                  )
-                  .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
-                  .map((s) => (
-                    <li
-                      key={s.id}
-                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-secondary p-3 rounded-lg border gap-2"
-                    >
-                      <div>
-                        <p className="font-bold">
-                          {s.lastName}, {s.firstName}{' '}
-                          <span className="text-primary font-normal text-xs">
-                            ({s.points} pts)
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Class: {getClassName(s.classId || '')} | ID: {s.nfcId}
-                        </p>
+                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-full px-6 shadow-md shadow-chart-3/20"><Plus className="mr-2 h-4 w-4" /> Add Prize</Button>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+                  {prizes?.sort((a, b) => a.points - b.points).map(p => (
+                    <li key={p.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center">
+                          <Switch checked={p.inStock} onCheckedChange={(checked) => updatePrize({ ...p, inStock: checked })} className="data-[state=checked]:bg-green-500 scale-75" />
+                          <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-50">{p.inStock ? 'On' : 'Off'}</p>
+                        </div>
+                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border", !p.inStock && "opacity-40 grayscale")}>
+                          <DynamicIcon name={p.icon} className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className={cn("font-bold text-base leading-none mb-1", !p.inStock && "line-through opacity-40")}>{p.name}</p>
+                          <p className="text-xs font-bold text-primary">{p.points} points</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-0.5 self-end sm:self-center">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => setStudentsToPrint([s])}>
-                              <IdCard className="w-4 h-4 text-green-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Print ID Card</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenActivityModal(s)}>
-                              <History className="w-4 h-4 text-gray-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>View Activity</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenStudentModal(s)}>
-                              <Edit className="w-4 h-4 text-blue-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Edit Student</p></TooltipContent>
-                        </Tooltip>
-                        <AlertDialog>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <Trash2 className="w-4 h-4 text-red-500" />
-                                </Button>
-                              </AlertDialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Delete Student</p></TooltipContent>
-                          </Tooltip>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete {s.firstName} {s.lastName}?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete this student's record.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => deleteStudent(s.id)}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </li>
                   ))}
-              </ul>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+                </ul>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Database Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{students?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Students</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{classes?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Classes</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{teachers?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Teachers / Faculty</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{coupons?.length || 0} / {usedCouponsCount}</p>
-              <p className="text-sm text-muted-foreground">Coupons (Created/Used)</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{prizes?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Prize Types</p>
-            </div>
-            <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{totalPointsAwarded.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">Points Awarded</p>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Achievements (if enabled) */}
+            {settings.enableAchievements && (
+              <Card className="border-t-4 border-amber-500 shadow-md">
+                <CardHeader className="flex flex-row justify-between items-center py-6">
+                  <div>
+                    <CardTitle className="flex items-center gap-2"><Trophy className="text-amber-500 w-5 h-5" /> Achievements</CardTitle>
+                    <CardDescription>Badges for student milestones.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-full px-4 border-amber-200 hover:bg-amber-50"><Plus className="mr-2 h-4 w-4" /> Add Achievement</Button>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {(achievements || []).sort((a, b) => a.name.localeCompare(b.name)).map(ach => (
+                      <li key={ach.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40">
+                            <DynamicIcon name={ach.icon} className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-base leading-none mb-1">{ach.name}</p>
+                            <p className="text-[10px] text-muted-foreground line-clamp-1">{ach.description}</p>
+                            <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase tracking-tighter">
+                              {ach.criteria.type}: {ach.criteria.threshold} {ach.bonusPoints ? `• +${ach.bonusPoints} pts` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenAchievementModal(ach)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deleteAchievement(ach.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </li>
+                    ))}
+                    {(!achievements || achievements.length === 0) && (
+                      <div className="text-center py-8 opacity-40">
+                        <Trophy className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm font-medium">No achievements created yet.</p>
+                      </div>
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Coupons */}
+            <Card className="border-t-4 border-primary shadow-md overflow-hidden bg-primary/5">
+              <CardHeader className="py-6">
+                <CardTitle className="flex items-center gap-2"><Printer className="text-primary w-5 h-5" /> Coupon Generation</CardTitle>
+                <CardDescription>Batch create and print physical point rewards.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col lg:flex-row gap-8 pb-10">
+                <div className="flex-grow space-y-6 max-w-xl">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="font-bold opacity-70">Issued By</Label>
+                      <Select value={printTeacher} onValueChange={setPrintTeacher}>
+                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="Admin">Admin</SelectItem>
+                          {teachers?.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold opacity-70">Reward Category</Label>
+                      <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
+                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.points}p)</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold opacity-70">Custom Point Value</Label>
+                    <Input type="number" value={printValue} onChange={e => setPrintValue(e.target.value)} className="rounded-xl h-12 bg-background font-bold text-lg" />
+                  </div>
+                  <Button onClick={handlePrintSheet} className="w-full font-bold h-14 rounded-2xl text-lg shadow-lg shadow-primary/20 hover:scale-[1.01] transition-transform">
+                    <Printer className="mr-3 w-6 h-6" /> Print Sheet (24 Coupons)
+                  </Button>
+                </div>
+                <div className="w-full lg:w-80 flex flex-col items-center justify-center p-8 border border-dashed border-primary/40 rounded-3xl bg-background/50 backdrop-blur-sm self-center">
+                  <p className="text-xs font-bold text-primary mb-6 uppercase tracking-widest bg-primary/10 px-4 py-1.5 rounded-full">DESIGN PREVIEW</p>
+                  <div className="hover:scale-105 transition-transform duration-500">
+                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                  </div>
+                  <p className="mt-6 text-[10px] text-muted-foreground italic text-center max-w-[200px]">This is how each individual coupon will look when printed.</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Backups */}
+            <Card className="border-t-4 border-chart-4 shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <CardTitle className="flex items-center gap-2"><Database className="text-chart-4 w-5 h-5" /> System Backups</CardTitle>
+                  <CardDescription>Create and restore data snapshots.</CardDescription>
+                </div>
+                <Button onClick={handleCreateBackup} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ScrollArea className="h-[400px]">
+                  <ul className="space-y-2.5 pr-4">
+                    {(backups || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(b => (
+                      <li key={b.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-chart-4/10 flex items-center justify-center"><Database className="w-5 h-5 text-chart-4" /></div>
+                          <div>
+                            <p className="font-code text-sm font-bold">{b.createdAt ? new Date(b.createdAt).toLocaleString() : 'Unknown date'}</p>
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{b.totalDocs} documents • <span className={b.type === 'scheduled' ? 'text-green-600' : 'text-blue-600'}>{b.type || 'manual'}</span></p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm" onClick={() => handleDownloadBackup(b.id)}><Download className="h-4 w-4" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm hover:border-red-200 hover:bg-red-50"><Upload className="h-4 w-4 text-orange-600" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl border-2">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-2xl font-bold">Restore snapshot?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-base text-balance mt-2">
+                                  This will <span className="font-bold text-red-600">OVERWRITE all current school data</span> with the state from {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'unknown date'}. This cannot be easily undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="mt-6">
+                                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRestoreFromBackup(b.id)} className="rounded-full bg-orange-600 hover:bg-orange-700">Restore Data</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-chart-1 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-chart-1" /> Classes</CardTitle>
+                <CardDescription>Manage class groups for your school.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-6">
+                  <Input placeholder="New class name..." value={newClassName} onChange={(e) => setNewClassName(e.target.value)} className="rounded-xl" />
+                  <Button onClick={handleAddClass} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                </div>
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {classes?.map((c) => (
+                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
+                      <span className="font-bold">{c.name}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteClass(c.id, students || [])}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </li>
+                  ))}
+                  {(!classes || classes.length === 0) && (
+                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No classes yet.</p>
+                  )}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-purple-500 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-purple-500" /> Teachers</CardTitle>
+                <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 mb-6">
+                  <Input placeholder="New teacher name..." value={newTeacherName} onChange={(e) => setNewTeacherName(e.target.value)} className="rounded-xl" />
+                  <Button onClick={handleAddTeacher} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                </div>
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {teachers?.map((t) => (
+                    <li key={t.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors">
+                      <span className="font-bold">{t.name}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteTeacher(t.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </li>
+                  ))}
+                  {(!teachers || teachers.length === 0) && (
+                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No teachers yet.</p>
+                  )}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-chart-2 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-chart-2" /> Reward Categories</CardTitle>
+                <CardDescription>Define categories and point values for coupons.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 mb-6">
+                  <Input placeholder="Category Name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="rounded-xl" />
+                  <div className="flex gap-2">
+                    <Input type="number" placeholder="Points" value={newCategoryPoints} onChange={(e) => setNewCategoryPoints(e.target.value)} className="rounded-xl" />
+                    <Button onClick={handleAddCategory} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                  </div>
+                </div>
+                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                  {categories?.map((c) => (
+                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-chart-2/20 transition-colors">
+                      <div>
+                        <p className="font-bold">{c.name}</p>
+                        <p className="text-xs text-muted-foreground">{c.points} pts</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteCategory(c.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </li>
+                  ))}
+                  {(!categories || categories.length === 0) && (
+                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No categories yet.</p>
+                  )}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-primary shadow-md overflow-hidden">
+              <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Users className="text-primary w-6 h-6" /> Students
+                  </CardTitle>
+                  <CardDescription>Manage your enrollments and view student activity.</CardDescription>
+                </div>
+                <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
+                  <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-full px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
+                  <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
+                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+                  <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="relative mb-6">
+                  <Input placeholder="Search students by name or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
+                  <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
+                </div>
+                <ScrollArea className="h-[500px]">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
+                    {students?.filter(s =>
+                      `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                      (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase())
+                    ).sort((a, b) => a.lastName.localeCompare(b.lastName)).map(s => (
+                      <li key={s.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-all hover:bg-background shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                            {s.firstName[0]}{s.lastName[0]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg">{s.lastName}, {s.firstName}</p>
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5">{getClassName(s.classId || '')} | ID: <span className="font-code">{s.nfcId || '---'}</span></p>
+                            <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-chart-3 shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gift className="text-chart-3 w-5 h-5" /> Prize Shop
+                  </CardTitle>
+                  <CardDescription>Items available for student redemption.</CardDescription>
+                </div>
+                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-full px-6 shadow-md shadow-chart-3/20">
+                  <Plus className="mr-2 h-4 w-4" /> Add Prize
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
+                  {prizes?.sort((a, b) => a.points - b.points).map(p => (
+                    <li key={p.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center">
+                          <Switch checked={p.inStock} onCheckedChange={(checked) => updatePrize({ ...p, inStock: checked })} className="data-[state=checked]:bg-green-500 scale-75" />
+                          <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-50">{p.inStock ? 'On' : 'Off'}</p>
+                        </div>
+                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border", !p.inStock && "opacity-40 grayscale")}>
+                          <DynamicIcon name={p.icon} className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className={cn("font-bold text-base leading-none mb-1", !p.inStock && "line-through opacity-40")}>{p.name}</p>
+                          <p className="text-xs font-bold text-primary">{p.points} points</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {settings.enableAchievements && (
+            <TabsContent value="achievements" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Card className="border-t-4 border-amber-500 shadow-md">
+                <CardHeader className="flex flex-row justify-between items-center py-6">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="text-amber-500 w-5 h-5" /> Achievements
+                    </CardTitle>
+                    <CardDescription>Badges for student milestones.</CardDescription>
+                  </div>
+                  <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-full px-4 border-amber-200 hover:bg-amber-50">
+                    <Plus className="mr-2 h-4 w-4" /> Add Achievement
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {(achievements || []).sort((a, b) => a.name.localeCompare(b.name)).map(ach => (
+                      <li key={ach.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40">
+                            <DynamicIcon name={ach.icon} className="w-5 h-5 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-base leading-none mb-1">{ach.name}</p>
+                            <p className="text-[10px] text-muted-foreground line-clamp-1">{ach.description}</p>
+                            <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase tracking-tighter">
+                              {ach.criteria.type}: {ach.criteria.threshold} {ach.bonusPoints ? `• +${ach.bonusPoints} pts` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenAchievementModal(ach)}><Edit className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deleteAchievement(ach.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </li>
+                    ))}
+                    {(!achievements || achievements.length === 0) && (
+                      <div className="text-center py-8 opacity-40">
+                        <Trophy className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm font-medium">No achievements created yet.</p>
+                      </div>
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-primary shadow-md overflow-hidden bg-primary/5">
+              <CardHeader className="py-6">
+                <CardTitle className="flex items-center gap-2">
+                  <Printer className="text-primary w-5 h-5" /> Coupon Generation
+                </CardTitle>
+                <CardDescription>Batch create and print physical point rewards.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col lg:flex-row gap-8 pb-10">
+                <div className="flex-grow space-y-6 max-w-xl">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="font-bold opacity-70">Issued By</Label>
+                      <Select value={printTeacher} onValueChange={setPrintTeacher}>
+                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="Admin">Admin</SelectItem>
+                          {teachers?.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold opacity-70">Reward Category</Label>
+                      <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
+                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          {categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.points}p)</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold opacity-70">Custom Point Value</Label>
+                    <Input type="number" value={printValue} onChange={e => setPrintValue(e.target.value)} className="rounded-xl h-12 bg-background font-bold text-lg" />
+                  </div>
+                  <Button onClick={handlePrintSheet} className="w-full font-bold h-14 rounded-2xl text-lg shadow-lg shadow-primary/20 hover:scale-[1.01] transition-transform">
+                    <Printer className="mr-3 w-6 h-6" /> Print Sheet (24 Coupons)
+                  </Button>
+                </div>
+                <div className="w-full lg:w-80 flex flex-col items-center justify-center p-8 border border-dashed border-primary/40 rounded-3xl bg-background/50 backdrop-blur-sm self-center">
+                  <p className="text-xs font-bold text-primary mb-6 uppercase tracking-widest bg-primary/10 px-4 py-1.5 rounded-full">DESIGN PREVIEW</p>
+                  <div className="hover:scale-105 transition-transform duration-500">
+                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                  </div>
+                  <p className="mt-6 text-[10px] text-muted-foreground italic text-center max-w-[200px]">This is how each individual coupon will look when printed.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-slate-800 shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /> System Stats</CardTitle>
+                <CardDescription>Overview of your school data at a glance.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+                {[
+                  { label: 'Students', val: students?.length || 0 },
+                  { label: 'Classes', val: classes?.length || 0 },
+                  { label: 'Teachers', val: teachers?.length || 0 },
+                  { label: 'Coupons', val: coupons?.length || 0 },
+                  { label: 'Used', val: usedCouponsCount },
+                  { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-secondary/30 border p-6 rounded-2xl">
+                    <p className="text-3xl font-bold font-code">{stat.val}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter opacity-70 mt-1">{stat.label}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-chart-4 shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="text-chart-4 w-5 h-5" /> System Backups
+                  </CardTitle>
+                  <CardDescription>Create and restore data snapshots.</CardDescription>
+                </div>
+                <Button onClick={handleCreateBackup} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ScrollArea className="h-[400px]">
+                  <ul className="space-y-2.5 pr-4">
+                    {(backups || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(b => (
+                      <li key={b.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-chart-4/10 flex items-center justify-center">
+                            <Database className="w-5 h-5 text-chart-4" />
+                          </div>
+                          <div>
+                            <p className="font-code text-sm font-bold">{b.createdAt ? new Date(b.createdAt).toLocaleString() : 'Unknown date'}</p>
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{b.totalDocs} documents • <span className={b.type === 'scheduled' ? 'text-green-600' : 'text-blue-600'}>{b.type || 'manual'}</span></p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm" onClick={() => handleDownloadBackup(b.id)}><Download className="h-4 w-4" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm hover:border-red-200 hover:bg-red-50"><Upload className="h-4 w-4 text-orange-600" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-3xl border-2">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-2xl font-bold">Restore snapshot?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-base text-balance mt-2">
+                                  This will <span className="font-bold text-red-600">OVERWRITE all current school data</span> with the state from {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'unknown date'}. This cannot be easily undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="mt-6">
+                                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRestoreFromBackup(b.id)} className="rounded-full bg-orange-600 hover:bg-orange-700">Restore Data</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+        </Tabs>
+
+        {/* Modals outside Tabs */}
         <StudentModal
           isOpen={isStudentModalOpen}
           setIsOpen={setIsStudentModalOpen}
@@ -1034,24 +1107,37 @@ function AdminDashboardInner() {
           setIsOpen={() => setActivityStudent(null)}
           student={activityStudent}
         />
+        <AchievementModal
+          isOpen={isAchievementModalOpen}
+          setIsOpen={setIsAchievementModalOpen}
+          achievement={editingAchievement}
+          categories={categories || []}
+        />
         <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
-          <AlertDialogContent>
+          <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>CSV Upload Report</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl">Import Report</AlertDialogTitle>
               <AlertDialogDescription>
-                {uploadReport?.success} students uploaded successfully. {uploadReport?.failed} rows failed.
+                <div className="flex gap-4 mt-2">
+                  <div className="bg-green-100 text-green-700 p-3 rounded-2xl flex-1 text-center font-bold">
+                    {uploadReport?.success} SUCCESS
+                  </div>
+                  <div className="bg-red-100 text-red-700 p-3 rounded-2xl flex-1 text-center font-bold">
+                    {uploadReport?.failed} FAILED
+                  </div>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             {uploadReport && uploadReport.errors.length > 0 && (
-              <div className="mt-4 max-h-60 overflow-y-auto bg-slate-100 dark:bg-slate-800 p-3 rounded-md text-sm font-code">
-                <p className="font-bold mb-2">Error Details:</p>
-                <ul className="space-y-1">
-                  {uploadReport.errors.map((error, i) => <li key={i}>{error}</li>)}
+              <ScrollArea className="h-40 mt-4 rounded-xl border bg-muted/50 p-3">
+                <p className="font-bold text-xs uppercase mb-2 opacity-60">Error Details</p>
+                <ul className="space-y-1 text-xs font-code">
+                  {uploadReport.errors.map((error, i) => <li key={i} className="text-red-500">• {error}</li>)}
                 </ul>
-              </div>
+              </ScrollArea>
             )}
-            <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setUploadReport(null)}>Close</AlertDialogAction>
+            <AlertDialogFooter className="mt-4">
+              <AlertDialogAction onClick={() => setUploadReport(null)} className="rounded-full">Close</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -1060,8 +1146,9 @@ function AdminDashboardInner() {
   );
 }
 
+
 export default function AdminPage() {
-  const { loginState, isInitialized } = useAppContext();
+  const { loginState, isInitialized, isAdmin } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
@@ -1070,13 +1157,15 @@ export default function AdminPage() {
     }
   }, [isInitialized, loginState, router]);
 
-  if (!isInitialized || loginState !== 'school') {
+  if (!isInitialized || loginState !== 'school' || !isAdmin) {
     return <AdminDashboardSkeleton />;
   }
 
   return (
     <ErrorBoundary name="AdminPage">
-      <AdminDashboardInner />
+      <SchoolGate fallback={<AdminDashboardSkeleton />}>
+        <AdminDashboardInner />
+      </SchoolGate>
     </ErrorBoundary>
   );
 }

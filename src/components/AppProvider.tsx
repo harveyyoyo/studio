@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, Achievement } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
@@ -17,8 +17,8 @@ import {
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass,
-  deleteClass as dbDeleteClass, addTeacher as dbAddTeacher,
-  deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
+  deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
+  addAchievement as dbAddAchievement, updateAchievement as dbUpdateAchievement, deleteAchievement as dbDeleteAchievement,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -35,6 +35,7 @@ interface AppContextType {
   isInitialized: boolean;
   isUserLoading: boolean;
   loginState: 'loggedOut' | 'school' | 'developer';
+  isAdmin: boolean;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   login: (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }) => Promise<boolean>;
@@ -59,6 +60,9 @@ interface AppContextType {
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[] }>;
+  addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
+  updateAchievement: (achievement: Achievement) => Promise<void>;
+  deleteAchievement: (achievementId: string) => Promise<void>;
   // Backup/School management
   createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
@@ -67,8 +71,7 @@ interface AppContextType {
   devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
   devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
   devBackupAllSchools: () => Promise<void>;
-  isAutoBackupEnabled: boolean;
-  toggleAutoBackup: () => void;
+  devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
   devMigrateSchoolData: (schoolId: string) => Promise<void>;
 }
 
@@ -166,9 +169,25 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbUploadStudents(firestore, schoolId, csv, curr, classes);
   }, [firestore, schoolId]);
 
+  const addAchievement_ = useCallback((a: Omit<Achievement, 'id'>) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbAddAchievement(firestore, schoolId, a);
+  }, [firestore, schoolId]);
+
+  const updateAchievement_ = useCallback((a: Achievement) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbUpdateAchievement(firestore, schoolId, a);
+  }, [firestore, schoolId]);
+
+  const deleteAchievement_ = useCallback((id: string) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbDeleteAchievement(firestore, schoolId, id);
+  }, [firestore, schoolId]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
+    isAdmin: authCtx.isAdmin,
     // Print
     ...printCtx,
     // CRUD
@@ -179,6 +198,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, redeemPrize: redeemPrize_,
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
+    addAchievement: addAchievement_, updateAchievement: updateAchievement_, deleteAchievement: deleteAchievement_,
     // Backup
     ...backupCtx,
   }), [
@@ -188,6 +208,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addCategory_, deleteCategory_, addCoupons_,
     redeemCoupon_, redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
+    addAchievement_, updateAchievement_, deleteAchievement_,
   ]);
 
   return (

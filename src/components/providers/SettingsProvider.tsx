@@ -2,12 +2,43 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
+
 interface Settings {
     graphicMode: 'classic' | 'graphics';
     displayMode: 'web' | 'app';
+    colorScheme: ColorScheme;
     soundEnabled: boolean;
     language: string;
     darkMode: boolean;
+    // Engagement
+    enableAchievements: boolean;
+    enableLevels: boolean;
+    enableStreaks: boolean;
+    enableChallenges: boolean;
+    // Analytics
+    enableTeacherCharts: boolean;
+    enableAdminAnalytics: boolean;
+    enableStudentReports: boolean;
+    // Social & Communication
+    enableNotifications: boolean;
+    enableClassLeaderboard: boolean;
+    enableShoutouts: boolean;
+    // Prize Shop
+    enablePrizeImages: boolean;
+    enablePrizeCategories: boolean;
+    enableWishlist: boolean;
+    enableSeasonalPrizes: boolean;
+    // Admin Tools
+    enableBulkPoints: boolean;
+    enablePointApproval: boolean;
+    enableAuditLog: boolean;
+    enablePdfExport: boolean;
+    // Student & Access
+    enableStudentProfiles: boolean;
+    enableQrLogin: boolean;
+    enableParentView: boolean;
+    enableMultiAdmin: boolean;
 }
 
 interface SettingsContextType {
@@ -15,13 +46,48 @@ interface SettingsContextType {
     updateSettings: (updates: Partial<Settings>) => void;
 }
 
+const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: string; border: string; label: string; swatch: string }> = {
+    default: { bg: 'bg-slate-50', card: 'bg-white', accent: 'text-slate-800', border: 'border-slate-200', label: 'Default', swatch: 'bg-slate-200' },
+    sky: { bg: 'bg-sky-50', card: 'bg-white', accent: 'text-sky-700', border: 'border-sky-200', label: 'Sky', swatch: 'bg-sky-300' },
+    rose: { bg: 'bg-rose-50', card: 'bg-white', accent: 'text-rose-700', border: 'border-rose-200', label: 'Rose', swatch: 'bg-rose-300' },
+    mint: { bg: 'bg-emerald-50', card: 'bg-white', accent: 'text-emerald-700', border: 'border-emerald-200', label: 'Mint', swatch: 'bg-emerald-300' },
+    lavender: { bg: 'bg-violet-50', card: 'bg-white', accent: 'text-violet-700', border: 'border-violet-200', label: 'Lavender', swatch: 'bg-violet-300' },
+    peach: { bg: 'bg-orange-50', card: 'bg-white', accent: 'text-orange-700', border: 'border-orange-200', label: 'Peach', swatch: 'bg-orange-300' },
+};
+
 const defaultSettings: Settings = {
-    graphicMode: 'graphics',
+    graphicMode: 'classic',
     displayMode: 'web',
+    colorScheme: 'default',
     soundEnabled: true,
     language: 'English',
     darkMode: false,
+    enableAchievements: false,
+    enableLevels: false,
+    enableStreaks: false,
+    enableChallenges: false,
+    enableTeacherCharts: false,
+    enableAdminAnalytics: false,
+    enableStudentReports: false,
+    enableNotifications: false,
+    enableClassLeaderboard: false,
+    enableShoutouts: false,
+    enablePrizeImages: false,
+    enablePrizeCategories: false,
+    enableWishlist: false,
+    enableSeasonalPrizes: false,
+    enableBulkPoints: false,
+    enablePointApproval: false,
+    enableAuditLog: false,
+    enablePdfExport: false,
+    enableStudentProfiles: false,
+    enableQrLogin: false,
+    enableParentView: false,
+    enableMultiAdmin: false,
 };
+
+export { colorSchemes };
+export type { ColorScheme };
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
@@ -67,6 +133,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             root.classList.remove('dark');
         }
     }, [settings.darkMode, isLoaded]);
+
+    // Apply color scheme data attribute for classic mode
+    useEffect(() => {
+        if (!isLoaded) return;
+        document.documentElement.setAttribute('data-color-scheme', settings.colorScheme ?? 'default');
+    }, [settings.colorScheme, isLoaded]);
 
     return (
         <SettingsContext.Provider value={{ settings, updateSettings }}>

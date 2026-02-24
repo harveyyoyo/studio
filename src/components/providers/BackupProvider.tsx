@@ -4,8 +4,6 @@
 import React, {
     createContext,
     useContext,
-    useState,
-    useEffect,
     useCallback,
     useMemo,
 } from 'react';
@@ -18,15 +16,13 @@ import {
     updateDoc,
     collection,
     writeBatch,
-    getDocs,
 } from 'firebase/firestore';
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import type { Database, HistoryItem } from '@/lib/types';
+import type { HistoryItem } from '@/lib/types';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
-import { useAuth } from './AuthProvider';
 
 interface BackupContextType {
     createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
@@ -36,26 +32,16 @@ interface BackupContextType {
     devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
     devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
     devBackupAllSchools: () => Promise<void>;
-    isAutoBackupEnabled: boolean;
-    toggleAutoBackup: () => void;
+    devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
     devMigrateSchoolData: (schoolId: string) => Promise<void>;
 }
 
 const BackupContext = createContext<BackupContextType | null>(null);
 
 export function BackupProvider({ children }: { children: React.ReactNode }) {
-    const [isAutoBackupEnabled, setIsAutoBackupEnabled] = useState(false);
     const { toast } = useToast();
     const { auth, firestore, functions } = useFirebase();
     const playSound = useArcadeSound();
-    const { loginState } = useAuth();
-
-    useEffect(() => {
-        const storedPref = localStorage.getItem('autoBackupEnabled');
-        if (storedPref) {
-            setIsAutoBackupEnabled(JSON.parse(storedPref));
-        }
-    }, []);
 
     const createSchool = useCallback(async (schoolId: string): Promise<{ passcode: string; cleanId: string } | null> => {
         if (!firestore || !auth.currentUser) return null;
@@ -76,7 +62,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             return null;
         }
 
-        let schoolData: Omit<Database, 'passcode'>, newPasscode;
+        let schoolData: Record<string, any>, newPasscode;
         if (cleanId === 'yeshiva') {
             newPasscode = '1234';
             schoolData = YESHIVA_DATA;
@@ -104,6 +90,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
         const finalSchoolDocData = {
             ...schoolDocData,
+            passcode: newPasscode,
             name: schoolData.name,
             hasMigratedStudents: true,
             hasMigratedClasses: true,
@@ -117,9 +104,6 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         allOps.push({ ref: schoolDocRef, data: finalSchoolDocData });
         const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
         allOps.push({ ref: adminRoleRef, data: { role: 'admin' } });
-        // Store passcode in a secrets subcollection that clients cannot read
-        const secretsRef = doc(firestore, 'schools', cleanId, 'secrets', 'config');
-        allOps.push({ ref: secretsRef, data: { passcode: newPasscode } });
 
         const collectItems = (list: any[] | undefined, collectionName: string) => {
             if (!list) return;
@@ -160,14 +144,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         collectItems(prizes, 'prizes');
         collectItems(coupons, 'coupons');
 
-        // First commit: school doc + roles_admin only. Rules evaluate per-operation against
-        // pre-commit state, so we must commit this so the user is admin before writing subcollections.
         const firstBatch = writeBatch(firestore);
         firstBatch.set(schoolDocRef, finalSchoolDocData);
         firstBatch.set(adminRoleRef, { role: 'admin' });
         await firstBatch.commit();
 
-        // Commit remaining ops (secrets + data subcollections) in chunks of 499
         const BATCH_LIMIT = 499;
         const restOps = allOps.slice(2);
         for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
@@ -187,10 +168,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     }, [firestore, auth, toast, playSound]);
 
     const devCreateBackup = useCallback(async (schoolId: string) => {
-        const createBackupTrigger = httpsCallable(functions, 'createBackupTrigger');
+        const createBackupFn = httpsCallable(functions, 'createBackupTrigger');
         try {
-            await createBackupTrigger({ schoolId });
+            await createBackupFn({ schoolId });
             playSound('swoosh');
+            toast({ title: 'Full Backup Created', description: 'All school data backed up to secure storage.' });
         } catch (error) {
             console.error(error);
             toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
@@ -198,68 +180,82 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     }, [toast, playSound, functions]);
 
     const devRestoreFromBackup = useCallback(async (schoolId: string, backupId: string) => {
-        if (!firestore) return;
-        const schoolDocRef = doc(firestore, 'schools', schoolId);
-        const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+        const restoreFn = httpsCallable(functions, 'restoreFromFullBackup');
         try {
-            const backupSnap = await getDoc(backupDocRef);
-            if (backupSnap.exists()) {
-                const backupData = backupSnap.data();
-                await setDoc(schoolDocRef, backupData);
-                playSound('success');
-            } else {
-                throw new Error('Backup or school not found');
-            }
+            await restoreFn({ schoolId, backupId });
+            playSound('success');
+            toast({ title: 'Full Restore Complete', description: 'All school data has been restored, including students, classes, activities, and more.' });
         } catch (e) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Restore Failed', description: (e as Error).message });
         }
-    }, [firestore, playSound, toast]);
+    }, [functions, playSound, toast]);
 
     const devDownloadBackup = useCallback(async (schoolId: string, backupId: string) => {
-        if (!firestore) return;
-        const backupDocRef = doc(firestore, 'schools', schoolId, 'backups', backupId);
+        const downloadFn = httpsCallable(functions, 'downloadFullBackup');
         try {
-            const backupSnap = await getDoc(backupDocRef);
-            if (backupSnap.exists()) {
-                playSound('swoosh');
-                const dataStr = JSON.stringify(backupSnap.data(), null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `reward-arcade-backup-${schoolId}-${backupId}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            } else {
-                throw new Error('Backup not found');
-            }
+            const result = await downloadFn({ schoolId, backupId });
+            const response = result.data as any;
+            playSound('swoosh');
+            const dataStr = JSON.stringify(response.data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = response.metadata?.createdAt
+                ? new Date(response.metadata.createdAt).toISOString().split('T')[0]
+                : backupId;
+            link.download = `reward-arcade-full-backup-${schoolId}-${dateStr}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         } catch (e) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Download Failed', description: (e as Error).message });
         }
-    }, [firestore, playSound, toast]);
+    }, [functions, playSound, toast]);
 
     const devBackupAllSchools = useCallback(async () => {
-        if (!firestore) return;
         playSound('swoosh');
         try {
-            const schoolsColRef = collection(firestore, 'schools');
-            const schoolsSnapshot = await getDocs(schoolsColRef);
-            const backupPromises = schoolsSnapshot.docs.map(schoolDoc => devCreateBackup(schoolDoc.id));
-            await Promise.all(backupPromises);
+            const backupAllFn = httpsCallable(functions, 'backupAllSchools');
+            const result = await backupAllFn({});
+            const response = result.data as any;
+            if (response.failed > 0) {
+                toast({
+                    variant: 'destructive',
+                    title: `Backup Complete with Errors`,
+                    description: `${response.succeeded}/${response.total} schools backed up. ${response.failed} failed.`,
+                });
+            } else {
+                toast({
+                    title: 'All Schools Backed Up',
+                    description: `${response.total} school(s) fully backed up to secure storage.`,
+                });
+            }
         } catch (e) {
             console.error('Backup of all schools failed', e);
+            toast({ variant: 'destructive', title: 'Backup Failed', description: (e as Error).message });
         }
-    }, [firestore, devCreateBackup, playSound]);
+    }, [functions, playSound, toast]);
+
+    const devVerifyBackup = useCallback(async (schoolId: string, backupId: string) => {
+        const verifyFn = httpsCallable(functions, 'verifyBackupIntegrity');
+        try {
+            const result = await verifyFn({ schoolId, backupId });
+            return result.data as { verified: boolean; reason: string };
+        } catch (e) {
+            return { verified: false, reason: (e as Error).message || 'Verification failed.' };
+        }
+    }, [functions]);
 
     const deleteSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
         try {
-            await devCreateBackup(schoolId);
-            toast({ title: "Final Backup Created", description: `A final backup for ${schoolId} has been saved.` });
+            const createBackupFn = httpsCallable(functions, 'createBackupTrigger');
+            await createBackupFn({ schoolId, type: 'pre-delete' });
+            toast({ title: "Final Backup Created", description: `A full backup for ${schoolId} has been saved before deletion.` });
             const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', auth.currentUser.uid);
             await setDoc(adminRoleRef, { role: 'admin' });
             await deleteDoc(doc(firestore, 'schools', schoolId));
@@ -268,32 +264,17 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
             toast({ variant: 'destructive', title: `School "${schoolId}" deletion failed!`, description: (e as Error).message });
         }
-    }, [firestore, auth, toast, playSound, devCreateBackup]);
+    }, [firestore, auth, toast, playSound, functions]);
 
     const updateSchool = useCallback(async (schoolId: string, updates: { name?: string; passcode?: string }) => {
         if (!firestore) return;
         try {
-            const { passcode, ...schoolDocUpdates } = updates;
-            if (Object.keys(schoolDocUpdates).length > 0) {
-                await updateDoc(doc(firestore, 'schools', schoolId), schoolDocUpdates);
-            }
-            if (passcode) {
-                await setDoc(doc(firestore, 'schools', schoolId, 'secrets', 'config'), { passcode });
-            }
+            await updateDoc(doc(firestore, 'schools', schoolId), updates);
             playSound('success');
         } catch (e) {
             toast({ variant: 'destructive', title: "School update failed", description: (e as Error).message });
         }
     }, [firestore, playSound, toast]);
-
-    const toggleAutoBackup = useCallback(() => {
-        setIsAutoBackupEnabled(prev => {
-            const newState = !prev;
-            localStorage.setItem('autoBackupEnabled', JSON.stringify(newState));
-            toast({ title: newState ? 'Automatic Backups Enabled' : 'Automatic Backups Disabled' });
-            return newState;
-        });
-    }, [toast]);
 
     const devMigrateSchoolData = useCallback(async (schoolId: string) => {
         if (!functions) return;
@@ -321,34 +302,16 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [functions, toast, playSound]);
 
-    // Auto-backup scheduler
-    useEffect(() => {
-        if (loginState !== 'developer' || !isAutoBackupEnabled) return;
-        const checkAndBackup = async () => {
-            const lastAutoBackupTime = localStorage.getItem('lastGlobalAutoBackupTime');
-            const oneDay = 24 * 60 * 60 * 1000;
-            if (!lastAutoBackupTime || Date.now() - parseInt(lastAutoBackupTime) > oneDay) {
-                console.log('Performing daily automatic backup of all schools...');
-                await devBackupAllSchools();
-                localStorage.setItem('lastGlobalAutoBackupTime', Date.now().toString());
-                toast({ title: "Automatic Daily Backup Complete", description: "All school databases have been backed up." });
-            }
-        };
-        checkAndBackup();
-        const intervalId = setInterval(checkAndBackup, 60 * 60 * 1000);
-        return () => clearInterval(intervalId);
-    }, [isAutoBackupEnabled, loginState, devBackupAllSchools, toast]);
-
     const value = useMemo(
         () => ({
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            isAutoBackupEnabled, toggleAutoBackup, devMigrateSchoolData,
+            devVerifyBackup, devMigrateSchoolData,
         }),
         [
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            isAutoBackupEnabled, toggleAutoBackup, devMigrateSchoolData,
+            devVerifyBackup, devMigrateSchoolData,
         ]
     );
 

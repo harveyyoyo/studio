@@ -88,7 +88,7 @@ export default function LoginPage() {
   const isGraphic = settings.graphicMode === 'graphics';
 
   return (
-    <div className={`min-h-screen relative overflow-hidden font-sans pb-24 flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`min-h-screen relative overflow-hidden font-sans ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
 
       {/* Settings - top right */}
       <div className="fixed top-4 right-4 z-[100] no-print">
@@ -189,26 +189,17 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-
-        {/* Footer - developer toggle (repeated for visibility) */}
-        <div className="mt-12 flex flex-col gap-6 text-center">
-          <div className={`w-full border-t pt-6 ${isGraphic ? 'border-white/10' : 'border-slate-200'}`} />
-          <button
-            onClick={() => setIsDeveloper(!isDeveloper)}
-            className={`text-xs font-bold uppercase tracking-widest transition-colors border-b-2 pb-1 min-h-[44px] flex items-center justify-center ${isGraphic ? 'text-white/40 hover:text-white border-white/10 hover:border-white' : 'text-slate-400 hover:text-slate-800 border-slate-200 hover:border-slate-800'}`}
-          >
-            {isDeveloper ? 'Return to School Login' : 'Switch to Developer Login'}
-          </button>
-        </div>
       </div>
 
-      {/* Home link bar */}
-      <div className={`fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors ${isGraphic ? 'bg-white border-white/10' : 'bg-card border-border shadow-lg'}`}>
-        <Link href="/" className={`flex flex-col items-center gap-0.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${isGraphic ? 'text-indigo-600 hover:text-indigo-500' : 'text-foreground hover:text-foreground/80'}`}>
+      {/* Home link bar (app mode only) */}
+      {settings.displayMode === 'app' && (
+      <div className={`fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors ${isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/10' : 'bg-card border-border shadow-lg'}`}>
+        <Link href="/" className={`flex flex-col items-center gap-0.5 transition-colors min-h-[44px] min-w-[44px] justify-center ${isGraphic ? 'text-primary' : 'text-foreground hover:text-foreground/80'}`}>
           <Home className="w-6 h-6" />
           <span className="text-[10px] font-black uppercase tracking-widest">Home</span>
         </Link>
       </div>
+      )}
     </div>
   );
 }

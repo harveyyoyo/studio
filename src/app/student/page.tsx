@@ -10,14 +10,19 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFunctions, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { SchoolGate } from '@/components/SchoolGate';
 import { httpsCallable } from 'firebase/functions';
 import { lookupStudentId } from '@/lib/db';
+import { StudentScanner } from '@/components/StudentScanner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Achievement } from '@/lib/types';
+import DynamicIcon from '@/components/DynamicIcon';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
   Nfc,
@@ -114,6 +119,9 @@ function StudentDashboardInner({
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
 
+  const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
+  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
@@ -194,11 +202,11 @@ function StudentDashboardInner({
   }, [schoolId, functions, logoutPasscode, onDone, playSound, toast]);
 
   if (studentLoading || !student || !schoolId) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>
+    return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
   }
 
   return (
-    <div className={`space-y-8 relative max-w-6xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`}>
+    <div className={`space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`}>
       {/* Graphic Elements */}
       {isGraphic && (
         <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
@@ -208,136 +216,227 @@ function StudentDashboardInner({
 
       {/* Hero Welcome Section */}
       <Card className={`overflow-hidden border-none shadow-xl ${isGraphic ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : 'bg-[#a3a8d4] dark:bg-slate-800'}`}>
-        <CardContent className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="space-y-2 text-center md:text-left">
-            <p className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
-            <h2 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-white">{student.firstName} {student.lastName}</h2>
+        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="space-y-1 text-center md:text-left">
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
+            <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white">{student.firstName} {student.lastName}</h2>
           </div>
           <div className="text-center md:text-right">
-            <p className="text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1">Current Balance</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl md:text-8xl font-black text-slate-800 dark:text-white leading-none">
+            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-0.5">Current Balance</p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-5xl md:text-7xl font-black text-slate-800 dark:text-white leading-none">
                 {student.points.toLocaleString()}
               </span>
-              <span className="text-2xl md:text-3xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
+              <span className="text-xl md:text-2xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-        {/* Left Section: Redeem Coupon */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
-            <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-black flex items-center gap-3 text-slate-800 dark:text-white">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                  </div>
-                  Redeem Coupon Code
-                </CardTitle>
-                <div className="px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-100 dark:border-amber-800 animate-pulse">
-                  Auto-logout in {logoutTimer}s
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-8">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-14">
-                  <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                    <Type className="w-4 h-4" /> Manual / USB
-                  </TabsTrigger>
-                  <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                    <Camera className="w-4 h-4" /> Webcam Scan
-                  </TabsTrigger>
-                </TabsList>
-
-                {activeTab === 'manual' ? (
-                  <div className="space-y-6">
-                    <div className="flex gap-3">
-                      <Input
-                        placeholder="Scan or type barcode now..."
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                        className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
-                        autoFocus
-                      />
-                      <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-[#8b91c8] hover:bg-[#7a80b7] text-white transition-all active:scale-95 uppercase tracking-widest">
-                        Redeem
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
-                    <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
-                    </div>
-                  </div>
-                )}
-              </Tabs>
-
-              {animatedValue !== null && (
-                <div key={animationKey.current} className="mt-8 p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-4 shadow-xl shadow-emerald-200/20">
-                  <Star className="w-8 h-8 fill-emerald-400 text-emerald-500" />
-                  <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+        {/* Left Section: Content Tabs */}
+        <div className="lg:col-span-2 space-y-5">
+          <Tabs defaultValue="redeem" className="w-full">
+            <TabsList className="bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12 mb-4">
+              <TabsTrigger value="redeem" className="rounded-lg font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Redeem</TabsTrigger>
+              {settings.enableAchievements && (
+                <TabsTrigger value="achievements" className="rounded-lg font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Badges</TabsTrigger>
               )}
-            </CardContent>
-          </Card>
+            </TabsList>
 
-          {/* Eligible Rewards - Bottom Wide Section */}
-          <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Award className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
-                  <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {[
-                  { name: 'Sticker Pack', cost: 50, icon: '😊', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                  { name: 'Homework Pass', cost: 100, icon: '📝', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                  { name: 'Eraser Collection', cost: 25, icon: '🧹', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                ].map((reward) => (
-                  <div key={reward.name} className={`${reward.color} p-6 rounded-2xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-3 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-1 transform duration-300`}>
-                    <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-2 shadow-inner">
-                      <span className="text-3xl">{reward.icon}</span>
+            <TabsContent value="redeem" className="space-y-5">
+              <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
+                <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                        <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                      </div>
+                      Redeem Coupon Code
+                    </CardTitle>
+                    <div className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-100 dark:border-amber-800 animate-pulse">
+                      Auto-logout in {logoutTimer}s
                     </div>
-                    <p className="text-sm font-black text-slate-800 dark:text-white leading-tight">{reward.name}</p>
-                    <Badge variant="secondary" className="font-black text-[10px] tracking-widest rounded-lg px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                      {reward.cost} PTS
-                    </Badge>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
+                      <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                        <Type className="w-4 h-4" /> Manual / USB
+                      </TabsTrigger>
+                      <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                        <Camera className="w-4 h-4" /> Webcam Scan
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {activeTab === 'manual' ? (
+                      <div className="space-y-6">
+                        <div className="flex gap-3">
+                          <Input
+                            placeholder="Scan or type barcode now..."
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                            onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                            className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
+                            autoFocus
+                          />
+                          <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-[#8b91c8] hover:bg-[#7a80b7] text-white transition-all active:scale-95 uppercase tracking-widest">
+                            Redeem
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
+                        <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
+                        </div>
+                      </div>
+                    )}
+                  </Tabs>
+
+                  {animatedValue !== null && (
+                    <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
+                      <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
+                      <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Eligible Rewards - Bottom Wide Section */}
+              <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
+                      <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { name: 'Sticker Pack', cost: 50, icon: '😊', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                      { name: 'Homework Pass', cost: 100, icon: '📝', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                      { name: 'Eraser Collection', cost: 25, icon: '🧹', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
+                    ].map((reward) => (
+                      <div key={reward.name} className={`${reward.color} p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300`}>
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner">
+                          <span className="text-2xl">{reward.icon}</span>
+                        </div>
+                        <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{reward.name}</p>
+                        <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {reward.cost} PTS
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {settings.enableAchievements && (
+              <TabsContent value="achievements">
+                <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base font-black text-slate-800 dark:text-white">Badges & Achievements</CardTitle>
+                        <CardDescription className="text-xs font-medium dark:text-slate-400">Unlock special badges and earn bonus points.</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {achievements?.sort((a, b) => {
+                        const aEarned = (student?.earnedAchievements || []).some(ea => ea.achievementId === a.id);
+                        const bEarned = (student?.earnedAchievements || []).some(ea => ea.achievementId === b.id);
+                        if (aEarned && !bEarned) return -1;
+                        if (!aEarned && bEarned) return 1;
+                        return 0;
+                      }).map(ach => {
+                        const earned = (student?.earnedAchievements || []).find(ea => ea.achievementId === ach.id);
+
+                        let progress = 0;
+                        if (!earned) {
+                          if (ach.criteria.type === 'points') {
+                            if (ach.criteria.categoryId) {
+                              progress = Math.min(100, ((student?.categoryPoints?.[ach.criteria.categoryId] || 0) / ach.criteria.threshold) * 100);
+                            } else {
+                              progress = Math.min(100, ((student?.points || 0) / ach.criteria.threshold) * 100);
+                            }
+                          } else if (ach.criteria.type === 'lifetimePoints') {
+                            progress = Math.min(100, ((student?.lifetimePoints || 0) / ach.criteria.threshold) * 100);
+                          }
+                        }
+
+                        return (
+                          <div key={ach.id} className={cn(
+                            "relative p-4 rounded-2xl border transition-all flex flex-col items-center text-center gap-2",
+                            earned ? "bg-amber-50/40 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/40" : "bg-slate-50/50 border-slate-100 opacity-60 grayscale-[0.5]"
+                          )}>
+                            <div className={cn(
+                              "w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border",
+                              earned ? "bg-white border-amber-200 text-amber-500" : "bg-slate-100 border-slate-200 text-slate-400"
+                            )}>
+                              <DynamicIcon name={ach.icon} className="w-7 h-7" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{ach.name}</p>
+                              {earned ? (
+                                <p className="text-[9px] font-bold text-amber-600 mt-0.5 uppercase tracking-tighter">Unlocked!</p>
+                              ) : (
+                                <div className="w-full mt-1.5 space-y-1">
+                                  <Progress value={progress} className="h-1" />
+                                  <p className="text-[8px] font-medium text-slate-500">{Math.floor(progress)}% Complete</p>
+                                </div>
+                              )}
+                            </div>
+                            {ach.bonusPoints && earned && (
+                              <Badge className="absolute -top-2 -right-2 bg-amber-500 text-white border-2 border-white text-[8px] h-5 min-w-5 flex items-center justify-center rounded-full px-1">
+                                +{ach.bonusPoints}
+                              </Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {(!achievements || achievements.length === 0) && (
+                      <div className="text-center py-12 opacity-30">
+                        <Trophy className="w-12 h-12 mx-auto mb-2" />
+                        <p className="text-sm font-bold">No achievements to unlock yet.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
 
         {/* Right Section: Activity */}
         <Card className="lg:col-span-1 border-none shadow-lg bg-white dark:bg-slate-900 flex flex-col">
-          <CardHeader className="pb-4 border-b border-slate-50 dark:border-slate-800">
-            <CardTitle className="text-lg font-black flex items-center gap-3 text-slate-800 dark:text-white">
-              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <ChevronRight className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+          <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
+            <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
               </div>
               Activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 pt-6">
+          <CardContent className="flex-1 pt-4">
             <StudentActivityList schoolId={schoolId} studentId={student.id} />
           </CardContent>
-          <div className="p-6 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <Button variant="outline" onClick={() => setIsLogoutDialogOpen(true)} className="w-full h-12 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2">
+          <div className="p-4 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+            <Button variant="outline" onClick={() => setIsLogoutDialogOpen(true)} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
               <LogOut className="h-4 w-4" /> Log Out Now
             </Button>
           </div>
@@ -348,26 +447,26 @@ function StudentDashboardInner({
         {/* ... dialog content ... */}
         <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-slate-800">Exit Kiosk?</DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium">
+            <DialogTitle className="text-xl font-black text-slate-800">Exit Kiosk?</DialogTitle>
+            <DialogDescription className="text-slate-500 font-medium text-sm">
               To protect student privacy, a passcode is required to exit the student kiosk.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6">
+          <div className="py-4">
             <Label htmlFor="logout-passcode-unified" className="font-black text-slate-700 uppercase tracking-widest text-[10px] ml-1">School Passcode</Label>
             <Input
               id="logout-passcode-unified"
               type="password"
-              className="mt-2 text-2xl rounded-2xl h-16 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
+              className="mt-2 text-xl rounded-xl h-14 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
               value={logoutPasscode}
               onChange={(e) => setLogoutPasscode(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleLogoutConfirm()}
               autoFocus
             />
           </div>
-          <DialogFooter className="flex gap-3 sm:justify-between">
-            <Button variant="ghost" className="rounded-xl flex-1 h-12 font-bold text-slate-500" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
-            <Button onClick={handleLogoutConfirm} className="rounded-xl flex-1 h-12 bg-red-500 hover:bg-red-600 text-white font-bold shadow-lg shadow-red-200">Confirm Exit</Button>
+          <DialogFooter className="flex gap-2 sm:justify-between">
+            <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
+            <Button onClick={handleLogoutConfirm} className="rounded-xl flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200">Confirm Exit</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -385,65 +484,14 @@ export default function StudentLoginPage() {
   const isGraphic = settings.graphicMode === 'graphics';
 
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
-  const [nfcId, setNfcId] = useState('');
-  const nfcInputRef = useRef<HTMLInputElement>(null);
-  const [loginTab, setLoginTab] = useState('nfc');
-  const [hasCameraPermission, setHasCameraPermission] = useState(true);
-
-  const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
-    loginTab === 'camera' && !activeStudentId,
-    (code) => handleNfcSubmit(code),
-    (err) => {
-      setHasCameraPermission(false);
-      if (loginTab === 'camera') setLoginTab('nfc');
-      toast({ variant: 'destructive', title: 'Camera Error', description: err });
-    }
-  );
-
-  useEffect(() => { setHasCameraPermission(hookHasPermission); }, [hookHasPermission]);
-
-  useEffect(() => {
-    if (isInitialized && loginState !== 'school') {
-      router.replace('/');
-    }
-  }, [isInitialized, loginState, router]);
-
-
-  useEffect(() => {
-    if (!activeStudentId && loginTab === 'nfc') {
-      setTimeout(() => nfcInputRef.current?.focus(), 100);
-    }
-  }, [activeStudentId, loginTab]);
-
-  const handleNfcSubmit = useCallback(async (scannedId?: string) => {
-    const rawId = scannedId || nfcId;
-    if (!rawId?.trim() || !schoolId) return;
-
-    try {
-      const finalStudentId = await lookupStudentId(firestore, schoolId, rawId.trim());
-      if (finalStudentId) {
-        playSound('login');
-        setActiveStudentId(finalStudentId);
-      } else {
-        playSound('error');
-        toast({ variant: 'destructive', title: 'Student Not Found', description: 'The provided ID does not match any student.' });
-      }
-    } catch (error) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not look up student.' });
-    }
-    setNfcId('');
-  }, [firestore, schoolId, nfcId, playSound, toast]);
 
   const handleDone = useCallback(() => {
     setActiveStudentId(null);
-    setNfcId('');
-    setLoginTab('nfc');
   }, []);
 
   if (!isInitialized || loginState !== 'school') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
         <div className="w-16 h-16 bg-slate-200 rounded-2xl animate-pulse mb-4" />
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Initialising Kiosk...</p>
       </div>
@@ -453,7 +501,9 @@ export default function StudentLoginPage() {
   if (activeStudentId) {
     return (
       <ErrorBoundary name="StudentDashboard">
-        <StudentDashboardInner studentId={activeStudentId} onDone={handleDone} />
+        <SchoolGate>
+          <StudentDashboardInner studentId={activeStudentId} onDone={handleDone} />
+        </SchoolGate>
       </ErrorBoundary>
     );
   }
@@ -461,107 +511,16 @@ export default function StudentLoginPage() {
   return (
     <ErrorBoundary name="StudentLoginPage">
       <TooltipProvider>
-        <div className={`flex flex-col items-center justify-center min-h-[80vh] py-10 px-4 font-sans ${isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`}>
-          <div className={`w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden relative ${isGraphic ? 'ring-8 ring-primary/5' : ''}`}>
-            {/* Mascot Decoration for Graphic Mode */}
-            {isGraphic && (
-              <div className="absolute -top-12 -left-12 w-32 h-32 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
-            )}
-
-            <div className={`p-8 text-center relative z-10 ${isGraphic ? 'bg-primary/5 border-b border-primary/10' : 'bg-slate-50 border-b'}`}>
-              <div className={`w-20 h-20 mx-auto mb-6 rounded-3xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0 ${isGraphic ? 'bg-primary text-white scale-110' : 'bg-slate-800 text-white'}`}>
-                <GraduationCap className="w-10 h-10" />
-              </div>
-              <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Student Kiosk</h1>
-              <p className="text-muted-foreground font-bold text-sm mt-2 tracking-wide">TAP CARD OR SCAN TO UNLOCK</p>
-            </div>
-
-            <div className="p-8">
-              <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                <TabsList className="grid w-full grid-cols-3 bg-slate-100/50 p-1.5 rounded-2xl mb-8">
-                  <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
-                    <Nfc className="mr-2 h-4 w-4" /> Card
-                  </TabsTrigger>
-                  <TabsTrigger value="manual" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
-                    <Type className="mr-2 h-4 w-4" /> Type
-                  </TabsTrigger>
-                  <TabsTrigger value="camera" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
-                    <Camera className="mr-2 h-4 w-4" /> Scan
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="nfc" className="text-center">
-                  <div className="py-12 space-y-8">
-                    <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                      <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${isGraphic ? 'bg-primary' : 'bg-slate-400'}`}></div>
-                      <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all ${isGraphic ? 'bg-white border-primary text-primary' : 'bg-white border-slate-800 text-slate-800'}`}>
-                        <Nfc className="w-12 h-12" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-slate-800 font-black text-lg">System Ready</p>
-                      <p className="text-muted-foreground text-sm font-medium">Please place your card on the reader</p>
-                    </div>
-                    <Input
-                      ref={nfcInputRef}
-                      type="text"
-                      className="absolute -top-[9999px] -left-[9999px]"
-                      value={nfcId}
-                      onChange={(e) => setNfcId(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                      autoFocus
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="manual">
-                  <div className="space-y-6 py-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="manual-nfcId-unified" className="font-black text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Student ID Code</Label>
-                      <Input
-                        id="manual-nfcId-unified"
-                        className="h-16 rounded-2xl text-2xl font-mono text-center border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary shadow-inner"
-                        value={nfcId}
-                        onChange={(e) => setNfcId(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                        placeholder="e.g. 100"
-                        autoFocus
-                      />
-                      <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
-                    </div>
-                    <Button onClick={() => handleNfcSubmit()} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all active:scale-95 text-white ${isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700'}`}>
-                      Login
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="camera">
-                  <div className="py-4 space-y-6">
-                    <div className="relative border-4 border-slate-100 rounded-[2rem] overflow-hidden shadow-2xl bg-black">
-                      <video ref={videoRef} className="w-full aspect-square object-cover" playsInline muted />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-[1.5rem] border-dashed animate-pulse" />
-                      </div>
-                      {!hasCameraPermission && (
-                        <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                          <Camera className="w-12 h-12 text-red-400 mb-4" />
-                          <p className="text-white font-bold">Camera access required</p>
-                          <p className="text-white/60 text-xs mt-2">Please enable camera in settings</p>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">Position barcode within the frame</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            <div className="bg-slate-50 p-6 border-t flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-              <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
-              <Link href="/portal" className="text-primary hover:underline flex items-center gap-1 group">
-                <ArrowLeft className="w-3 h-3" /> Back to portal <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
+        <div className={`flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans ${isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`}>
+          <StudentScanner
+            onStudentFound={setActiveStudentId}
+            title="Student Kiosk"
+          />
+          <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+            <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
+            <Link href="/portal" className="text-primary hover:underline flex items-center gap-1 group">
+              <ArrowLeft className="w-3 h-3" /> Back to portal <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
         </div>
       </TooltipProvider>

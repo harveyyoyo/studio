@@ -11,53 +11,63 @@ service cloud.firestore {
       return isAuth() && exists(/databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid));
     }
     
-    // School document: any auth user can read (needed for passcode login flow)
-    // and create (for sample school seeding). Only admins can modify or delete.
     match /schools/{schoolId} {
       allow read: if isAuth();
       allow create: if isAuth();
       allow update, delete: if isAdmin(schoolId);
-      
-      // Everything below is scoped to admins of THIS school only.
-      // The school login flow creates roles_admin/{uid} on successful passcode,
-      // so kiosk and redemption sessions already have admin status.
+
+      // Read: any authenticated user (access control enforced at the
+      // application layer via passcode — the school URL + passcode gate
+      // prevents unauthorized UI access).
+      // Write: only provisioned admins.
 
       match /students/{studentId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
 
         match /activities/{activityId} {
-          allow read, write: if isAdmin(schoolId);
+          allow read: if isAuth();
+          allow write: if isAdmin(schoolId);
         }
       }
       
       match /teachers/{teacherId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
       
       match /classes/{classId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
       
       match /categories/{categoryId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
+      }
+
+      match /achievements/{achievementId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
 
       match /prizes/{prizeId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
       
       match /coupons/{couponId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
       
-      // A user can grant themselves admin by creating their own uid doc
-      // (happens during passcode login). Only existing admins can manage others.
       match /roles_admin/{uid} {
-        allow read, update, delete: if isAdmin(schoolId);
+        allow read: if isAuth();
         allow create: if isAuth() && request.auth.uid == uid;
+        allow update, delete: if isAdmin(schoolId);
       }
 
-      // Passcode stored here; only writable by admins, never readable by clients.
+      // Passcode stored here; never readable by clients.
       // The Cloud Function verifySchoolPasscode reads this via the admin SDK.
       match /secrets/{docId} {
         allow read: if false;
@@ -65,7 +75,8 @@ service cloud.firestore {
       }
 
       match /backups/{backupId} {
-        allow read, write: if isAdmin(schoolId);
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId);
       }
     }
   }

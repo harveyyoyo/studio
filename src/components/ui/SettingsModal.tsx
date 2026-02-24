@@ -10,24 +10,60 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Volume2, VolumeX, Eye, Monitor, Smartphone, ChevronRight, Bell, Shield, HelpCircle, Moon, Sun, ArrowLeft } from 'lucide-react';
-import { useSettings } from '../providers/SettingsProvider';
+import { Label } from '@/components/ui/label';
+import {
+    Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
+    Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
+    BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
+    Users, Database, Printer, LayoutDashboard, History,
+} from 'lucide-react';
+import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+
+type SettingsView = 'main' | 'advanced' | 'features';
+
+function FeatureRow({ id, label, desc, icon, settings, onToggle }: {
+    id: string; label: string; desc: string; icon: React.ReactNode;
+    settings: any; onToggle: (key: string, val: any) => void;
+}) {
+    const isEnabled = settings[id] || false;
+    return (
+        <div className="flex items-center justify-between py-2.5 px-2">
+            <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg transition-colors ${isEnabled ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' : 'bg-slate-200 text-slate-400 dark:bg-slate-700'}`}>
+                    {icon}
+                </div>
+                <div>
+                    <Label className="font-bold text-sm cursor-pointer block text-slate-700 dark:text-slate-200" htmlFor={id}>{label}</Label>
+                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{desc}</p>
+                </div>
+            </div>
+            <Switch
+                id={id}
+                checked={isEnabled}
+                onCheckedChange={(checked) => onToggle(id, checked)}
+                className="data-[state=checked]:bg-amber-500"
+            />
+        </div>
+    );
+}
 
 export function SettingsModal() {
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [view, setView] = useState<SettingsView>('main');
 
-    const handleToggle = (key: keyof typeof settings, value: any) => {
-        updateSettings({ [key]: value });
+    const handleToggle = (key: string, value: any) => {
+        updateSettings({ [key]: value } as any);
         if (settings.soundEnabled || key === 'soundEnabled') {
             playSound('click');
         }
     };
 
+    const viewTitle = view === 'main' ? 'Interface Settings' : view === 'advanced' ? 'Advanced' : 'Features';
+
     return (
-        <Dialog onOpenChange={(open) => { if (!open) setShowAdvanced(false); }}>
+        <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl group relative z-50">
                     <Settings className="w-5 h-5 text-slate-600 dark:text-slate-300 group-hover:rotate-45 transition-transform duration-300" />
@@ -38,24 +74,22 @@ export function SettingsModal() {
                 <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <DialogHeader>
                         <div className="flex items-center gap-2">
-                            {showAdvanced && (
-                                <Button variant="ghost" size="icon" onClick={() => setShowAdvanced(false)} className="h-8 w-8 -ml-2">
+                            {view !== 'main' && (
+                                <Button variant="ghost" size="icon" onClick={() => setView('main')} className="h-8 w-8 -ml-2">
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
                             )}
                             <DialogTitle className="text-lg font-bold text-slate-800 dark:text-white">
-                                {showAdvanced ? 'Advanced Settings' : 'School Rewards'}
-                                {!showAdvanced && <br />}
-                                {!showAdvanced && <span className="text-slate-600 dark:text-slate-400 font-normal text-sm">Interface Settings</span>}
+                                {viewTitle}
                             </DialogTitle>
                         </div>
                     </DialogHeader>
                 </div>
 
-                <div className="px-6 py-4 min-h-[300px]">
-                    {!showAdvanced ? (
+                <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                    {view === 'main' && (
                         <>
-                            {/* Graphic Mode - Primary Toggle */}
+                            {/* Graphic Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -75,7 +109,34 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
-                            {/* Dark Mode Toggle */}
+                            {/* Color Scheme */}
+                            {settings.graphicMode === 'classic' && (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 rounded-lg bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                                            <Palette className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-800 dark:text-white">Color Scheme</h4>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Classic mode colors</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(Object.keys(colorSchemes) as ColorScheme[]).map((key) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => handleToggle('colorScheme', key)}
+                                                className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${settings.colorScheme === key ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-500' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                            >
+                                                <span className={`w-4 h-4 rounded-full ${colorSchemes[key].swatch} shrink-0`} />
+                                                {colorSchemes[key].label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Dark Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -95,7 +156,7 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
-                            {/* Display Mode - Web vs App */}
+                            {/* Display Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center gap-3 mb-3">
                                     {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-slate-600 dark:text-slate-400" /> : <Monitor className="w-5 h-5 text-slate-600 dark:text-slate-400" />}
@@ -120,22 +181,36 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
+                            {/* Features Button */}
+                            <Button
+                                variant="outline"
+                                onClick={() => setView('features')}
+                                className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-2 hover:bg-amber-50 dark:hover:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 mb-3"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Zap className="w-5 h-5" />
+                                    <span className="font-bold">Features</span>
+                                </div>
+                                <ChevronRight className="w-5 h-5 opacity-50" />
+                            </Button>
+
                             {/* Advanced Button */}
                             <Button
                                 variant="outline"
-                                onClick={() => setShowAdvanced(true)}
+                                onClick={() => setView('advanced')}
                                 className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-dashed border-2 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
                             >
                                 <div className="flex items-center gap-3">
                                     <Settings className="w-5 h-5" />
-                                    <span className="font-bold">Advanced Settings</span>
+                                    <span className="font-bold">Advanced</span>
                                 </div>
                                 <ChevronRight className="w-5 h-5 opacity-50" />
                             </Button>
                         </>
-                    ) : (
+                    )}
+
+                    {view === 'advanced' && (
                         <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                            {/* Sound Effects */}
                             <div className="flex items-center justify-between py-2 px-2">
                                 <div className="flex items-center gap-3">
                                     {settings.soundEnabled ? <Volume2 className="w-5 h-5 text-slate-500" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
@@ -151,7 +226,6 @@ export function SettingsModal() {
                                 />
                             </div>
 
-                            {/* Notifications */}
                             <button className="flex items-center justify-between py-2 px-2 w-full text-left hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                                 <div className="flex items-center gap-3">
                                     <Bell className="w-5 h-5 text-slate-500" />
@@ -163,7 +237,6 @@ export function SettingsModal() {
                                 <ChevronRight className="w-5 h-5 text-slate-300" />
                             </button>
 
-                            {/* Privacy */}
                             <button className="flex items-center justify-between py-2 px-2 w-full text-left hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                                 <div className="flex items-center gap-3">
                                     <Shield className="w-5 h-5 text-slate-500" />
@@ -174,6 +247,37 @@ export function SettingsModal() {
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-slate-300" />
                             </button>
+                        </div>
+                    )}
+
+                    {view === 'features' && (
+                        <div className="space-y-1 animate-in slide-in-from-right-4 duration-300">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Engagement</p>
+                            <FeatureRow id="enableAchievements" label="Achievements" desc="Digital badges for milestones" icon={<Trophy className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableLevels" label="Level System" desc="Students level up with points" icon={<Zap className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableStreaks" label="Daily Streaks" desc="Track consecutive earning days" icon={<History className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Insights</p>
+                            <FeatureRow id="enableTeacherCharts" label="Teacher Charts" desc="Class-level data visualization" icon={<BarChart3 className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableAdminAnalytics" label="School Analytics" desc="School-wide data trends" icon={<ShieldCheck className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableStudentReports" label="Printable Reports" desc="PDF reports for meetings" icon={<Printer className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Social</p>
+                            <FeatureRow id="enableNotifications" label="In-App Alerts" desc="Notify students on points earned" icon={<Bell className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableShoutouts" label="Public Shoutouts" desc="Teacher recognition feed" icon={<MessageSquare className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Experience</p>
+                            <FeatureRow id="enablePrizeImages" label="Prize Images" desc="Upload photos for shop items" icon={<ShoppingBag className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableWishlist" label="Wishlists" desc="Students save for prizes" icon={<Star className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableQrLogin" label="QR Card Login" desc="Login via QR code scanning" icon={<LayoutDashboard className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Workflow</p>
+                            <FeatureRow id="enableBulkPoints" label="Bulk Assignment" desc="Points to a whole class at once" icon={<Users className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableAuditLog" label="System Logs" desc="Track admin changes & actions" icon={<Database className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
                         </div>
                     )}
                 </div>

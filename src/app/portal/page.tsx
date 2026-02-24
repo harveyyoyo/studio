@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Home, User, Star, Gift, ArrowRight } from 'lucide-react';
+import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Star, Gift, ArrowRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
@@ -21,7 +21,7 @@ export default function PortalPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-500'}`}>
+            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-background text-muted-foreground'}`}>
                 <p className="font-medium">Just a moment…</p>
                 <p className="text-sm">Loading your school.</p>
             </div>
@@ -59,7 +59,7 @@ export default function PortalPage() {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 relative overflow-hidden font-sans pb-24 ${isGraphic ? 'bg-[#0c133a] text-white' : 'bg-slate-50 text-slate-900'}`}>
+        <div className={`min-h-screen transition-colors duration-500 relative overflow-hidden font-sans ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} ${isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'}`}>
 
             {/* Graphic Decoration */}
             {isGraphic && (
@@ -70,33 +70,20 @@ export default function PortalPage() {
                 </>
             )}
 
-            <div className="relative z-10 max-w-4xl mx-auto pt-12 pb-8 px-6 space-y-8 animate-in fade-in duration-500">
-
-                {/* Portal Header */}
-                <div className="text-center space-y-2">
-                    <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>
-                        School: {schoolId?.replace(/_/g, ' ') || 'School Reward System'}
-                    </p>
-                    <h2 className={`text-3xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>
-                        Welcome to <span className="text-primary">{schoolId?.replace(/_/g, ' ') || 'School Reward System'}</span>
-                    </h2>
-                    <p className={`text-sm font-medium ${isGraphic ? 'text-white/40' : 'text-slate-500'}`}>
-                        Please select your portal to continue.
-                    </p>
-                </div>
+            <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6 animate-in fade-in duration-500">
 
                 {/* Portal Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {portals.map((p) => {
-                        const Icon = p.icon;
-                        const gc = colorMap[p.color];
+                    const Icon = p.icon;
+                    const gc = colorMap[p.color];
 
-                        return (
-                            <Link key={p.href} href={p.href} className="block group">
-                                <Card className={`h-full border-t-4 transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative ${isGraphic
-                                        ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
-                                        : `bg-white border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
-                                    }`}>
+                    return (
+                        <Link key={p.href} href={p.href} className="block group">
+                        <Card className={`h-full min-h-[200px] sm:min-h-[220px] border-t-4 transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative ${isGraphic
+                                ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
+                                : `bg-white border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
+                            }`}>
                                     {/* Decorative Elements for Graphic Mode */}
                                     {isGraphic && (
                                         <div className="absolute -top-4 -right-4 w-12 h-12 opacity-5">
@@ -104,7 +91,7 @@ export default function PortalPage() {
                                         </div>
                                     )}
 
-                                    <CardHeader className="space-y-4">
+                                    <CardHeader className="space-y-3 pt-5 pb-5">
                                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px] ${isGraphic ? 'bg-white/10 border border-white/10' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
                                             }`}>
                                             <Icon className={`w-8 h-8 ${isGraphic ? gc.text : (iconTextClassic[p.color] ?? '')}`} />
@@ -129,39 +116,6 @@ export default function PortalPage() {
                 </div>
             </div>
 
-            {/* Persistent Bottom Nav - all portals reachable */}
-            <nav className={`fixed bottom-0 left-0 right-0 py-2 z-50 transition-all border-t ${isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'}`}>
-                <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-x-3 gap-y-1 items-center px-2">
-                    <Link href="/" title="Return to login" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Home className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Leave</span>
-                    </Link>
-                    <div className={`flex flex-col items-center py-1 ${isGraphic ? 'text-primary' : 'text-indigo-600'}`}>
-                        <Star className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Portal</span>
-                    </div>
-                    <Link href="/student" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <GraduationCap className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Student</span>
-                    </Link>
-                    <Link href="/teacher" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Printer className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Teacher</span>
-                    </Link>
-                    <Link href="/prize" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Gift className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Prizes</span>
-                    </Link>
-                    <Link href="/admin" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <UserCog className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Admin</span>
-                    </Link>
-                    <Link href="/halloffame" className={`flex flex-col items-center transition-colors py-1 ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                        <Trophy className="w-5 h-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Hall of Fame</span>
-                    </Link>
-                </div>
-            </nav>
         </div>
     );
 }

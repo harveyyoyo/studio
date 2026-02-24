@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Home } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -138,7 +138,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
     return (
         <TooltipProvider>
-            <div className={`min-h-screen transition-colors duration-500 pb-24 ${isGraphic ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+            <div className={`min-h-screen transition-colors duration-500 ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} ${isGraphic ? 'bg-slate-900 text-white' : 'bg-background text-foreground'}`}>
 
                 {/* Unified Header */}
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-[#0c1a3a] border-b border-indigo-500/20 shadow-lg' : 'bg-white border-b'}`}>
@@ -153,11 +153,9 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                 <p className={`text-xs mt-0.5 ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
                             </div>
                         </div>
-                        {isGraphic && (
-                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
-                                <UserCheck className="w-6 h-6 text-indigo-400" />
-                            </div>
-                        )}
+                        <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-white/10 text-white/60 hover:text-white hover:bg-white/5' : ''}`}>
+                            <LogOut className="w-4 h-4" /> Switch Teacher
+                        </Button>
                     </div>
                 </div>
 
@@ -244,24 +242,6 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                     </div>
                 </div>
 
-                {/* Unified Bottom Nav */}
-                <nav className={`fixed bottom-0 left-0 right-0 py-4 z-50 transition-all border-t ${isGraphic ? 'bg-[#0c1a3a]/95 backdrop-blur-md border-white/5 shadow-2xl' : 'bg-white border-slate-100 shadow-lg'
-                    }`}>
-                    <div className="max-w-md mx-auto flex justify-around items-center px-4">
-                        <Link href="/portal" className={`flex flex-col items-center gap-1 transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                            <Home className="w-6 h-6" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Portal</span>
-                        </Link>
-                        <div className={`flex flex-col items-center gap-1 ${isGraphic ? 'text-indigo-400' : 'text-indigo-600'}`}>
-                            <UserCheck className="w-6 h-6" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
-                        </div>
-                        <button className={`flex flex-col items-center gap-1 transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
-                            <LogOut className="w-6 h-6" onClick={onLogout} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
-                        </button>
-                    </div>
-                </nav>
             </div>
         </TooltipProvider>
     );
@@ -310,7 +290,7 @@ export default function TeacherPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-400'}`}>
+            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-background text-muted-foreground'}`}>
                 Loading...
             </div>
         );

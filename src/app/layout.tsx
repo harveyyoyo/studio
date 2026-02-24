@@ -46,7 +46,7 @@ export default function RootLayout({
           <AppProvider>
             <div
               id="screen-view"
-              className="flex min-h-screen flex-col items-center p-2 sm:p-4"
+              className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
             >
               <Header />
               <main id="app" className="w-full max-w-6xl relative z-10">

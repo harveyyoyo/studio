@@ -8,8 +8,10 @@ import React, {
     useEffect,
     useCallback,
     useMemo,
+    useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import {
     doc,
@@ -18,6 +20,21 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
+async function provisionAdminViaServer(auth: import('firebase/auth').Auth, schoolId: string): Promise<boolean> {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const idToken = await user.getIdToken();
+    const res = await fetch('/api/auth/provision', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ schoolId }),
+    });
+    return res.ok;
+}
+
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
 
@@ -25,10 +42,11 @@ interface AuthContextType {
     isInitialized: boolean;
     isUserLoading: boolean;
     loginState: LoginState;
+    isAdmin: boolean;
     schoolId: string | null;
     syncStatus: SyncStatus;
     login: (
-        type: 'school' | 'developer',
+        type: LoginState,
         credentials: { schoolId?: string; passcode?: string }
     ) => Promise<boolean>;
     logout: () => void;
@@ -42,23 +60,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
 
+    const [isAdmin, setIsAdmin] = useState(false);
+
     const { auth, firestore, functions, isUserLoading } = useFirebase();
     const playSound = useArcadeSound();
     const router = useRouter();
 
-    // Restore session
+    // Restore session and provision admin role before any child renders.
+    // All state mutations are guarded by `cancelled` so React 18 StrictMode's
+    // double-invocation of effects doesn't set schoolId from a stale closure.
     useEffect(() => {
-        const savedState = sessionStorage.getItem('loginState');
-        const savedSchoolId = sessionStorage.getItem('schoolId');
-        if (savedState) {
-            const state = savedState as LoginState;
-            setLoginState(state);
-            if (state === 'school' && savedSchoolId) {
-                setSchoolId(savedSchoolId);
+        let cancelled = false;
+
+        const restore = async () => {
+            const savedState = localStorage.getItem('loginState') as LoginState | null;
+            const savedSchoolId = localStorage.getItem('schoolId');
+
+            if (savedState === 'school' && savedSchoolId) {
+                // Provision admin role via server-side API route (Admin SDK)
+                // so the write bypasses Firestore Security Rules entirely.
+                // Client-side writes fail when sign_in_provider is "custom"
+                // (injected by Firebase App Hosting).
+                let provisioned = false;
+                if (auth) {
+                    try {
+                        provisioned = await provisionAdminViaServer(auth, savedSchoolId);
+                        // Add a small delay for Firestore replication/propagation
+                        if (provisioned) await new Promise((r) => setTimeout(r, 1000));
+                    } catch (e) {
+                        console.error('[AuthProvider] Failed to provision admin role during restore:', e);
+                    }
+                }
+
+                if (cancelled) return;
+
+                if (provisioned) {
+                    setLoginState('school');
+                    setSchoolId(savedSchoolId);
+                    setIsAdmin(true);
+                } else {
+                    localStorage.removeItem('loginState');
+                    localStorage.removeItem('schoolId');
+                }
+            } else if (savedState) {
+                if (cancelled) return;
+                setLoginState(savedState);
+                if (savedState === 'developer') setIsAdmin(true);
             }
-        }
-        setIsInitialized(true);
-    }, []);
+
+            if (!cancelled) {
+                setIsInitialized(true);
+            }
+        };
+
+        restore();
+        return () => { cancelled = true; };
+    }, [firestore, auth]);
+
+    // If the Firebase auth user changes mid-session (e.g. custom token expires
+    // and is replaced by anonymous auth), re-provision the admin role for the
+    // new UID so existing Firestore listeners don't hit permission errors.
+    const provisionedUidRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!auth) return;
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user || !schoolId || loginState !== 'school') return;
+            if (user.uid === provisionedUidRef.current) return;
+            provisionedUidRef.current = user.uid;
+            provisionAdminViaServer(auth, schoolId).catch((e) =>
+                console.error('[AuthProvider] Re-provision on auth change failed:', e)
+            );
+        });
+        return unsubscribe;
+    }, [auth, schoolId, loginState]);
 
     // Data sync & network status listener
     useEffect(() => {
@@ -103,7 +177,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [schoolId, firestore]);
 
     const login = useCallback(
-        async (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }): Promise<boolean> => {
+        async (
+            type: LoginState,
+            credentials: { schoolId?: string; passcode?: string }
+        ): Promise<boolean> => {
             if (type === 'developer') {
                 // Validate via server-side API route so passcode never reaches client bundle
                 try {
@@ -115,7 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const data = await res.json();
                     if (data.success) {
                         setLoginState('developer');
-                        sessionStorage.setItem('loginState', 'developer');
+                        setIsAdmin(true);
+                        localStorage.setItem('loginState', 'developer');
                         return true;
                     }
                 } catch (e) {
@@ -126,10 +204,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
+
+                    if (auth) {
+                        await provisionAdminViaServer(auth, lowerSchoolId);
+                    }
+
                     setSchoolId(lowerSchoolId);
                     setLoginState('school');
-                    sessionStorage.setItem('loginState', 'school');
-                    sessionStorage.setItem('schoolId', lowerSchoolId);
+                    setIsAdmin(true);
+                    localStorage.setItem('loginState', 'school');
+                    localStorage.setItem('schoolId', lowerSchoolId);
                     return true;
                 } catch (e) {
                     console.error("School login error", e);
@@ -143,18 +227,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = useCallback(() => {
         playSound('swoosh');
-        sessionStorage.clear();
+        localStorage.removeItem('loginState');
+        localStorage.removeItem('schoolId');
         setLoginState('loggedOut');
         setSchoolId(null);
+        setIsAdmin(false);
         router.push('/');
     }, [router, playSound]);
 
     const value = useMemo(
         () => ({
-            isInitialized, isUserLoading, loginState, schoolId, syncStatus,
+            isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus,
             login, logout,
         }),
-        [isInitialized, isUserLoading, loginState, schoolId, syncStatus, login, logout]
+        [isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus, login, logout]
     );
 
     return (

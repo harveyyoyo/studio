@@ -9,6 +9,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { lookupStudentId } from '@/lib/db';
+import { StudentScanner } from '@/components/StudentScanner';
 import {
     Card,
     CardContent,
@@ -227,64 +228,9 @@ export default function PrizePage() {
     const { toast } = useToast();
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
-    const [nfcId, setNfcId] = useState('');
-    const nfcInputRef = useRef<HTMLInputElement>(null);
-    const [loginTab, setLoginTab] = useState('nfc');
-    const [hasCameraPermission, setHasCameraPermission] = useState(true);
-
-    const { videoRef, hasCameraPermission: hookHasPermission } = useBarcodeScanner(
-        loginTab === 'camera' && !activeStudentId,
-        (code) => handleNfcSubmit(code),
-        (err) => {
-            setHasCameraPermission(false);
-            if (loginTab === 'camera') setLoginTab('nfc');
-            toast({ variant: 'destructive', title: 'Camera Error', description: err });
-        }
-    );
-
-    useEffect(() => { setHasCameraPermission(hookHasPermission); }, [hookHasPermission]);
-
-    useEffect(() => {
-        if (isInitialized && loginState !== 'school') {
-            router.replace('/');
-        }
-    }, [isInitialized, loginState, router]);
-
-    useEffect(() => {
-        if (!activeStudentId && loginTab === 'nfc') {
-            setTimeout(() => nfcInputRef.current?.focus(), 100);
-        }
-    }, [activeStudentId, loginTab]);
-
-    const handleNfcSubmit = useCallback(async (scannedId?: string) => {
-        const rawId = scannedId || nfcId;
-        if (!rawId?.trim() || !schoolId) return;
-
-        try {
-            const finalStudentId = await lookupStudentId(firestore, schoolId, rawId.trim());
-            if (finalStudentId) {
-                setActiveStudentId(finalStudentId);
-            } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Student Not Found',
-                    description: 'The provided ID does not match any student.',
-                });
-            }
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: 'Could not look up student.',
-            });
-        }
-        setNfcId('');
-    }, [firestore, schoolId, nfcId, toast]);
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
-        setNfcId('');
-        setLoginTab('nfc');
     }, []);
 
     if (!isInitialized || loginState !== 'school') {
@@ -303,102 +249,24 @@ export default function PrizePage() {
     return (
         <TooltipProvider>
             <div className="flex flex-col items-center justify-center py-10">
-                <Card className="w-full max-w-md border-t-4 border-chart-3">
-                    <CardHeader className="text-center">
-                        <div className="mx-auto bg-accent p-4 rounded-full mb-4 w-24 h-24 flex items-center justify-center">
-                            <Gift className="w-16 h-16 text-chart-3" />
-                        </div>
-                        <CardTitle className="text-2xl font-bold font-headline">
-                            Prize Redemption
-                        </CardTitle>
-                        <CardDescription>Choose how to identify the student below. Scan a card, type an ID, or use the camera.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={loginTab} onValueChange={setLoginTab} className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
-                                    <Nfc className="mr-2 h-4 w-4" /> Card
-                                </TabsTrigger>
-                                <TabsTrigger value="manual">
-                                    <Type className="mr-2 h-4 w-4" /> Type
-                                </TabsTrigger>
-                                <TabsTrigger value="camera">
-                                    <Camera className="mr-2 h-4 w-4" /> Scan
-                                </TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="nfc" className="text-center">
-                                <div className="py-8 space-y-4">
-                                    <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                                        <div className="absolute inset-0 rounded-full border-2 border-dashed border-primary/50 dark:border-primary/40 animate-pulse"></div>
-                                        <Nfc className="w-16 h-16 text-muted-foreground" />
-                                    </div>
-                                    <p className="text-muted-foreground">
-                                        Tap your card on the reader...
-                                    </p>
-                                    <Input
-                                        ref={nfcInputRef}
-                                        type="text"
-                                        className="absolute -top-[9999px] -left-[9999px]"
-                                        value={nfcId}
-                                        onChange={(e) => setNfcId(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                                        autoFocus
-                                    />
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="manual">
-                                <div className="space-y-6 py-4">
-                                    <div className="space-y-3">
-                                        <Label htmlFor="manual-nfcId-prize" className="font-black text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Student ID Code</Label>
-                                        <Input
-                                            id="manual-nfcId-prize"
-                                            className="h-16 rounded-2xl text-2xl font-mono text-center border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary shadow-inner"
-                                            value={nfcId}
-                                            onChange={(e) => setNfcId(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                                            placeholder="e.g. 100"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <Button onClick={() => handleNfcSubmit()} className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all active:scale-95 bg-primary hover:bg-primary/90 text-white">
-                                        Login to Redeem
-                                    </Button>
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="camera">
-                                <div className="py-4 space-y-6">
-                                    <div className="relative border-4 border-slate-100 rounded-2xl overflow-hidden shadow-xl bg-black">
-                                        <video ref={videoRef} className="w-full aspect-square object-cover" playsInline muted />
-                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                            <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-xl border-dashed animate-pulse" />
-                                        </div>
-                                        {!hasCameraPermission && (
-                                            <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-                                                <Camera className="w-12 h-12 text-red-400 mb-4" />
-                                                <p className="text-white font-bold">Camera access required</p>
-                                                <p className="text-white/60 text-xs mt-2">Please enable camera in settings</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <p className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider">Position barcode within the frame</p>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-
-                        <div className="text-center mt-6">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button asChild variant="link" className="text-xs h-auto p-0">
-                                        <Link href="/portal"><ArrowLeft className="mr-2" /> Back to portal</Link>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Return to the main portal selection screen.</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StudentScanner
+                    onStudentFound={setActiveStudentId}
+                    title="Prize Redemption"
+                    description="Choose how to identify the student below."
+                    icon={<Gift className="w-8 h-8" />}
+                />
+                <div className="text-center mt-6">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button asChild variant="link" className="text-xs h-auto p-0">
+                                <Link href="/portal"><ArrowLeft className="mr-2" /> Back to portal</Link>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Return to the main portal selection screen.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
             </div>
         </TooltipProvider>
     );

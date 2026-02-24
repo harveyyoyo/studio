@@ -2,84 +2,377 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const crypto = require("crypto");
 admin.initializeApp();
-/**
- * Verifies a school passcode server-side so the client never sees the real value.
- * On success, grants the caller admin role for the school.
- */
-exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
-    var _a, _b, _c;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "Must be authenticated.");
-    }
-    const { schoolId, passcode } = data;
-    if (typeof schoolId !== "string" || !schoolId.trim()) {
-        throw new functions.https.HttpsError("invalid-argument", "A valid schoolId is required.");
-    }
-    if (typeof passcode !== "string" || !passcode) {
-        throw new functions.https.HttpsError("invalid-argument", "A passcode is required.");
-    }
-    const db = admin.firestore();
-    const cleanId = schoolId.trim().toLowerCase();
-    const schoolDocRef = db.collection("schools").doc(cleanId);
-    const schoolSnap = await schoolDocRef.get();
-    if (!schoolSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "School not found.");
-    }
-    // Read passcode from secrets subcollection (preferred) or fall back to
-    // the school doc itself for schools that haven't been migrated yet.
-    let storedPasscode;
-    const secretsSnap = await schoolDocRef.collection("secrets").doc("config").get();
-    if (secretsSnap.exists) {
-        storedPasscode = (_a = secretsSnap.data()) === null || _a === void 0 ? void 0 : _a.passcode;
-    }
-    else {
-        storedPasscode = (_b = schoolSnap.data()) === null || _b === void 0 ? void 0 : _b.passcode;
-    }
-    if (!storedPasscode || storedPasscode !== passcode) {
-        throw new functions.https.HttpsError("permission-denied", "Incorrect passcode.");
-    }
-    // Grant admin role to the caller
-    await schoolDocRef
-        .collection("roles_admin")
-        .doc(context.auth.uid)
-        .set({ role: "admin" });
-    return { success: true, schoolName: ((_c = schoolSnap.data()) === null || _c === void 0 ? void 0 : _c.name) || cleanId };
-});
-exports.createBackupTrigger = functions.https.onCall(async (data, context) => {
-    const schoolId = data.schoolId;
+const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+const RETENTION_DAYS = 30;
+// ========================================================================
+// Auth helpers
+// ========================================================================
+function requireAuth(context) {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
+}
+function requireString(value, name) {
+    if (typeof value !== "string" || value.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", `A valid ${name} is required.`);
     }
+}
+// ========================================================================
+// Core backup engine
+// ========================================================================
+async function collectFullSchoolData(schoolId) {
     const db = admin.firestore();
-    const schoolDocRef = db.collection("schools").doc(schoolId);
-    try {
-        const schoolSnap = await schoolDocRef.get();
-        if (!schoolSnap.exists) {
-            throw new functions.https.HttpsError("not-found", "School not found.");
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const schoolSnap = await schoolRef.get();
+    if (!schoolSnap.exists) {
+        throw new functions.https.HttpsError("not-found", `School "${schoolId}" not found.`);
+    }
+    const schoolData = JSON.parse(JSON.stringify(schoolSnap.data()));
+    delete schoolData.passcode;
+    const counts = {};
+    let totalDocs = 1;
+    for (const sub of SUBCOLLECTIONS) {
+        const snap = await schoolRef.collection(sub).get();
+        const items = [];
+        counts[sub] = snap.size;
+        totalDocs += snap.size;
+        for (const d of snap.docs) {
+            const item = Object.assign({ id: d.id }, d.data());
+            if (sub === "students") {
+                const activitiesSnap = await d.ref.collection("activities").get();
+                if (activitiesSnap.size > 0) {
+                    item._activities = activitiesSnap.docs.map((a) => (Object.assign({ id: a.id }, a.data())));
+                    counts.activities = (counts.activities || 0) + activitiesSnap.size;
+                    totalDocs += activitiesSnap.size;
+                }
+            }
+            items.push(item);
         }
-        const schoolData = schoolSnap.data();
-        // Create a clean, serializable backup object.
-        // This is the most robust way to avoid issues with non-serializable data.
-        const backupData = JSON.parse(JSON.stringify(schoolData));
-        // Remove sensitive or irrelevant fields from the backup.
-        delete backupData.passcode;
-        const backupId = Date.now().toString();
-        const backupDocRef = schoolDocRef.collection("backups").doc(backupId);
-        await backupDocRef.set(backupData);
-        return { success: true, backupId };
+        schoolData[`_${sub}`] = items;
+    }
+    return { data: schoolData, counts, totalDocs };
+}
+async function performFullBackup(schoolId, type) {
+    const backupId = Date.now().toString();
+    const db = admin.firestore();
+    try {
+        const { data, counts, totalDocs } = await collectFullSchoolData(schoolId);
+        const jsonStr = JSON.stringify(data);
+        const sha256 = crypto.createHash("sha256").update(jsonStr).digest("hex");
+        const sizeBytes = Buffer.byteLength(jsonStr, "utf8");
+        const storagePath = `backups/${schoolId}/${backupId}.json`;
+        const bucket = admin.storage().bucket();
+        await bucket.file(storagePath).save(jsonStr, {
+            contentType: "application/json",
+            metadata: { schoolId, sha256, type, backupId },
+        });
+        const metadata = {
+            createdAt: Date.now(),
+            storagePath,
+            sha256,
+            sizeBytes,
+            type,
+            status: "complete",
+            collections: counts,
+            totalDocs,
+        };
+        await db.collection("schools").doc(schoolId).collection("backups").doc(backupId).set(metadata);
+        return { success: true, backupId, metadata };
     }
     catch (error) {
-        console.error("Backup failed:", error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
+        const errorMsg = (error === null || error === void 0 ? void 0 : error.message) || "Unknown error";
+        console.error(`Backup failed for ${schoolId}:`, error);
+        try {
+            await db.collection("schools").doc(schoolId).collection("backups").doc(backupId).set({
+                createdAt: Date.now(),
+                type,
+                status: "failed",
+                error: errorMsg,
+                storagePath: "",
+                sha256: "",
+                sizeBytes: 0,
+                collections: {},
+                totalDocs: 0,
+            });
         }
-        throw new functions.https.HttpsError("internal", "An unexpected error occurred during backup. The data may contain non-serializable fields.");
+        catch (logErr) {
+            console.error("Could not log backup failure:", logErr);
+        }
+        return { success: false, backupId, error: errorMsg };
+    }
+}
+async function restoreSchoolFromData(schoolId, backupData) {
+    var _a;
+    const db = admin.firestore();
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const BATCH_LIMIT = 499;
+    const currentSnap = await schoolRef.get();
+    const currentPasscode = currentSnap.exists ? (_a = currentSnap.data()) === null || _a === void 0 ? void 0 : _a.passcode : null;
+    for (const sub of SUBCOLLECTIONS) {
+        const snap = await schoolRef.collection(sub).get();
+        if (sub === "students") {
+            for (const studentDoc of snap.docs) {
+                const activitiesSnap = await studentDoc.ref.collection("activities").get();
+                for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
+                    const batch = db.batch();
+                    activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach((d) => batch.delete(d.ref));
+                    await batch.commit();
+                }
+            }
+        }
+        for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+            const batch = db.batch();
+            snap.docs.slice(i, i + BATCH_LIMIT).forEach((d) => batch.delete(d.ref));
+            await batch.commit();
+        }
+    }
+    const schoolDocData = {};
+    for (const key of Object.keys(backupData)) {
+        if (!key.startsWith("_")) {
+            schoolDocData[key] = backupData[key];
+        }
+    }
+    if (currentPasscode) {
+        schoolDocData.passcode = currentPasscode;
+    }
+    await schoolRef.set(schoolDocData);
+    for (const sub of SUBCOLLECTIONS) {
+        const items = backupData[`_${sub}`];
+        if (!items || items.length === 0)
+            continue;
+        const ops = [];
+        for (const item of items) {
+            const itemObj = Object.assign({}, item);
+            const itemId = itemObj.id;
+            const activities = itemObj._activities;
+            delete itemObj.id;
+            delete itemObj._activities;
+            const docRef = schoolRef.collection(sub).doc(itemId);
+            ops.push({ ref: docRef, data: itemObj });
+            if (sub === "students" && Array.isArray(activities)) {
+                for (const act of activities) {
+                    const actObj = Object.assign({}, act);
+                    const actId = actObj.id;
+                    delete actObj.id;
+                    ops.push({ ref: docRef.collection("activities").doc(actId), data: actObj });
+                }
+            }
+        }
+        for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+            const batch = db.batch();
+            ops.slice(i, i + BATCH_LIMIT).forEach((op) => batch.set(op.ref, op.data));
+            await batch.commit();
+        }
+    }
+}
+async function pruneOldBackups(schoolId) {
+    const db = admin.firestore();
+    const bucket = admin.storage().bucket();
+    const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const allBackups = await db.collection("schools").doc(schoolId).collection("backups").get();
+    let deleted = 0;
+    for (const backupDoc of allBackups.docs) {
+        const data = backupDoc.data();
+        const createdAt = data.createdAt || 0;
+        if (createdAt > 0 && createdAt < cutoff) {
+            if (data.storagePath) {
+                try {
+                    await bucket.file(data.storagePath).delete();
+                }
+                catch (_a) {
+                    /* file already gone */
+                }
+            }
+            await backupDoc.ref.delete();
+            deleted++;
+        }
+    }
+    return deleted;
+}
+// ========================================================================
+// Callable: Full-depth backup
+// ========================================================================
+exports.createBackupTrigger = functions
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const type = data.type || "manual";
+    const result = await performFullBackup(data.schoolId, type);
+    if (!result.success) {
+        throw new functions.https.HttpsError("internal", result.error || "Backup failed.");
+    }
+    return { success: true, backupId: result.backupId, metadata: result.metadata };
+});
+// ========================================================================
+// Callable: Backup all schools
+// ========================================================================
+exports.backupAllSchools = functions
+    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .https.onCall(async (_data, context) => {
+    requireAuth(context);
+    const schoolsSnap = await admin.firestore().collection("schools").get();
+    const results = [];
+    for (const schoolDoc of schoolsSnap.docs) {
+        const result = await performFullBackup(schoolDoc.id, "manual");
+        results.push({ schoolId: schoolDoc.id, success: result.success, error: result.error });
+    }
+    const failed = results.filter((r) => !r.success);
+    return {
+        total: results.length,
+        succeeded: results.length - failed.length,
+        failed: failed.length,
+        failures: failed,
+    };
+});
+// ========================================================================
+// Callable: Full restore from backup
+// ========================================================================
+exports.restoreFromFullBackup = functions
+    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.backupId, "backupId");
+    const { schoolId, backupId } = data;
+    const db = admin.firestore();
+    const backupDoc = await db
+        .collection("schools").doc(schoolId)
+        .collection("backups").doc(backupId)
+        .get();
+    if (!backupDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Backup not found.");
+    }
+    const backupMeta = backupDoc.data();
+    await performFullBackup(schoolId, "pre-restore");
+    if (!backupMeta.storagePath) {
+        throw new functions.https.HttpsError("failed-precondition", "This backup has no Cloud Storage file and cannot be restored.");
+    }
+    const bucket = admin.storage().bucket();
+    const [fileContents] = await bucket.file(backupMeta.storagePath).download();
+    const jsonStr = fileContents.toString("utf8");
+    if (backupMeta.sha256) {
+        const hash = crypto.createHash("sha256").update(jsonStr).digest("hex");
+        if (hash !== backupMeta.sha256) {
+            throw new functions.https.HttpsError("data-loss", "Backup integrity check failed — the file may be corrupted.");
+        }
+    }
+    await restoreSchoolFromData(schoolId, JSON.parse(jsonStr));
+    return { success: true };
+});
+// ========================================================================
+// Callable: Download backup data
+// ========================================================================
+exports.downloadFullBackup = functions
+    .runWith({ timeoutSeconds: 120, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.backupId, "backupId");
+    const db = admin.firestore();
+    const backupDoc = await db
+        .collection("schools").doc(data.schoolId)
+        .collection("backups").doc(data.backupId)
+        .get();
+    if (!backupDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Backup not found.");
+    }
+    const meta = backupDoc.data();
+    if (!meta.storagePath) {
+        throw new functions.https.HttpsError("failed-precondition", "This backup has no Cloud Storage file and cannot be downloaded.");
+    }
+    const bucket = admin.storage().bucket();
+    const [fileContents] = await bucket.file(meta.storagePath).download();
+    return { data: JSON.parse(fileContents.toString("utf8")), metadata: meta };
+});
+// ========================================================================
+// Callable: Verify backup integrity (SHA-256)
+// ========================================================================
+exports.verifyBackupIntegrity = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.backupId, "backupId");
+    const db = admin.firestore();
+    const backupDoc = await db
+        .collection("schools").doc(data.schoolId)
+        .collection("backups").doc(data.backupId)
+        .get();
+    if (!backupDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "Backup not found.");
+    }
+    const meta = backupDoc.data();
+    if (!meta.storagePath || !meta.sha256) {
+        throw new functions.https.HttpsError("failed-precondition", "This backup has no Cloud Storage file or integrity hash and cannot be verified.");
+    }
+    try {
+        const bucket = admin.storage().bucket();
+        const [fileContents] = await bucket.file(meta.storagePath).download();
+        const hash = crypto.createHash("sha256").update(fileContents).digest("hex");
+        const match = hash === meta.sha256;
+        return {
+            verified: match,
+            expectedHash: meta.sha256,
+            actualHash: hash,
+            reason: match
+                ? "Backup integrity verified — SHA-256 hash matches."
+                : "Hash mismatch — backup file may be corrupted.",
+        };
+    }
+    catch (error) {
+        return { verified: false, reason: `Cannot read backup file: ${error.message}` };
     }
 });
+// ========================================================================
+// Scheduled: Automatic daily full backup + retention pruning
+// Requires: Firebase Blaze plan + Cloud Scheduler API enabled
+// ========================================================================
+exports.scheduledFullBackup = functions
+    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .pubsub.schedule("every 24 hours")
+    .timeZone("UTC")
+    .onRun(async () => {
+    const schoolsSnap = await admin.firestore().collection("schools").get();
+    let succeeded = 0;
+    let failed = 0;
+    let totalPruned = 0;
+    for (const schoolDoc of schoolsSnap.docs) {
+        const result = await performFullBackup(schoolDoc.id, "scheduled");
+        if (result.success) {
+            succeeded++;
+            totalPruned += await pruneOldBackups(schoolDoc.id);
+        }
+        else {
+            failed++;
+        }
+    }
+    functions.logger.info(`Scheduled backup: ${succeeded} succeeded, ${failed} failed, ${totalPruned} old backups pruned.`);
+    return null;
+});
+// ========================================================================
+// Callable: Verify school passcode (used by login and student logout)
+// ========================================================================
+exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
+    }
+    const db = admin.firestore();
+    const schoolDoc = await db.collection("schools").doc(data.schoolId).get();
+    if (!schoolDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+    }
+    const schoolData = schoolDoc.data();
+    if (schoolData.passcode !== data.passcode) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+    }
+    return { success: true };
+});
+// ========================================================================
+// Migration functions (unchanged from original)
+// ========================================================================
 exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
     if (!context.auth) {

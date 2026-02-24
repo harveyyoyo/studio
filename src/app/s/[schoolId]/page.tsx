@@ -1,0 +1,160 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAppContext } from '@/components/AppProvider';
+import { useFirebase } from '@/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Loader2, AlertCircle, Star, Gamepad2 } from 'lucide-react';
+
+export default function SchoolLoginPage() {
+    const { schoolId } = useParams<{ schoolId: string }>();
+    const router = useRouter();
+    const { login, loginState, isInitialized } = useAppContext();
+    const { firestore } = useFirebase();
+    const { settings } = useSettings();
+    const playSound = useArcadeSound();
+    const { toast } = useToast();
+    const isGraphic = settings.graphicMode === 'graphics';
+
+    const [schoolName, setSchoolName] = useState<string | null>(null);
+    const [notFound, setNotFound] = useState(false);
+    const [passcode, setPasscode] = useState('');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!isInitialized) return;
+
+        if (loginState === 'school') {
+            router.replace('/portal');
+            return;
+        }
+
+        if (!firestore || !schoolId) return;
+
+        let cancelled = false;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(firestore, 'schools', schoolId));
+                if (cancelled) return;
+                if (snap.exists()) {
+                    setSchoolName(snap.data().name || schoolId);
+                } else {
+                    setNotFound(true);
+                }
+            } catch {
+                if (!cancelled) setNotFound(true);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isInitialized, firestore, schoolId, loginState, router]);
+
+    const handleLogin = async () => {
+        if (!passcode) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Please enter the passcode.' });
+            return;
+        }
+        const success = await login('school', { schoolId, passcode });
+        if (success) {
+            playSound('login');
+            router.push('/portal');
+        } else {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Invalid passcode.' });
+            setPasscode('');
+        }
+    };
+
+    if (loading || !isInitialized) {
+        return (
+            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-muted-foreground'}`}>
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <p className="font-medium text-sm">Loading&hellip;</p>
+            </div>
+        );
+    }
+
+    if (notFound) {
+        return (
+            <div className={`min-h-screen flex flex-col items-center justify-center gap-6 px-6 font-sans ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
+                <div className={`w-full max-w-sm rounded-2xl p-8 text-center border ${isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20' : 'bg-card border-border shadow-lg'}`}>
+                    <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${isGraphic ? 'text-red-400' : 'text-red-500'}`} />
+                    <h2 className="text-lg font-bold mb-2">School Not Found</h2>
+                    <p className={`text-sm mb-6 ${isGraphic ? 'text-white/60' : 'text-slate-500'}`}>
+                        There is no school with the ID <span className="font-bold font-code">{schoolId}</span>. Please check the link and try again.
+                    </p>
+                    <button
+                        onClick={() => router.push('/')}
+                        className={`w-full h-12 font-bold rounded-xl transition-all ${isGraphic ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                    >
+                        Go to Login
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
+
+            {isGraphic && (
+                <div className="absolute inset-0 z-0 opacity-10">
+                    <Star className="absolute top-10 left-10 w-8 h-8 text-yellow-300" />
+                    <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-white/50 -rotate-12" />
+                    <Star className="absolute top-40 right-16 w-6 h-6 text-yellow-300" />
+                    <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-white/50 rotate-12" />
+                </div>
+            )}
+
+            <div className="relative z-10 w-full max-w-md px-6 pt-16 sm:pt-24 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+                <div className={`w-full rounded-[2.5rem] p-8 relative transition-all border ${isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl' : 'bg-card border-border shadow-lg'}`}>
+
+                    <div className="text-center mb-8">
+                        <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${isGraphic ? 'text-white/50' : 'text-slate-400'}`}>
+                            Welcome to
+                        </p>
+                        <h2 className={`text-2xl font-black tracking-tight mb-1 ${isGraphic ? 'drop-shadow-md' : 'text-slate-800'}`}>
+                            {schoolName}
+                        </h2>
+                        <p className={`text-xs font-medium ${isGraphic ? 'text-white/80' : 'text-slate-500'}`}>
+                            Enter your passcode to continue.
+                        </p>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="passcode" className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isGraphic ? 'text-white/60' : 'text-slate-400'}`}>
+                                Passcode
+                            </Label>
+                            <input
+                                id="passcode"
+                                type="password"
+                                autoFocus
+                                className={`w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center ${isGraphic ? 'bg-white/10 border border-white/10 text-white focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100'}`}
+                                value={passcode}
+                                onChange={(e) => setPasscode(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                            />
+                        </div>
+
+                        <div className="pt-4">
+                            <button
+                                onClick={handleLogin}
+                                className={`w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl ${isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                            >
+                                Login
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
