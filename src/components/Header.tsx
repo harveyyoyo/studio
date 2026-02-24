@@ -42,7 +42,7 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  if (pathname === '/' || pathname.startsWith('/s/')) {
+  if (pathname.startsWith('/s/')) {
     return null;
   }
 
