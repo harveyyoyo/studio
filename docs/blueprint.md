@@ -1,4 +1,4 @@
-# **App Name**: Arcade Rewards Hub
+# **App Name**: Student Reward System
 
 ## Core Features:
 

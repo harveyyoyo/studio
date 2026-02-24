@@ -85,7 +85,20 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             schoolData = SCHOOL_DATA;
         } else {
             newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
-            schoolData = { name: cleanId, updatedAt: Date.now() };
+            schoolData = {
+                name: cleanId,
+                updatedAt: Date.now(),
+                students: [{
+                    id: '100',
+                    firstName: 'Test',
+                    lastName: 'Student',
+                    nfcId: '100',
+                    points: 0,
+                    lifetimePoints: 0,
+                    classId: '',
+                    history: [],
+                }],
+            };
         }
 
         const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;

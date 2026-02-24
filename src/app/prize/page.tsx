@@ -25,7 +25,6 @@ import {
     LogOut,
     ShoppingBag,
     ArrowLeft,
-    Loader2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
@@ -152,8 +151,8 @@ export default function PrizePage() {
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [nfcId, setNfcId] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
     const nfcInputRef = useRef<HTMLInputElement>(null);
+    const [loginTab, setLoginTab] = useState('nfc');
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -162,20 +161,48 @@ export default function PrizePage() {
     }, [isInitialized, loginState, router]);
 
     useEffect(() => {
-        if (!activeStudentId) {
+        if (!activeStudentId && loginTab === 'nfc') {
             setTimeout(() => nfcInputRef.current?.focus(), 100);
         }
-    }, [activeStudentId]);
+    }, [activeStudentId, loginTab]);
 
-    const handleNfcSubmit = async () => {
-        if (!nfcId || !schoolId) return;
+    // Same login logic as student kiosk (student/page.tsx) so ID lookup behaves identically
+    const handleNfcSubmit = useCallback(async (scannedId?: string) => {
+        const rawId = scannedId || nfcId;
+        if (!rawId || !schoolId) return;
+        const idToSubmit = rawId.trim();
 
-        setIsLoading(true);
-        const studentRef = doc(firestore, 'schools', schoolId, 'students', nfcId);
         try {
-            const studentSnap = await getDoc(studentRef);
-            if (studentSnap.exists()) {
-                setActiveStudentId(studentSnap.id);
+            let finalStudentId: string | null = null;
+
+            const { getDocs, where, collection, query } = await import('firebase/firestore');
+            const studentsRef = collection(firestore, 'schools', schoolId, 'students');
+
+            const qStr = query(studentsRef, where('nfcId', '==', idToSubmit));
+            const querySnap = await getDocs(qStr);
+
+            if (!querySnap.empty) {
+                finalStudentId = querySnap.docs[0].id;
+            } else {
+                const asNum = /^\d+$/.test(idToSubmit) ? parseInt(idToSubmit, 10) : NaN;
+                if (!Number.isNaN(asNum)) {
+                    const qNum = query(studentsRef, where('nfcId', '==', asNum));
+                    const numSnap = await getDocs(qNum);
+                    if (!numSnap.empty) {
+                        finalStudentId = numSnap.docs[0].id;
+                    }
+                }
+            }
+
+            if (finalStudentId == null) {
+                const studentSnap = await getDoc(doc(firestore, 'schools', schoolId, 'students', idToSubmit));
+                if (studentSnap.exists()) {
+                    finalStudentId = studentSnap.id;
+                }
+            }
+
+            if (finalStudentId) {
+                setActiveStudentId(finalStudentId);
             } else {
                 toast({
                     variant: 'destructive',
@@ -191,12 +218,12 @@ export default function PrizePage() {
             });
         }
         setNfcId('');
-        setIsLoading(false);
-    };
+    }, [firestore, schoolId, nfcId, toast]);
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
         setNfcId('');
+        setLoginTab('nfc');
     }, []);
 
     if (!isInitialized || loginState !== 'school') {
@@ -221,13 +248,13 @@ export default function PrizePage() {
                         <CardDescription>Scan your student card to redeem prizes.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Tabs defaultValue="nfc" className="w-full" onValueChange={() => nfcInputRef.current?.focus()}>
+                        <Tabs value={loginTab} onValueChange={setLoginTab} className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="nfc">
-                                    <Nfc className="mr-2 h-4 w-4" /> NFC Card
+                                <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()}>
+                                    <Nfc className="mr-2 h-4 w-4" /> Card
                                 </TabsTrigger>
                                 <TabsTrigger value="manual">
-                                    <Type className="mr-2 h-4 w-4" /> Manual
+                                    <Type className="mr-2 h-4 w-4" /> Type
                                 </TabsTrigger>
                             </TabsList>
                             <TabsContent value="nfc" className="text-center">
@@ -251,28 +278,22 @@ export default function PrizePage() {
                                 </div>
                             </TabsContent>
                             <TabsContent value="manual">
-                                <div className="space-y-4 py-4">
-                                    <div>
-                                        <Label htmlFor="manual-nfcId">Student ID</Label>
+                                <div className="space-y-6 py-4">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="manual-nfcId-prize" className="font-black text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Student ID Code</Label>
                                         <Input
-                                            id="manual-nfcId"
+                                            id="manual-nfcId-prize"
+                                            className="h-16 rounded-2xl text-2xl font-mono text-center border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary shadow-inner"
                                             value={nfcId}
                                             onChange={(e) => setNfcId(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleNfcSubmit()}
-                                            placeholder="Enter student ID"
+                                            placeholder="e.g. 100"
+                                            autoFocus
                                         />
                                     </div>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button onClick={handleNfcSubmit} className="w-full" disabled={isLoading}>
-                                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                Login to Redeem
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Log in with the student ID to view and redeem prizes.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
+                                    <Button onClick={() => handleNfcSubmit()} className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-lg transition-all active:scale-95 bg-primary hover:bg-primary/90">
+                                        Login to Redeem
+                                    </Button>
                                 </div>
                             </TabsContent>
                         </Tabs>

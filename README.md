@@ -1,6 +1,6 @@
-# Welcome to Reward Arcade!
+# Welcome to the Student Reward System!
 
-Reward Arcade is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
+The Student Reward System is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
 
 ## How to Use the App
 

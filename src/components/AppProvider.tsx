@@ -22,11 +22,14 @@ import {
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
+import { SettingsProvider } from './providers/SettingsProvider';
 
 // Re-export types from AuthProvider for backward compatibility
 export type { SyncStatus, LoginState } from './providers/AuthProvider';
 
 interface AppContextType {
+  // ... existing types
+
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
@@ -198,9 +201,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AuthProvider>
       <PrintProvider>
         <BackupProvider>
-          <AppContextBridge>
-            {children}
-          </AppContextBridge>
+          <SettingsProvider>
+            <AppContextBridge>
+              {children}
+            </AppContextBridge>
+          </SettingsProvider>
         </BackupProvider>
       </PrintProvider>
     </AuthProvider>

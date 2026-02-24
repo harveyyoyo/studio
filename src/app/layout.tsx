@@ -1,5 +1,5 @@
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AppProvider } from "@/components/AppProvider";
 import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,11 +7,20 @@ import "./globals.css";
 import { FirebaseClientProvider } from '@/firebase';
 
 
-export const metadata: Metadata = {
-  title: "Arcade Rewards Hub",
-  description: "A school points and rewards system.",
+export const viewport: Viewport = {
+  themeColor: "#13a58d",
 };
 
+export const metadata: Metadata = {
+  title: "School Reward System",
+  description: "A school points and rewards system.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "School Reward System",
+  },
+};
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,7 +41,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <AppProvider>
             <div

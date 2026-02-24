@@ -3,12 +3,15 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
+import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Home, User, Star, Gift, ArrowRight } from 'lucide-react';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowRight, UserCog, GraduationCap, ShoppingBag, Printer, Trophy } from 'lucide-react';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const router = useRouter();
+    const { settings } = useSettings();
+    const isGraphic = settings.graphicMode === 'graphics';
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -17,72 +20,133 @@ export default function PortalPage() {
     }, [isInitialized, loginState, router]);
 
     if (!isInitialized || loginState !== 'school') {
-        return <p>Loading...</p>;
+        return (
+            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-400'}`}>
+                Loading...
+            </div>
+        );
     }
 
+    const portals = [
+        { href: '/student', label: 'Student Portal', desc: 'Check points, redeem coupons & prizes', icon: GraduationCap, color: 'chart-1' },
+        { href: '/teacher', label: 'Teacher Portal', desc: 'Log in as a teacher to generate and print coupon sheets.', icon: Printer, color: 'chart-2' },
+        { href: '/admin', label: 'Admin Portal', desc: 'Manage all school data and settings.', icon: UserCog, color: 'destructive' },
+        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
+        { href: '/halloffame', label: 'Hall of Fame', desc: 'View the top student point earners.', icon: Trophy, color: 'chart-5' },
+    ];
+
+    const colorMap: Record<string, { bg: string; border: string; glow: string; text: string; iconBg: string }> = {
+        'chart-1': { bg: 'from-blue-600/20 to-blue-900/40', border: 'border-blue-500/40', glow: 'shadow-blue-500/20', text: 'text-blue-400', iconBg: 'bg-blue-100' },
+        'chart-2': { bg: 'from-purple-600/20 to-purple-900/40', border: 'border-purple-500/40', glow: 'shadow-purple-500/20', text: 'text-purple-400', iconBg: 'bg-purple-100' },
+        'chart-3': { bg: 'from-amber-600/20 to-amber-900/40', border: 'border-amber-400/40', glow: 'shadow-amber-400/20', text: 'text-amber-400', iconBg: 'bg-amber-100' },
+        'destructive': { bg: 'from-red-600/20 to-red-900/40', border: 'border-red-500/40', glow: 'shadow-red-500/20', text: 'text-red-400', iconBg: 'bg-red-100' },
+        'chart-5': { bg: 'from-orange-600/20 to-orange-900/40', border: 'border-orange-400/40', glow: 'shadow-orange-400/20', text: 'text-orange-400', iconBg: 'bg-orange-100' },
+    };
+    const borderTopClass: Record<string, string> = {
+        'chart-1': 'border-t-blue-500',
+        'chart-2': 'border-t-purple-500',
+        'chart-3': 'border-t-amber-500',
+        'destructive': 'border-t-red-500',
+        'chart-5': 'border-t-orange-500',
+    };
+    const iconTextClassic: Record<string, string> = {
+        'chart-1': 'text-blue-600',
+        'chart-2': 'text-purple-600',
+        'chart-3': 'text-amber-600',
+        'destructive': 'text-red-600',
+        'chart-5': 'text-orange-600',
+    };
+
     return (
-        <div className="flex flex-col items-center justify-center py-10">
-            <div className="text-center mb-10">
-                <h1 className="text-4xl font-bold font-headline">Welcome to {schoolId?.replace(/_/g, ' ')}</h1>
-                <p className="text-muted-foreground">Please select your portal to continue.</p>
+        <div className={`min-h-screen transition-colors duration-500 relative overflow-hidden font-sans pb-24 ${isGraphic ? 'bg-[#0c133a] text-white' : 'bg-slate-50 text-slate-900'}`}>
+
+            {/* Graphic Decoration */}
+            {isGraphic && (
+                <>
+                    <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[30%] bg-blue-600/15 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[30%] bg-purple-600/15 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute top-[30%] right-[10%] w-[30%] h-[20%] bg-amber-500/10 blur-[80px] rounded-full pointer-events-none" />
+                </>
+            )}
+
+            <div className="relative z-10 max-w-4xl mx-auto pt-12 pb-8 px-6 space-y-8 animate-in fade-in duration-500">
+
+                {/* Portal Header */}
+                <div className="text-center space-y-2">
+                    <h2 className={`text-3xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>
+                        Welcome to <span className="text-primary">{schoolId?.replace(/_/g, ' ') || 'School Reward System'}</span>
+                    </h2>
+                    <p className={`text-sm font-medium ${isGraphic ? 'text-white/40' : 'text-slate-500'}`}>
+                        Please select your portal to continue.
+                    </p>
+                </div>
+
+                {/* Portal Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    {portals.map((p) => {
+                        const Icon = p.icon;
+                        const gc = colorMap[p.color];
+
+                        return (
+                            <Link key={p.href} href={p.href} className="block group">
+                                <Card className={`h-full border-t-4 transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative ${isGraphic
+                                        ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
+                                        : `bg-white border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
+                                    }`}>
+                                    {/* Decorative Elements for Graphic Mode */}
+                                    {isGraphic && (
+                                        <div className="absolute -top-4 -right-4 w-12 h-12 opacity-5">
+                                            <Star className="w-full h-full fill-current" />
+                                        </div>
+                                    )}
+
+                                    <CardHeader className="space-y-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px] ${isGraphic ? 'bg-white/10 border border-white/10' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
+                                            }`}>
+                                            <Icon className={`w-8 h-8 ${isGraphic ? gc.text : (iconTextClassic[p.color] ?? '')}`} />
+                                        </div>
+                                        <div>
+                                            <CardTitle className={`text-lg font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>
+                                                {p.label}
+                                            </CardTitle>
+                                            <CardDescription className={`text-xs font-medium mt-1 leading-relaxed ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>
+                                                {p.desc}
+                                            </CardDescription>
+                                        </div>
+                                    </CardHeader>
+
+                                    <div className={`absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100 ${isGraphic ? 'text-white/30' : 'text-slate-300'}`}>
+                                        <ArrowRight className="w-5 h-5" />
+                                    </div>
+                                </Card>
+                            </Link>
+                        );
+                    })}
+                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl">
-                <Link href="/student" className="group">
-                    <Card className="h-full border-t-4 border-primary hover:shadow-xl hover:border-primary/80 transition-all transform hover:-translate-y-1">
-                        <CardHeader>
-                            <GraduationCap className="w-10 h-10 mb-2 text-primary" />
-                            <CardTitle>Student Portal</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                Check points, redeem coupons &amp; prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </Link>
-                <Link href="/teacher" className="group">
-                    <Card className="h-full border-t-4 border-chart-1 hover:shadow-xl hover:border-chart-1/80 transition-all transform hover:-translate-y-1">
-                        <CardHeader>
-                            <Printer className="w-10 h-10 mb-2 text-chart-1" />
-                            <CardTitle>Teacher Portal</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                Log in as a teacher to generate and print coupon sheets <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </Link>
-                <Link href="/admin" className="group">
-                    <Card className="h-full border-t-4 border-chart-2 hover:shadow-xl hover:border-chart-2/80 transition-all transform hover:-translate-y-1">
-                        <CardHeader>
-                            <UserCog className="w-10 h-10 mb-2 text-chart-2" />
-                            <CardTitle>Admin Portal</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                Manage all school data and settings <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </Link>
-                <Link href="/prize" className="group">
-                    <Card className="h-full border-t-4 border-chart-3 hover:shadow-xl hover:border-chart-3/80 transition-all transform hover:-translate-y-1">
-                        <CardHeader>
-                            <ShoppingBag className="w-10 h-10 mb-2 text-chart-3" />
-                            <CardTitle>Prize Shop</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                Redeem your points for awesome prizes <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </Link>
-                <Link href="/halloffame" className="group">
-                    <Card className="h-full border-t-4 border-amber-400 hover:shadow-xl hover:border-amber-400/80 transition-all transform hover:-translate-y-1">
-                        <CardHeader>
-                            <Trophy className="w-10 h-10 mb-2 text-amber-500" />
-                            <CardTitle>Hall of Fame</CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                View the top student point earners <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </Link>
-            </div>
+
+            {/* Persistent Bottom Nav - Matched to Login/Home */}
+            <nav className={`fixed bottom-0 left-0 right-0 py-3 z-50 transition-all border-t ${isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]'
+                }`}>
+                <div className="max-w-md mx-auto flex justify-around items-center px-4">
+                    <Link href="/" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Home className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Home</span>
+                    </Link>
+                    <div className={`flex flex-col items-center ${isGraphic ? 'text-primary' : 'text-indigo-600'}`}>
+                        <Star className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Portal</span>
+                    </div>
+                    <Link href="/prize" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Gift className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Prizes</span>
+                    </Link>
+                    <Link href="/halloffame" className={`flex flex-col items-center transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                        <Trophy className="w-6 h-6" />
+                        <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Fame</span>
+                    </Link>
+                </div>
+            </nav>
         </div>
-    )
+    );
 }

@@ -4,7 +4,7 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore'
 import { getFunctions } from 'firebase/functions';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -24,8 +24,15 @@ export function initializeFirebase() {
       if (process.env.NODE_ENV === "production") {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
       }
-      firebaseApp = initializeApp(firebaseConfig);
+      try {
+        firebaseApp = initializeApp(firebaseConfig);
+      } catch (err) {
+        console.error("Critical Firebase Initialization Error:", err);
+        return null as any;
+      }
     }
+
+    if (!firebaseApp) return null as any;
 
     return getSdks(firebaseApp);
   }
@@ -35,10 +42,23 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  let firestore;
+  try {
+    // Attempt to initialize Firestore with offline persistence
+    const isBrowser = typeof window !== 'undefined';
+    firestore = initializeFirestore(firebaseApp, {
+      ...(isBrowser ? { localCache: persistentLocalCache() } : {}),
+    });
+  } catch (e: any) {
+    // Fall back to getFirestore() on ANY error (e.g., indexedDB blocked in incognito, fast refresh, etc.)
+    console.warn("Firestore initialization error, falling back to non-persistent:", e);
+    firestore = getFirestore(firebaseApp);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp),
+    firestore,
     functions: getFunctions(firebaseApp)
   };
 }

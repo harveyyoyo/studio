@@ -394,7 +394,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
     return { success: 0, failed: 0, errors: ['File is empty.'] };
   }
 
-  const existingNfcIds = new Set(currentStudents.map(s => s.id));
+  const existingNfcIds = new Set(currentStudents.map(s => s.nfcId || s.id));
   let successCount = 0;
   const studentsToCreate: Student[] = [];
 

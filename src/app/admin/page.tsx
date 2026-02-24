@@ -54,6 +54,8 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 function AdminDashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
@@ -124,7 +126,7 @@ function AdminDashboardSkeleton() {
   );
 }
 
-function AdminDashboard() {
+function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory, addCoupons,
@@ -899,7 +901,11 @@ function AdminDashboard() {
             <ScrollArea className="h-96">
               <ul className="space-y-2 pr-4">
                 {students && [...students]
-                  .filter(s => `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                  .filter(s =>
+                    s.firstName.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                    s.lastName.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                    (s.nfcId || s.id).toLowerCase().includes(studentSearchTerm.toLowerCase())
+                  )
                   .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || '') || (a.firstName || '').localeCompare(b.firstName || ''))
                   .map((s) => (
                     <li
@@ -914,7 +920,7 @@ function AdminDashboard() {
                           </span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Class: {getClassName(s.classId || '')} | ID: {s.id}
+                          Class: {getClassName(s.classId || '')} | ID: {s.nfcId}
                         </p>
                       </div>
                       <div className="flex items-center gap-0.5 self-end sm:self-center">
@@ -1063,5 +1069,9 @@ export default function AdminPage() {
     return <AdminDashboardSkeleton />;
   }
 
-  return <AdminDashboard />;
+  return (
+    <ErrorBoundary name="AdminPage">
+      <AdminDashboardInner />
+    </ErrorBoundary>
+  );
 }

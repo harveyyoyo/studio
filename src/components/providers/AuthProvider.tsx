@@ -61,23 +61,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsInitialized(true);
     }, []);
 
-    // Data sync listener
+    // Data sync & network status listener
     useEffect(() => {
-        if (!schoolId || !firestore) {
-            return;
+        const handleOnline = () => setSyncStatus('syncing');
+        const handleOffline = () => setSyncStatus('offline');
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        if (!navigator.onLine) {
+            setSyncStatus('offline');
         }
 
-        setSyncStatus('syncing');
+        if (!schoolId || !firestore) {
+            return () => {
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+            };
+        }
+
+        if (navigator.onLine) {
+            setSyncStatus('syncing');
+        }
 
         const schoolDocRef = doc(firestore, 'schools', schoolId);
-        const unsub = onSnapshot(schoolDocRef, (snap) => {
-            setSyncStatus(snap.metadata.hasPendingWrites ? 'syncing' : 'synced');
+        const unsub = onSnapshot(schoolDocRef, { includeMetadataChanges: true }, (snap) => {
+            if (!navigator.onLine) {
+                setSyncStatus('offline');
+            } else {
+                setSyncStatus(snap.metadata.hasPendingWrites ? 'syncing' : 'synced');
+            }
         }, (error) => {
             console.error("Firestore snapshot error:", error);
             setSyncStatus('error');
         });
 
-        return () => unsub();
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            unsub();
+        };
     }, [schoolId, firestore]);
 
     const login = useCallback(

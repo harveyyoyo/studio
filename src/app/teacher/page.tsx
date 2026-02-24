@@ -10,15 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Home } from 'lucide-react';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -27,28 +28,30 @@ import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 
-function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
+function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
     const { addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { settings } = useSettings();
+    const isGraphic = settings.graphicMode === 'graphics';
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
-    
+
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
     useEffect(() => {
         if (categories && categories.length > 0 && !printCategoryId) {
-          setPrintCategoryId(categories[0].id);
+            setPrintCategoryId(categories[0].id);
         }
     }, [categories, printCategoryId]);
 
-     useEffect(() => {
+    useEffect(() => {
         const category = categories?.find(c => c.id === printCategoryId);
         if (category) {
             setPrintValue(category.points.toString());
@@ -90,12 +93,12 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
             return;
         }
         if (!value || value <= 0) {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid Value',
-            description: 'Coupon value must be a positive number.',
-          });
-          return;
+            toast({
+                variant: 'destructive',
+                title: 'Invalid Value',
+                description: 'Coupon value must be a positive number.',
+            });
+            return;
         }
         const selectedCategory = categories?.find(c => c.id === printCategoryId);
         if (!selectedCategory) {
@@ -107,16 +110,16 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
             return;
         }
         const couponsToCreate: Coupon[] = Array.from({ length: 24 }, () => {
-          const code = Math.floor(100000 + Math.random() * 900000).toString();
-          return {
-            id: code,
-            code,
-            value: value,
-            category: selectedCategory.name,
-            teacher: teacherName,
-            used: false,
-            createdAt: Date.now(),
-          };
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            return {
+                id: code,
+                code,
+                value: value,
+                category: selectedCategory.name,
+                teacher: teacherName,
+                used: false,
+                createdAt: Date.now(),
+            };
         });
         await addCoupons(couponsToCreate);
         setCouponsToPrint(couponsToCreate);
@@ -124,123 +127,193 @@ function TeacherPrinter({ teacherName, onLogout }: { teacherName: string, onLogo
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
-      id: 'PREVIEW',
-      code: 'PREVIEW',
-      value: parseInt(printValue) || 0,
-      category: selectedCategoryForPreview?.name || 'Category',
-      teacher: teacherName,
-      used: false,
-      createdAt: Date.now(),
+        id: 'PREVIEW',
+        code: 'PREVIEW',
+        value: parseInt(printValue) || 0,
+        category: selectedCategoryForPreview?.name || 'Category',
+        teacher: teacherName,
+        used: false,
+        createdAt: Date.now(),
     };
-    
+
     return (
         <TooltipProvider>
-            <div className="space-y-6">
-                 <Card className="bg-card border-t-4 border-chart-1">
-                    <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <CardTitle className="font-headline text-2xl flex items-center gap-2"><Printer className="text-chart-1"/>Teacher Portal</CardTitle>
-                            <CardDescription>Create coupon print sheets.</CardDescription>
+            <div className={`min-h-screen transition-colors duration-500 pb-24 ${isGraphic ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+
+                {/* Unified Header */}
+                <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-[#0c1a3a] border-b border-indigo-500/20 shadow-lg' : 'bg-white border-b'}`}>
+                    <div className="max-w-4xl mx-auto flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <Button variant="ghost" onClick={onLogout} className={isGraphic ? 'text-white/60 hover:text-white hover:bg-white/5' : ''}>
+                                <ArrowLeft className="w-5 h-5 mr-2" /> Back
+                            </Button>
+                            <div>
+                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Teacher Portal</h1>
+                                <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-amber-400' : 'text-primary'}`}>{teacherName}</p>
+                            </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-                            <div className="text-left sm:text-right">
-                               <p className="text-sm text-muted-foreground">Logged in as</p>
-                               <p className="font-bold flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" /> {teacherName}</p>
+                        {isGraphic && (
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-inner">
+                                <UserCheck className="w-6 h-6 text-indigo-400" />
                             </div>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="outline" onClick={onLogout} className="w-full sm:w-auto"><LogOut className="mr-2"/> Log Out</Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Return to the teacher selection screen.</p>
-                                </TooltipContent>
-                            </Tooltip>
-                       </div>
-                    </CardHeader>
-                </Card>
-
-                <div className="flex justify-center">
-                    <Card className="w-full max-w-4xl">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                               <Printer className="text-primary" /> Coupon Printer
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col md:flex-row gap-6">
-                            {categoriesLoading ? <Skeleton className="h-48 w-full" /> : (
-                            <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                                <div>
-                                    <Label>Category</Label>
-                                    <div className="flex items-center gap-2">
-                                        <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                                        <SelectTrigger><SelectValue placeholder="Select a category..."/></SelectTrigger>
-                                        <SelectContent>
-                                            {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                        </SelectContent>
-                                        </Select>
-                                        <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <DialogTrigger asChild>
-                                                        <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0"><Plus className="h-4 w-4" /></Button>
-                                                    </DialogTrigger>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>Add a new coupon category.</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Add New Category</DialogTitle>
-                                                    <DialogDescription>Create a new category for coupons.</DialogDescription>
-                                                </DialogHeader>
-                                                 <div className="grid grid-cols-3 items-center gap-4 py-4">
-                                                    <Label htmlFor="new-print-category-name" className="text-right">Name</Label>
-                                                    <Input id="new-print-category-name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className="col-span-2" />
-
-                                                    <Label htmlFor="new-print-category-points" className="text-right">Points</Label>
-                                                    <Input id="new-print-category-points" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className="col-span-2" />
-                                                </div>
-                                                <DialogFooter>
-                                                    <Button onClick={handleAddPrintCategory}>Save Category</Button>
-                                                </DialogFooter>
-                                            </DialogContent>
-                                        </Dialog>
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label>Value</Label>
-                                    <Input
-                                    type="number"
-                                    placeholder="e.g. 25"
-                                    value={printValue}
-                                    onChange={(e) => setPrintValue(e.target.value)}
-                                    />
-                                </div>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button onClick={handlePrintSheet} className="w-full font-bold gap-2 sm:col-span-2">
-                                            <Printer /> Print Sheet (24 Coupons)
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Generate and print a full sheet of 24 coupons with these settings.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
-                            )}
-                             <div className="w-full md:w-1/3 flex flex-col items-center flex-shrink-0">
-                                <Label className="font-semibold text-muted-foreground">Live Preview</Label>
-                                <div className="mt-2 w-full max-w-[240px] aspect-[2/1]">
-                                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        )}
+                    </div>
                 </div>
+
+                <div className="max-w-4xl mx-auto px-6 -mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                        {/* Quick Points Section */}
+                        <Card className={`border-t-4 transition-all ${isGraphic
+                            ? 'bg-slate-800/50 backdrop-blur-md border-indigo-500 shadow-2xl border-t-indigo-500'
+                            : 'bg-white border-chart-2 shadow-lg'
+                            }`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Plus className={isGraphic ? 'text-indigo-400' : 'text-chart-2'} />
+                                    Quick Points
+                                </CardTitle>
+                                <CardDescription className={isGraphic ? 'text-slate-400' : ''}>
+                                    Instantly award points for positive behavior.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { label: 'Helpful', points: 5 },
+                                        { label: 'Homework', points: 10 },
+                                        { label: 'Participated', points: 5 },
+                                        { label: 'Effort', points: 10 },
+                                        { label: 'Cleaned', points: 5 },
+                                        { label: 'Star', points: 20 },
+                                    ].map((item) => (
+                                        <Button
+                                            key={item.label}
+                                            variant="outline"
+                                            className={`h-auto flex-col items-start p-4 transition-all active:scale-95 ${isGraphic
+                                                ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
+                                                : 'bg-slate-50 border-2 border-transparent hover:bg-slate-100'
+                                                }`}
+                                        >
+                                            <span className={`font-black text-lg ${isGraphic ? 'text-indigo-400' : 'text-primary'}`}>+{item.points}</span>
+                                            <span className="font-bold text-[10px] uppercase tracking-wider opacity-60">{item.label}</span>
+                                        </Button>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Coupon Printer Section */}
+                        <Card className={`border-t-4 transition-all ${isGraphic
+                            ? 'bg-slate-800/50 backdrop-blur-md border-primary shadow-2xl'
+                            : 'bg-white border-primary shadow-lg'
+                            }`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Printer className={isGraphic ? 'text-primary' : 'text-primary'} />
+                                    Coupon Printer
+                                </CardTitle>
+                                <CardDescription className={isGraphic ? 'text-slate-400' : ''}>
+                                    Generate a sheet of 24 unique QR codes.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {categoriesLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
+                                    <div className="space-y-6">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Category</Label>
+                                                <div className="flex items-center gap-2">
+                                                    <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
+                                                        <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-white/5 border-white/10 text-white' : ''}`}>
+                                                            <SelectValue placeholder="Select..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                                                        <DialogTrigger asChild>
+                                                            <Button variant="outline" size="icon" className={`h-12 w-12 rounded-xl ${isGraphic ? 'bg-white/5 border-white/10' : ''}`}>
+                                                                <Plus className="h-4 w-4" />
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className={isGraphic ? 'bg-slate-900 text-white border-white/10' : ''}>
+                                                            <DialogHeader>
+                                                                <DialogTitle>Add Category</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="grid gap-4 py-4">
+                                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                                    <Label htmlFor="name" className="text-right">Name</Label>
+                                                                    <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-white/5 border-white/10' : ''}`} />
+                                                                </div>
+                                                                <div className="grid grid-cols-4 items-center gap-4">
+                                                                    <Label htmlFor="pts" className="text-right">Points</Label>
+                                                                    <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-white/5 border-white/10' : ''}`} />
+                                                                </div>
+                                                            </div>
+                                                            <DialogFooter>
+                                                                <Button onClick={handleAddPrintCategory} className="rounded-xl">Save</Button>
+                                                            </DialogFooter>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Points Value</Label>
+                                                <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50'}`} />
+                                            </div>
+                                        </div>
+
+                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 ${isGraphic ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-slate-800 hover:bg-slate-700'
+                                            }`}>
+                                            <Printer className="w-5 h-5 mr-3" /> Generate Sheet
+                                        </Button>
+
+                                        <div className="flex flex-col items-center pt-6 border-t border-dashed border-slate-700/50">
+                                            <p className={`text-[10px] font-black uppercase tracking-widest mb-4 opacity-40`}>Preview</p>
+                                            <div className="w-full max-w-[220px] shadow-2xl rounded-lg overflow-hidden border border-white/5">
+                                                <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* Unified Bottom Nav */}
+                <nav className={`fixed bottom-0 left-0 right-0 py-4 z-50 transition-all border-t ${isGraphic ? 'bg-[#0c1a3a]/95 backdrop-blur-md border-white/5 shadow-2xl' : 'bg-white border-slate-100 shadow-lg'
+                    }`}>
+                    <div className="max-w-md mx-auto flex justify-around items-center px-4">
+                        <Link href="/portal" className={`flex flex-col items-center gap-1 transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                            <Home className="w-6 h-6" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Portal</span>
+                        </Link>
+                        <div className={`flex flex-col items-center gap-1 ${isGraphic ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                            <UserCheck className="w-6 h-6" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                        </div>
+                        <button className={`flex flex-col items-center gap-1 transition-colors ${isGraphic ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}>
+                            <LogOut className="w-6 h-6" onClick={onLogout} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
+                        </button>
+                    </div>
+                </nav>
             </div>
         </TooltipProvider>
-    )
+    );
+}
+
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+function TeacherPrinter(props: { teacherName: string, onLogout: () => void }) {
+    return (
+        <ErrorBoundary name="TeacherPrinter">
+            <TeacherPrinterInner {...props} />
+        </ErrorBoundary>
+    );
 }
 
 
@@ -248,6 +321,8 @@ export default function TeacherPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const router = useRouter();
     const firestore = useFirestore();
+    const { settings } = useSettings();
+    const isGraphic = settings.graphicMode === 'graphics';
 
     const [loggedInTeacher, setLoggedInTeacher] = useState<string | null>(null);
     const [selectedLoginName, setSelectedLoginName] = useState('Admin');
@@ -273,59 +348,64 @@ export default function TeacherPage() {
     };
 
     if (!isInitialized || loginState !== 'school') {
-        return <p>Loading...</p>;
+        return (
+            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-slate-50 text-slate-400'}`}>
+                Loading...
+            </div>
+        );
     }
-    
+
     if (loggedInTeacher) {
         return <TeacherPrinter teacherName={loggedInTeacher} onLogout={handleLogout} />;
     }
 
     return (
-        <TooltipProvider>
-            <div className="flex flex-col items-center justify-center py-10">
-                <Card className="w-full max-w-md border-t-4 border-chart-1">
-                    <CardHeader className="text-center">
-                        <CardTitle className="text-2xl font-bold font-headline">Teacher Portal Login</CardTitle>
-                        <CardDescription>Select your name to continue.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {teachersLoading ? <Skeleton className="h-10 w-full" /> : (
-                        <div>
-                            <Label htmlFor="teacher-name">Select Your Name</Label>
-                            <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
-                              <SelectTrigger id="teacher-name"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                 <SelectItem value="Admin">Admin</SelectItem>
-                                {teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+        <ErrorBoundary name="TeacherPage">
+            <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-500 py-10 px-4 ${isGraphic ? 'bg-gradient-to-br from-indigo-950 to-slate-900 text-white' : 'bg-slate-100'}`}>
+                <Card className={`w-full max-w-md border-t-8 transition-all ${isGraphic
+                    ? 'bg-slate-900/80 backdrop-blur-xl border-indigo-500 shadow-[0_0_50px_rgba(99,102,241,0.2)]'
+                    : 'bg-white border-chart-1 shadow-2xl'
+                    }`}>
+                    <CardHeader className="text-center space-y-4">
+                        <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 ${isGraphic ? 'bg-primary text-white' : 'bg-slate-800 text-white'
+                            }`}>
+                            <UserCheck className="w-10 h-10" />
                         </div>
+                        <div>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
+                            <CardDescription className={isGraphic ? 'text-slate-400' : ''}>Select your name to start granting rewards.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {teachersLoading ? <Skeleton className="h-10 w-full" /> : (
+                            <div className="space-y-2">
+                                <Label htmlFor="teacher-name" className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Select Your Name</Label>
+                                <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
+                                    <SelectTrigger id="teacher-name" className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-white/5 border-white/10' : 'bg-slate-50'}`}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Admin">Admin</SelectItem>
+                                        {teachers?.map((t) => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         )}
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button onClick={handleLogin} className="w-full font-bold" disabled={teachersLoading}>
-                                   <LogIn className="mr-2" /> Log In
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Log in as the selected teacher to access the coupon printer.</p>
-                            </TooltipContent>
-                        </Tooltip>
-                        <div className="text-center mt-6">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button asChild variant="link" className="text-xs h-auto p-0">
-                                        <Link href="/portal"><ArrowLeft className="mr-2"/> Back to Portal Selection</Link>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Return to the main portal selection screen.</p>
-                                </TooltipContent>
-                            </Tooltip>
+
+                        <Button onClick={handleLogin} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
+                            }`} disabled={teachersLoading}>
+                            <LogIn className="mr-3 w-6 h-6" /> Login
+                        </Button>
+
+                        <div className="text-center pt-4 border-t border-dashed border-slate-700/50">
+                            <Link href="/portal" className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isGraphic ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                                }`}>
+                                <ArrowLeft className="w-3 h-3" /> Back to Portal Selection
+                            </Link>
                         </div>
                     </CardContent>
                 </Card>
             </div>
-        </TooltipProvider>
+        </ErrorBoundary>
     );
 }

@@ -236,9 +236,9 @@ exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, con
         "An unexpected error occurred during migration."
       );
     }
-  });
+});
 
-  exports.migratePrizesToSubcollection = functions.https.onCall(async (data, context) => {
+exports.migratePrizesToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
   
     if (!context.auth) {
@@ -297,9 +297,9 @@ exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, con
         "An unexpected error occurred during migration."
       );
     }
-  });
+});
 
-  exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, context) => {
+exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
   
     if (!context.auth) {
@@ -358,9 +358,9 @@ exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, con
         "An unexpected error occurred during migration."
       );
     }
-  });
+});
 
-  exports.migrateCategoriesToSubcollection = functions.https.onCall(async (data, context) => {
+exports.migrateCategoriesToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
   
     if (!context.auth) {
@@ -419,4 +419,4 @@ exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, con
         "An unexpected error occurred during migration."
       );
     }
-  });
+});

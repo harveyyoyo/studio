@@ -1,4 +1,13 @@
 import type { NextConfig } from 'next';
+import withPWAInit from '@ducanh2912/next-pwa';
+
+const withPWA = withPWAInit({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  cacheOnFrontEndNav: true,
+  sw: 'sw.js',
+});
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -24,6 +33,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  env: {
+    NEXT_PUBLIC_VERSION: `v1.0.6 - ${new Date().toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).replace(/(\d+)\/(\d+)\/(\d+),/, '$3-$1-$2')}`,
+  },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

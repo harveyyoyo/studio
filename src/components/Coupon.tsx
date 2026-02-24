@@ -2,13 +2,13 @@ import type { Coupon } from '@/lib/types';
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `Arcade Rewards - ${schoolName}` : 'Arcade Rewards';
-  
+  const title = schoolName ? `School Rewards - ${schoolName}` : 'School Reward System';
+
   return (
     <div className="bg-card/80 p-2 border border-dashed rounded-lg flex flex-col items-center justify-between shadow-sm relative overflow-hidden text-center h-full">
       {isNew && (
         <div className="absolute top-1 right-1 bg-primary/80 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
-            NEW
+          NEW
         </div>
       )}
       <div className="font-bold text-muted-foreground text-[10px] uppercase tracking-wider px-1">
