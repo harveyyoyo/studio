@@ -15,7 +15,7 @@ There are three main portals to access the system, plus a few special pages.
 
 Once you've logged into a school, you can choose from several portals:
 
-*   **Student Portal:**
+*   **Redeem Coupons / Kiosk:**
     *   **How to Log In:** Students can log in by scanning their unique ID card or manually typing in their ID number.
     *   **What you can do:**
         *   View your current point balance.
