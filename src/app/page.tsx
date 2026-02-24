@@ -90,13 +90,6 @@ export default function LoginPage() {
   return (
     <div className={`min-h-screen relative overflow-hidden font-sans ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
 
-      {/* Settings - top right */}
-      <div className="fixed top-4 right-4 z-[100] no-print">
-        <div className={`rounded-xl shadow-lg border p-1 ${isGraphic ? 'bg-white/10 backdrop-blur-md border-white/20' : 'bg-card border-border'}`}>
-          <SettingsModal />
-        </div>
-      </div>
-
       {/* Background Decor - Only for Graphic Mode */}
       {isGraphic && (
         <div className="absolute inset-0 z-0 opacity-10">
