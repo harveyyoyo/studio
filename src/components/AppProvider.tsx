@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -228,17 +227,17 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <PrintProvider>
-        <BackupProvider>
-          <SettingsProvider>
+    <SettingsProvider>
+      <AuthProvider>
+        <PrintProvider>
+          <BackupProvider>
             <AppContextBridge>
               {children}
             </AppContextBridge>
-          </SettingsProvider>
-        </BackupProvider>
-      </PrintProvider>
-    </AuthProvider>
+          </BackupProvider>
+        </PrintProvider>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }
 
