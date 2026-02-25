@@ -1,11 +1,8 @@
 import * as admin from 'firebase-admin';
 
-const serviceAccount = require('../../serviceAccountKey.json');
-
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  // Use Application Default Credentials, which works automatically in Firebase/GCP environments.
+  admin.initializeApp();
 }
 
 export const adminDb = admin.firestore();
