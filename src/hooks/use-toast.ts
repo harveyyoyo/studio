@@ -7,7 +7,6 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
-import { useArcadeSound } from './useArcadeSound';
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -143,16 +142,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-let globalPlaySound: (sound: any) => void = () => {};
-
 function toast({ ...props }: Toast) {
   const id = genId()
-
-  if (props.variant === 'destructive') {
-    globalPlaySound('error');
-  } else {
-    globalPlaySound('success');
-  }
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -182,8 +173,6 @@ function toast({ ...props }: Toast) {
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
-  const playSound = useArcadeSound();
-  globalPlaySound = playSound;
 
   React.useEffect(() => {
     listeners.push(setState)

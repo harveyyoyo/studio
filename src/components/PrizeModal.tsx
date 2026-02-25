@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Prize } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 interface PrizeModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
   const { toast } = useToast();
+  const playSound = useArcadeSound();
 
   const isEditing = !!prize;
 
@@ -53,10 +55,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
   const handleSave = async () => {
     const pointsValue = parseInt(points);
     if (!name || !icon) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Name and Icon are required.' });
       return;
     }
      if (isNaN(pointsValue) || pointsValue < 0) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Points must be a positive number.' });
       return;
     }
@@ -64,10 +68,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
     if (isEditing && prize) {
       const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock };
       await updatePrize(updatedPrize);
+      playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
       const newPrize = { name, points: pointsValue, icon, inStock };
       await addPrize(newPrize);
+      playSound('success');
       toast({ title: 'Prize added!' });
     }
     setIsOpen(false);

@@ -193,6 +193,7 @@ function StudentDashboardInner({
     try {
       const verify = httpsCallable(functions, 'verifySchoolPasscode');
       await verify({ schoolId, passcode: logoutPasscode });
+      playSound('swoosh');
       onDone();
       toast({ title: "Logged Out", description: "You have been successfully logged out." });
     } catch {

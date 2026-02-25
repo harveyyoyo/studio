@@ -171,9 +171,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const createBackupFn = httpsCallable(functions, 'createBackupTrigger');
         try {
             await createBackupFn({ schoolId });
-            playSound('swoosh');
+            playSound('success');
             toast({ title: 'Full Backup Created', description: 'All school data backed up to secure storage.' });
         } catch (error) {
+            playSound('error');
             console.error(error);
             toast({ variant: 'destructive', title: 'Backup Failed', description: (error as any).message });
         }
@@ -223,18 +224,21 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             const result = await backupAllFn({});
             const response = result.data as any;
             if (response.failed > 0) {
+                playSound('error');
                 toast({
                     variant: 'destructive',
                     title: `Backup Complete with Errors`,
                     description: `${response.succeeded}/${response.total} schools backed up. ${response.failed} failed.`,
                 });
             } else {
+                playSound('success');
                 toast({
                     title: 'All Schools Backed Up',
                     description: `${response.total} school(s) fully backed up to secure storage.`,
                 });
             }
         } catch (e) {
+            playSound('error');
             console.error('Backup of all schools failed', e);
             toast({ variant: 'destructive', title: 'Backup Failed', description: (e as Error).message });
         }
@@ -255,6 +259,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         try {
             const createBackupFn = httpsCallable(functions, 'createBackupTrigger');
             await createBackupFn({ schoolId, type: 'pre-delete' });
+            playSound('swoosh');
             toast({ title: "Final Backup Created", description: `A full backup for ${schoolId} has been saved before deletion.` });
             const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', auth.currentUser.uid);
             await setDoc(adminRoleRef, { role: 'admin' });
@@ -262,6 +267,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             playSound('success');
             toast({ title: `School "${schoolId}" deleted!` });
         } catch (e) {
+            playSound('error');
             toast({ variant: 'destructive', title: `School "${schoolId}" deletion failed!`, description: (e as Error).message });
         }
     }, [firestore, auth, toast, playSound, functions]);
@@ -272,6 +278,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             await updateDoc(doc(firestore, 'schools', schoolId), updates);
             playSound('success');
         } catch (e) {
+            playSound('error');
             toast({ variant: 'destructive', title: "School update failed", description: (e as Error).message });
         }
     }, [firestore, playSound, toast]);
@@ -293,12 +300,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 const result = await callable({ schoolId });
                 console.log(`${funcName} result:`, result.data);
             }
-            toast({ title: "Migration Complete!", description: `Data for ${schoolId} has been migrated to the new structure.` });
             playSound('success');
+            toast({ title: "Migration Complete!", description: `Data for ${schoolId} has been migrated to the new structure.` });
         } catch (error) {
+            playSound('error');
             console.error("Data migration failed:", error);
             toast({ variant: 'destructive', title: 'Migration Failed', description: (error as any).message });
-            playSound('error');
         }
     }, [functions, toast, playSound]);
 

@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
@@ -34,6 +35,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
     const firestore = useFirestore();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
+    const playSound = useArcadeSound();
 
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
@@ -60,6 +62,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
+            playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Missing Information',
@@ -69,6 +72,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         }
         const points = parseInt(newPrintCategoryPoints);
         if (isNaN(points) || points <= 0) {
+            playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Invalid Points',
@@ -83,16 +87,19 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         setNewPrintCategoryName('');
         setNewPrintCategoryPoints('10');
         setIsPrintCategoryDialogOpen(false);
+        playSound('success');
         toast({ title: 'Category Added' });
     };
 
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
         if (!teacherName) {
+            playSound('error');
             toast({ variant: 'destructive', title: 'An error occurred. Please log in again.' });
             return;
         }
         if (!value || value <= 0) {
+            playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Invalid Value',
@@ -102,6 +109,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         }
         const selectedCategory = categories?.find(c => c.id === printCategoryId);
         if (!selectedCategory) {
+            playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Category Not Found',
@@ -264,6 +272,7 @@ export default function TeacherPage() {
     const firestore = useFirestore();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
+    const playSound = useArcadeSound();
 
     const [loggedInTeacher, setLoggedInTeacher] = useState<string | null>(null);
     const [selectedLoginName, setSelectedLoginName] = useState('Admin');
@@ -280,11 +289,13 @@ export default function TeacherPage() {
 
     const handleLogin = () => {
         if (selectedLoginName) {
+            playSound('login');
             setLoggedInTeacher(selectedLoginName);
         }
     };
 
     const handleLogout = () => {
+        playSound('swoosh');
         setLoggedInTeacher(null);
     };
 

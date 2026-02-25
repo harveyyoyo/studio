@@ -58,6 +58,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 function AdminDashboardSkeleton() {
   return (
@@ -110,6 +111,7 @@ function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
   const [points, setPoints] = useState('10');
   const [description, setDescription] = useState('');
   const { toast } = useToast();
+  const playSound = useArcadeSound();
 
   useEffect(() => {
     if (isOpen) {
@@ -123,10 +125,12 @@ function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
   const handleAward = async () => {
     const pointsValue = parseInt(points);
     if (!description.trim()) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Description is required' });
       return;
     }
     if (isNaN(pointsValue) || pointsValue <= 0) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Points must be a positive number' });
       return;
     }
@@ -134,6 +138,7 @@ function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
     const result = await onAward(student.id, pointsValue, description);
     
     if(result.success) {
+      playSound('success');
       let toastDescription = `Awarded ${pointsValue} points to ${student.firstName}.`;
       if(result.bonusTotal && result.bonusTotal > 0) {
         toastDescription += ` They also earned ${result.bonusTotal} bonus points from achievements!`;
@@ -141,6 +146,7 @@ function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
       toast({ title: 'Points Awarded!', description: toastDescription });
       onOpenChange(false);
     } else {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
     }
   };
@@ -182,6 +188,7 @@ function AdminDashboardInner() {
   } = useAppContext();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const playSound = useArcadeSound();
   const backupFileInputRef = useRef<HTMLInputElement>(null);
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
   const { settings, updateSettings } = useSettings();
@@ -293,6 +300,7 @@ function AdminDashboardInner() {
 
   const handleAddClass = () => {
     if (!newClassName) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Class Name Required', description: 'Please enter a name for the new class.' });
       return;
     }
@@ -302,6 +310,7 @@ function AdminDashboardInner() {
 
   const handleAddTeacher = () => {
     if (!newTeacherName) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Teacher Name Required', description: 'Please enter a name for the new teacher.' });
       return;
     }
@@ -311,11 +320,13 @@ function AdminDashboardInner() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName || !newCategoryPoints) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
       return;
     }
     const points = parseInt(newCategoryPoints);
     if (isNaN(points) || points <= 0) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
       return;
     }
@@ -326,11 +337,13 @@ function AdminDashboardInner() {
 
   const handleAddPrintCategory = async () => {
     if (!newPrintCategoryName || !newPrintCategoryPoints) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
       return;
     }
     const points = parseInt(newPrintCategoryPoints);
     if (isNaN(points) || points <= 0) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
       return;
     }
@@ -365,11 +378,13 @@ function AdminDashboardInner() {
   const handlePrintSheet = async () => {
     const value = parseInt(printValue);
     if (!value || value <= 0) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Invalid Value', description: 'Coupon value must be a positive number.' });
       return;
     }
     const selectedCategory = categories?.find(c => c.id === printCategoryId);
     if (!selectedCategory) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Category Not Found', description: 'Please select a valid category.' });
       return;
     }
@@ -392,12 +407,14 @@ function AdminDashboardInner() {
   const handleCreateBackup = async () => {
     if (!schoolId) return;
     await devCreateBackup(schoolId);
+    playSound('success');
     toast({ title: "Backup Created", description: "A new backup has been saved." });
   }
 
   const handleRestoreFromBackup = async (backupId: string) => {
     if (!schoolId) return;
     await devRestoreFromBackup(schoolId, backupId);
+    playSound('success');
     toast({ title: "Restore Complete", description: "Data has been restored from the backup." });
   }
 
@@ -416,6 +433,7 @@ function AdminDashboardInner() {
         setUploadReport(report);
       }
     } catch (err: any) {
+      playSound('error');
       toast({
         variant: 'destructive',
         title: 'Failed to process CSV file.',

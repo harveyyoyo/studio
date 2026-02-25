@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 
 interface SchoolInfo {
@@ -152,6 +153,7 @@ export default function DeveloperPage() {
   const router = useRouter();
   const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
+  const playSound = useArcadeSound();
 
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string; passcode: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -218,12 +220,14 @@ export default function DeveloperPage() {
       const snapshot = await getDocs(q);
 
       if (snapshot.empty) {
+        playSound('error');
         toast({ variant: 'destructive', title: 'No Backups Found', description: `No backups were found for school ID "${orphanSchoolId}". A backup must exist to restore data.` });
       } else {
         const backupDoc = snapshot.docs[0];
         setLatestBackup({ id: backupDoc.id });
       }
     } catch (e) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Error Finding Backup', description: (e as Error).message });
     } finally {
       setIsFindingBackup(false);
@@ -233,13 +237,13 @@ export default function DeveloperPage() {
   const handleRestoreOrphan = async () => {
     if (!orphanSchoolId || !latestBackup) return;
     await devRestoreFromBackup(orphanSchoolId, latestBackup.id);
-    toast({ title: 'Restore Complete!', description: `The school "${orphanSchoolId}" should now appear in the main list below. You may need to run the data migration tool on it.` });
     setOrphanSchoolId('');
     setLatestBackup(null);
   }
 
   const handleCreateSchool = async () => {
     if (!newSchoolId) {
+      playSound('error');
       toast({ variant: 'destructive', title: "School ID cannot be empty." });
       return;
     }
@@ -275,6 +279,7 @@ export default function DeveloperPage() {
 
     if (Object.keys(updates).length > 0) {
       await updateSchool(editingSchool.id, updates);
+      playSound('success');
       toast({ title: `School "${editingSchool.id}" updated!` });
     } else {
       toast({ title: 'No changes were made.' });
@@ -307,13 +312,11 @@ export default function DeveloperPage() {
     if (!backupSchool) return;
     await devCreateBackup(backupSchool.id);
     handleOpenBackupModal(backupSchool); // Refresh list
-    toast({ title: "Backup Created" });
   }
 
   const handleRestoreBackup = async (backupId: string) => {
     if (!backupSchool) return;
     await devRestoreFromBackup(backupSchool.id, backupId);
-    toast({ title: "Restore Complete", description: `School "${backupSchool.id}" has been restored.` });
   }
 
   const handleBackupAll = async () => {
@@ -325,6 +328,11 @@ export default function DeveloperPage() {
     if (!backupSchool) return;
     toast({ title: "Verifying...", description: "Checking backup integrity via SHA-256 hash." });
     const result = await devVerifyBackup(backupSchool.id, backupId);
+    if (result.verified) {
+      playSound('success');
+    } else {
+      playSound('error');
+    }
     toast({
       title: result.verified ? "Backup Verified" : "Verification Failed",
       description: result.reason,
@@ -349,6 +357,7 @@ export default function DeveloperPage() {
     const url = getSchoolUrl(id);
     await navigator.clipboard.writeText(url);
     setCopiedId(id);
+    playSound('click');
     toast({ title: 'Link copied!' });
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -758,4 +767,3 @@ export default function DeveloperPage() {
     </TooltipProvider>
   )
 }
-

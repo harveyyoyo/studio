@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Achievement, Category } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 interface AchievementModalProps {
     isOpen: boolean;
@@ -36,6 +37,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
     const [categoryId, setCategoryId] = useState<string>('');
     const [bonusPoints, setBonusPoints] = useState('0');
     const { toast } = useToast();
+    const playSound = useArcadeSound();
 
     const isEditing = !!achievement;
 
@@ -66,11 +68,13 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
         const bonusPointsValue = parseInt(bonusPoints);
 
         if (!name || !description || !icon) {
+            playSound('error');
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Name, Description, and Icon are required.' });
             return;
         }
 
         if (isNaN(thresholdValue) || thresholdValue < 0) {
+            playSound('error');
             toast({ variant: 'destructive', title: 'Invalid Threshold', description: 'Threshold must be a non-negative number.' });
             return;
         }
@@ -90,13 +94,16 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
         try {
             if (isEditing && achievement) {
                 await updateAchievement({ ...data, id: achievement.id });
+                playSound('success');
                 toast({ title: 'Achievement updated!' });
             } else {
                 await addAchievement(data);
+                playSound('success');
                 toast({ title: 'Achievement added!' });
             }
             setIsOpen(false);
         } catch (err: any) {
+            playSound('error');
             toast({ variant: 'destructive', title: 'Error saving achievement', description: err.message });
         }
     };

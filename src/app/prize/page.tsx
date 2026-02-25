@@ -41,6 +41,7 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 function PrizeActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
     const firestore = useFirestore();
@@ -94,6 +95,7 @@ function PrizeDashboard({
     const { schoolId, redeemPrize } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
+    const playSound = useArcadeSound();
 
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
@@ -109,6 +111,7 @@ function PrizeDashboard({
 
     useEffect(() => {
         if (hasLoadedOnce.current && !studentLoading && !student) {
+            playSound('error');
             toast({
                 variant: 'destructive',
                 title: 'Student not found',
@@ -116,7 +119,7 @@ function PrizeDashboard({
             });
             onDone();
         }
-    }, [student, studentLoading, onDone, toast]);
+    }, [student, studentLoading, onDone, toast, playSound]);
 
     if (studentLoading || prizesLoading || !student) {
         return (
@@ -131,6 +134,7 @@ function PrizeDashboard({
 
     const handleRedeemReward = async (prize: Prize) => {
         await redeemPrize(student.id, prize);
+        playSound('redeem');
         toast({
             title: 'Reward Redeemed!',
             description: `You redeemed a ${prize.name} for ${prize.points} points.`,

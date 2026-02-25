@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Student, Class } from '@/lib/types';
 import { useFirestore } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
   const { toast } = useToast();
+  const playSound = useArcadeSound();
 
   const isEditing = !!student;
 
@@ -62,14 +64,17 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
 
   const handleSave = async () => {
     if (!firstName || !lastName) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
     if (!nfcId) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Student ID is required.' });
       return;
     }
     if (!firestore || !schoolId) {
+      playSound('error');
       toast({ variant: 'destructive', title: 'Database connection not found.' });
       return;
     }
@@ -79,6 +84,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     if (isEditing && student) {
       const updatedStudent: Student = { ...student, firstName, lastName, points: parseInt(points) || 0, classId: finalClassId, nfcId };
       await updateStudent(updatedStudent);
+      playSound('success');
       toast({ title: 'Student updated!' });
     } else {
       const newStudent = {
@@ -89,6 +95,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         classId: finalClassId,
       };
       await addStudent(newStudent);
+      playSound('success');
       toast({ title: 'Student added!' });
     }
     setIsOpen(false);
