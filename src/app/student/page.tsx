@@ -156,13 +156,15 @@ function StudentDashboardInner({
   const resetTimer = useCallback(() => setLogoutTimer(10), []);
 
   useEffect(() => {
-    const handleDone = () => onDone();
     if (logoutTimer <= 0) {
-      handleDone();
+      onDone();
       return;
     }
-    const intervalId = setInterval(() => setLogoutTimer((prev) => prev - 1), 1000);
-    return () => clearInterval(intervalId);
+    const timerId = setTimeout(() => {
+      setLogoutTimer(logoutTimer - 1);
+    }, 1000);
+
+    return () => clearTimeout(timerId);
   }, [logoutTimer, onDone]);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
