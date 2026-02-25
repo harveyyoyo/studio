@@ -465,7 +465,7 @@ function AdminDashboardInner() {
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
         <Tabs defaultValue="students" className="space-y-6">
-          <div className="flex justify-center overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex justify-start sm:justify-center overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm">
               <TabsTrigger value="stats" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <LayoutDashboard className="w-4 h-4" /> Stats
@@ -616,9 +616,9 @@ function AdminDashboardInner() {
                       `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
                       (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase())
                     ).sort((a, b) => a.lastName.localeCompare(b.lastName)).map(s => (
-                      <li key={s.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-all hover:bg-background shadow-sm">
+                      <li key={s.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/30 transition-all hover:bg-background shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0">
                             {s.firstName[0]}{s.lastName[0]}
                           </div>
                           <div>
@@ -627,7 +627,7 @@ function AdminDashboardInner() {
                             <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
                           </div>
                         </div>
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 self-end sm:self-center">
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setAwardingStudent(s)}><Award className="w-4 h-4 text-green-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
@@ -657,13 +657,13 @@ function AdminDashboardInner() {
               <CardContent>
                 <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
                   {prizes?.sort((a, b) => a.points - b.points).map(p => (
-                    <li key={p.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
-                      <div className="flex items-center gap-4">
+                    <li key={p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                      <div className="flex items-center gap-4 flex-grow">
                         <div className="flex flex-col items-center">
                           <Switch checked={p.inStock} onCheckedChange={(checked) => updatePrize({ ...p, inStock: checked })} className="data-[state=checked]:bg-green-500 scale-75" />
                           <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-50">{p.inStock ? 'On' : 'Off'}</p>
                         </div>
-                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border", !p.inStock && "opacity-40 grayscale")}>
+                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border flex-shrink-0", !p.inStock && "opacity-40 grayscale")}>
                           <DynamicIcon name={p.icon} className="w-6 h-6 text-primary" />
                         </div>
                         <div>
@@ -671,7 +671,7 @@ function AdminDashboardInner() {
                           <p className="text-xs font-bold text-primary">{p.points} points</p>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 self-end sm:self-center">
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
@@ -699,9 +699,9 @@ function AdminDashboardInner() {
                 <CardContent>
                   <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                     {(achievements || []).sort((a, b) => a.name.localeCompare(b.name)).map(ach => (
-                      <li key={ach.id} className="flex justify-between items-center bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40">
+                      <li key={ach.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4 flex-grow">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40 flex-shrink-0">
                             <DynamicIcon name={ach.icon} className="w-5 h-5 text-amber-600" />
                           </div>
                           <div>
@@ -712,7 +712,7 @@ function AdminDashboardInner() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 self-end sm:self-center">
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenAchievementModal(ach)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deleteAchievement(ach.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
@@ -819,9 +819,9 @@ function AdminDashboardInner() {
                 <ScrollArea className="h-[400px]">
                   <ul className="space-y-2.5 pr-4">
                     {(backups || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(b => (
-                      <li key={b.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border group transition-all hover:bg-background">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-chart-4/10 flex items-center justify-center">
+                      <li key={b.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-secondary/20 p-4 rounded-2xl border group transition-all hover:bg-background">
+                        <div className="flex items-center gap-4 flex-grow">
+                          <div className="w-10 h-10 rounded-full bg-chart-4/10 flex items-center justify-center flex-shrink-0">
                             <Database className="w-5 h-5 text-chart-4" />
                           </div>
                           <div>
@@ -829,7 +829,7 @@ function AdminDashboardInner() {
                             <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{b.totalDocs} documents • <span className={b.type === 'scheduled' ? 'text-green-600' : 'text-blue-600'}>{b.type || 'manual'}</span></p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 self-end sm:self-center">
                           <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm" onClick={() => handleDownloadBackup(b.id)}><Download className="h-4 w-4" /></Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
