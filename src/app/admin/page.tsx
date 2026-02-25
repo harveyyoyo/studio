@@ -465,8 +465,8 @@ function AdminDashboardInner() {
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
         <Tabs defaultValue="students" className="space-y-6">
-          <div className="flex justify-start sm:justify-center overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm">
+          <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto">
               <TabsTrigger value="stats" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <LayoutDashboard className="w-4 h-4" /> Stats
               </TabsTrigger>
