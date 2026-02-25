@@ -48,7 +48,7 @@ export default function Header() {
 
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
-    if (loginState === 'school') return 'levelUp EDU';
+    if (loginState === 'school') return schoolId?.replace(/_/g, ' ') || 'levelUp EDU';
     return 'School Reward System';
   }
 
@@ -73,14 +73,27 @@ export default function Header() {
       { href: '/admin', icon: UserCog, label: 'Admin' },
       { href: '/halloffame', icon: Trophy, label: 'Fame' },
     ];
+    
+    const appTitle = getTitle();
 
     return (
       <>
-        <div className="fixed top-4 right-4 z-[100] no-print">
-          <div className={`backdrop-blur-md rounded-xl shadow-lg border p-1 ${isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'}`}>
-            <SettingsModal />
-          </div>
-        </div>
+        <header className={`no-print w-full flex justify-between items-center relative z-20 mb-4 ${isGraphicApp ? 'text-white' : 'text-foreground'}`}>
+            <Link href="/" className="flex items-center gap-3 relative z-10 group">
+                <div className={`overflow-hidden rounded-lg shadow-md ${isGraphicApp ? 'ring-2 ring-primary/20' : ''}`}>
+                    <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain bg-white" />
+                </div>
+                <h1 className="text-lg font-bold leading-none font-headline">
+                    {appTitle}
+                </h1>
+            </Link>
+            <div className="z-[101]">
+                <div className={`backdrop-blur-md rounded-xl shadow-lg border p-1 ${isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'}`}>
+                    <SettingsModal />
+                </div>
+            </div>
+        </header>
+
         {loginState === 'school' && (
           <nav className={`fixed bottom-0 left-0 right-0 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-[100] no-print border-t transition-colors ${isGraphicApp ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-200 shadow-lg'}`}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
