@@ -8,6 +8,3 @@ runConfig:
   memoryMiB: 512
   concurrency: 80
 
-env:
-  - variable: DEV_PASSCODE
-    secret: DEV_PASSCODE
