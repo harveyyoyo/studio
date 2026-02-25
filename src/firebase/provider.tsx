@@ -71,6 +71,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   useEffect(() => {
     if (!auth) { 
+      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not available.") });
       return;
     }
 
@@ -80,6 +81,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (firebaseUser) {
             setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         } else {
+            // First, set loading to false to allow initial render.
+            setUserAuthState({ user: null, isUserLoading: false, userError: null });
+            // Then, attempt to sign in anonymously in the background.
             signInAnonymously(auth).catch((error) => {
                 console.error("FirebaseProvider: Anonymous sign-in failed:", error);
                 setUserAuthState({ user: null, isUserLoading: false, userError: error });
@@ -107,13 +111,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       userError: userAuthState.userError,
     };
   }, [firebaseApp, firestore, auth, functions, userAuthState]);
-
-  // Block the entire tree until anonymous auth resolves.
-  // This guarantees every downstream hook/effect has an authenticated user,
-  // preventing "missing permissions" errors from racing ahead of auth.
-  if (userAuthState.isUserLoading) {
-    return null;
-  }
 
   return (
     <FirebaseContext.Provider value={contextValue}>
