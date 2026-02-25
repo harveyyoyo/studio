@@ -5,10 +5,10 @@ export default function ShowcasePage() {
         <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50">
             <div className="text-center space-y-6 px-6">
                 <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase">
-                    Academic Arcade Showcase
+                    levelUp EDU Showcase
                 </h1>
                 <p className="text-slate-400 max-w-xl mx-auto">
-                    A richer marketing experience for Academic Arcade will live here soon.
+                    A richer marketing experience for levelUp EDU will live here soon.
                     For now, you can explore the main app experience from the home page.
                 </p>
                 <Link

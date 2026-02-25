@@ -12,13 +12,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "School Reward System",
-  description: "A school points and rewards system.",
+  title: "levelUp EDU",
+  description: "LevelUp rewards hub",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "School Reward System",
+    title: "levelUp EDU",
   },
 };
 export default function RootLayout({

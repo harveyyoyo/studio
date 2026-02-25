@@ -1,6 +1,6 @@
-# Welcome to NextGen Rewards!
+# Welcome to levelUp EDU!
 
-NextGen Rewards is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
+levelUp EDU is a fun and easy way to manage a school-wide points and rewards system. Students can earn points, redeem them for prizes, and track their progress, all while fostering a positive school culture.
 
 ## How to Use the App
 

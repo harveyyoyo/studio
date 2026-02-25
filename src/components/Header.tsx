@@ -48,8 +48,8 @@ export default function Header() {
 
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
-    if (loginState === 'school') return 'School Reward System';
-    return 'School Reward System';
+    if (loginState === 'school') return 'levelUp EDU';
+    return 'levelUp EDU';
   }
 
   const getSubTitle = () => {
@@ -59,7 +59,7 @@ export default function Header() {
       case 'school':
         return <span className="font-code text-primary/80">{schoolId}</span>;
       default:
-        return 'School Points System';
+        return 'LevelUp rewards hub';
     }
   }
 

@@ -2,7 +2,7 @@ import type { Coupon } from '@/lib/types';
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `School Rewards - ${schoolName}` : 'School Reward System';
+  const title = schoolName ? `levelUp EDU - ${schoolName}` : 'levelUp EDU';
 
   return (
     <div className="bg-card/80 p-2 border border-dashed rounded-lg flex flex-col items-center justify-between shadow-sm relative overflow-hidden text-center h-full">
