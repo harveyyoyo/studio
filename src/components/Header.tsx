@@ -49,7 +49,7 @@ export default function Header() {
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
     if (loginState === 'school') return 'levelUp EDU';
-    return 'levelUp EDU';
+    return 'School Reward System';
   }
 
   const getSubTitle = () => {
