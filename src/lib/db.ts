@@ -1,3 +1,4 @@
+
 import {
   doc,
   setDoc,
@@ -430,6 +431,90 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
     return { success: false, message: e.message || 'An unknown error occurred.' };
   }
 };
+
+export const awardPointsToStudent = async (firestore: Firestore, schoolId: string, studentId: string, points: number, description: string): Promise<{ success: boolean; message: string; bonusTotal?: number }> => {
+  if (points <= 0) {
+    return { success: false, message: "Points must be a positive number." };
+  }
+  const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+
+  try {
+    const result = await runTransaction(firestore, async (transaction) => {
+      const studentDoc = await transaction.get(studentRef);
+      if (!studentDoc.exists()) {
+        throw new Error("Student not found.");
+      }
+      const studentData = studentDoc.data() as Student;
+
+      const newPoints = studentData.points + points;
+      const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
+
+      const achievementsRef = collection(firestore, 'schools', schoolId, 'achievements');
+      const achievementsSnap = await getDocs(achievementsRef);
+      const allAchievements = achievementsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Achievement));
+
+      const earnedAchievementIds = new Set((studentData.earnedAchievements || []).map(a => a.achievementId));
+      const newlyEarned: Achievement[] = [];
+      let bonusTotal = 0;
+
+      for (const ach of allAchievements) {
+        if (earnedAchievementIds.has(ach.id) || ach.criteria.type === 'manual') continue;
+
+        let isQualified = false;
+        if (ach.criteria.type === 'points' && !ach.criteria.categoryId) {
+            if (newPoints >= ach.criteria.threshold) isQualified = true;
+        } else if (ach.criteria.type === 'lifetimePoints') {
+            if (newLifetimePoints >= ach.criteria.threshold) isQualified = true;
+        }
+
+        if (isQualified) {
+          newlyEarned.push(ach);
+          bonusTotal += ach.bonusPoints || 0;
+          earnedAchievementIds.add(ach.id);
+        }
+      }
+
+      const updatedEarnedAchievements = [...(studentData.earnedAchievements || [])];
+      newlyEarned.forEach(ach => updatedEarnedAchievements.push({ achievementId: ach.id, earnedAt: Date.now() }));
+
+      transaction.update(studentRef, {
+        points: newPoints + bonusTotal,
+        lifetimePoints: newLifetimePoints + bonusTotal,
+        earnedAchievements: updatedEarnedAchievements,
+      });
+
+      const activityCollectionRef = collection(firestore, 'schools', schoolId, 'students', studentId, 'activities');
+      const mainActivityRef = doc(activityCollectionRef);
+      transaction.set(mainActivityRef, { desc: description, amount: points, date: Date.now() });
+
+      newlyEarned.forEach(ach => {
+        const achActivityRef = doc(activityCollectionRef);
+        transaction.set(achActivityRef, {
+          desc: `Achievement Earned: ${ach.name}`,
+          amount: ach.bonusPoints || 0,
+          date: Date.now(),
+          metadata: { type: 'achievement', achievementId: ach.id }
+        });
+        const achRef = doc(firestore, 'schools', schoolId, 'achievements', ach.id);
+        transaction.update(achRef, { unlockedCount: (ach.unlockedCount || 0) + 1 });
+      });
+      
+      return { bonusTotal };
+    });
+    return { success: true, message: "Points awarded successfully.", bonusTotal: result.bonusTotal };
+  } catch (e: any) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: studentRef.path,
+        operation: 'update',
+        requestResourceData: { studentId, points, description },
+      })
+    );
+    return { success: false, message: e.message || 'An unknown error occurred.' };
+  }
+};
+
 
 export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize) => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);

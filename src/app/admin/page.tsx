@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,7 +9,7 @@ import { SchoolGate } from '@/components/SchoolGate';
 import {
   BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   Printer, Edit, History, Users, User, Gift, UploadCloud,
-  Trophy, ShieldCheck, LayoutDashboard,
+  Trophy, ShieldCheck, LayoutDashboard, Award,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -100,6 +101,76 @@ function AdminDashboardSkeleton() {
   );
 }
 
+function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
+  student: Student | null;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAward: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
+}) {
+  const [points, setPoints] = useState('10');
+  const [description, setDescription] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setPoints('10');
+      setDescription('');
+    }
+  }, [isOpen]);
+
+  if (!student) return null;
+
+  const handleAward = async () => {
+    const pointsValue = parseInt(points);
+    if (!description.trim()) {
+      toast({ variant: 'destructive', title: 'Description is required' });
+      return;
+    }
+    if (isNaN(pointsValue) || pointsValue <= 0) {
+      toast({ variant: 'destructive', title: 'Points must be a positive number' });
+      return;
+    }
+
+    const result = await onAward(student.id, pointsValue, description);
+    
+    if(result.success) {
+      let toastDescription = `Awarded ${pointsValue} points to ${student.firstName}.`;
+      if(result.bonusTotal && result.bonusTotal > 0) {
+        toastDescription += ` They also earned ${result.bonusTotal} bonus points from achievements!`;
+      }
+      toast({ title: 'Points Awarded!', description: toastDescription });
+      onOpenChange(false);
+    } else {
+      toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Award Points to {student.firstName} {student.lastName}</DialogTitle>
+          <DialogDescription>Manually grant points for a specific reason.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-1">
+            <Label htmlFor="award-points">Points to Award</Label>
+            <Input id="award-points" type="number" value={points} onChange={e => setPoints(e.target.value)} autoFocus />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="award-desc">Reason / Description</Label>
+            <Input id="award-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., 'Classroom leadership'" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleAward}>Award Points</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function AdminDashboardInner() {
   const {
@@ -107,7 +178,7 @@ function AdminDashboardInner() {
     addClass, deleteClass, deleteCategory, addCategory, addCoupons,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
-    deleteAchievement,
+    deleteAchievement, awardPoints,
   } = useAppContext();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -151,6 +222,7 @@ function AdminDashboardInner() {
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
   const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
+  const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
   const [printTeacher, setPrintTeacher] = useState('Admin');
@@ -539,6 +611,7 @@ function AdminDashboardInner() {
                         </div>
                         <div className="flex gap-1.5">
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setAwardingStudent(s)}><Award className="w-4 h-4 text-green-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
@@ -791,6 +864,12 @@ function AdminDashboardInner() {
           setIsOpen={setIsAchievementModalOpen}
           achievement={editingAchievement}
           categories={categories || []}
+        />
+        <AwardPointsDialog
+          isOpen={!!awardingStudent}
+          onOpenChange={() => setAwardingStudent(null)}
+          student={awardingStudent}
+          onAward={awardPoints}
         />
         <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
           <AlertDialogContent className="rounded-3xl">

@@ -19,6 +19,7 @@ import {
   deleteStudent as dbDeleteStudent, addClass as dbAddClass,
   deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
   addAchievement as dbAddAchievement, updateAchievement as dbUpdateAchievement, deleteAchievement as dbDeleteAchievement,
+  awardPointsToStudent as dbAwardPointsToStudent,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -55,6 +56,7 @@ interface AppContextType {
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
+  awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   redeemPrize: (studentId: string, prize: Prize) => Promise<void>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
@@ -144,6 +146,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbRedeemCoupon(firestore, schoolId, studentId, code);
   }, [firestore, schoolId]);
 
+  const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
+    if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
+    return dbAwardPointsToStudent(firestore, schoolId, studentId, points, description);
+  }, [firestore, schoolId]);
+
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbRedeemPrize(firestore, schoolId, studentId, prize);
@@ -195,7 +202,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addClass: addClass_, deleteClass: deleteClass_,
     addTeacher: addTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, deleteCategory: deleteCategory_,
-    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, redeemPrize: redeemPrize_,
+    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, awardPoints: awardPoints_,
+    redeemPrize: redeemPrize_,
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
     addAchievement: addAchievement_, updateAchievement: updateAchievement_, deleteAchievement: deleteAchievement_,
@@ -206,7 +214,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addStudent_, updateStudent_, deleteStudent_,
     addClass_, deleteClass_, addTeacher_, deleteTeacher_,
     addCategory_, deleteCategory_, addCoupons_,
-    redeemCoupon_, redeemPrize_, addPrize_, updatePrize_, deletePrize_,
+    redeemCoupon_, awardPoints_, redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     addAchievement_, updateAchievement_, deleteAchievement_,
   ]);
