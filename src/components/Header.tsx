@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
+import { Logo } from './Logo';
 
 export default function Header() {
   const pathname = usePathname();
@@ -82,7 +83,7 @@ export default function Header() {
         <header className={`no-print w-full flex justify-between items-center relative z-20 mb-4 ${isGraphicApp ? 'text-white' : 'text-foreground'}`}>
             <Link href="/" className="flex items-center gap-3 relative z-10 group">
                 <div className={`overflow-hidden rounded-lg shadow-md ${isGraphicApp ? 'ring-2 ring-primary/20' : ''}`}>
-                    <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain bg-white" />
+                    <Logo className="w-8 h-8" />
                 </div>
                 <h1 className="text-lg font-bold leading-none font-headline">
                     {appTitle}
@@ -128,7 +129,7 @@ export default function Header() {
 
       <Link href="/" className="flex items-center gap-3 relative z-10 group">
         <div className={`overflow-hidden rounded-lg shadow-md group-hover:scale-110 transition-transform ${isGraphic ? 'ring-4 ring-primary/20' : ''}`}>
-          <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white" />
+          <Logo className="w-10 h-10" />
         </div>
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-foreground leading-none font-headline">
