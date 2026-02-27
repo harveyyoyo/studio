@@ -1,3 +1,4 @@
+
 'use client';
 // Force rebuild for hydration sync
 import { useState, useEffect } from 'react';
@@ -49,7 +50,7 @@ export default function Header() {
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
     if (loginState === 'school') return schoolId?.replace(/_/g, ' ') || 'levelUp EDU';
-    return 'School Reward System';
+    return 'levelUp EDU';
   }
 
   const getSubTitle = () => {
