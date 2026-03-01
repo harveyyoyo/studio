@@ -50,7 +50,6 @@ export default function Header() {
 
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
-    if (loginState === 'school') return schoolId?.replace(/_/g, ' ') || 'levelUp EDU';
     return 'levelUp EDU';
   }
 
@@ -85,9 +84,14 @@ export default function Header() {
                 <div className={`overflow-hidden rounded-lg shadow-md ${isGraphicApp ? 'ring-2 ring-primary/20' : ''}`}>
                     <Logo className="w-8 h-8" />
                 </div>
-                <h1 className="text-lg font-bold leading-none font-headline">
-                    {appTitle}
-                </h1>
+                <div>
+                  <h1 className="text-lg font-bold leading-none font-headline">
+                      {appTitle}
+                  </h1>
+                  {loginState === 'school' && schoolId && (
+                    <p className={`text-xs font-bold leading-tight ${isGraphicApp ? 'text-white/60' : 'text-primary'}`}>{schoolId.replace(/_/g, ' ')}</p>
+                  )}
+                </div>
             </Link>
             <div className="z-[101]">
                 <div className={`backdrop-blur-md rounded-xl shadow-lg border p-1 ${isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'}`}>
@@ -135,6 +139,9 @@ export default function Header() {
           <h1 className="text-xl md:text-2xl font-bold text-foreground leading-none font-headline">
             {getTitle()}
           </h1>
+           {loginState === 'school' && schoolId && (
+             <p className="text-sm font-bold text-primary">{schoolId.replace(/_/g, ' ')}</p>
+          )}
         </div>
       </Link>
 
