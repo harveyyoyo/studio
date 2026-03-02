@@ -16,6 +16,7 @@ import { useFirebase } from '@/firebase';
 import {
     doc,
     setDoc,
+    onSnapshot,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
