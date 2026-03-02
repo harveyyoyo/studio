@@ -139,9 +139,6 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         };
 
         const allOps: Array<{ ref: any; data: any }> = [];
-        allOps.push({ ref: schoolDocRef, data: finalSchoolDocData });
-        const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
-        allOps.push({ ref: adminRoleRef, data: { role: 'admin' } });
 
         const collectItems = (list: any[] | undefined, collectionName: string) => {
             if (!list) return;
@@ -184,11 +181,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const firstBatch = writeBatch(firestore);
         firstBatch.set(schoolDocRef, finalSchoolDocData);
+        const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
         firstBatch.set(adminRoleRef, { role: 'admin' });
         await firstBatch.commit();
 
         const BATCH_LIMIT = 499;
-        const restOps = allOps.slice(2);
+        const restOps = allOps;
         for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
             const chunk = restOps.slice(i, i + BATCH_LIMIT);
             const batch = writeBatch(firestore);
