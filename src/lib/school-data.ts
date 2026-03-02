@@ -119,7 +119,7 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
     { id: 'scat10', name: 'Problem Solving', points: 45 },
   ],
   coupons: [
-    { id: 'ACAD10', code: 'ACAD10', category: 'Academics', value: 10, used: false, createdAt: Date.now() - 86400000 * 20, teacher: 'Mr. Smith' },
+    { id: '123123', code: '123123', category: 'Academics', value: 10, used: false, createdAt: Date.now() - 86400000 * 20, teacher: 'Mr. Smith' },
     { id: 'BEHAVE5', code: 'BEHAVE5', category: 'Good Behavior', value: 5, used: true, usedBy: '100', usedAt: Date.now() - 86400000 * 2, createdAt: Date.now() - 86400000 * 30, teacher: 'Mrs. Jones' },
     { id: 'HELP15', code: 'HELP15', category: 'Helping Others', value: 15, used: false, createdAt: Date.now() - 86400000 * 10, teacher: 'Ms. Davis' },
     { id: 'SPIRIT20', code: 'SPIRIT20', category: 'School Spirit', value: 20, used: false, createdAt: Date.now() - 86400000 * 5, teacher: 'Mr. Brown' },

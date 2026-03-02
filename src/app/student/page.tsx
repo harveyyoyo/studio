@@ -263,7 +263,7 @@ function StudentDashboardInner({
                   <div className="space-y-6">
                     <div className="flex gap-3">
                       <Input
-                        placeholder="e.g., SHTEIG-50"
+                        placeholder="try 123123 as sample"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
