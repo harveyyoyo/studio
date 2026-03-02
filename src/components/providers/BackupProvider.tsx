@@ -16,6 +16,7 @@ import {
     updateDoc,
     collection,
     writeBatch,
+    getDocs,
 } from 'firebase/firestore';
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
@@ -54,13 +55,50 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const schoolDocRef = doc(firestore, 'schools', cleanId);
         const schoolExists = (await getDoc(schoolDocRef)).exists();
+        
         if (schoolExists) {
-            if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
+            if (cleanId === 'yeshiva' || cleanId === 'schoolabc') {
+                // It's a sample school, so we'll reset it.
+                if (cleanId === 'schoolabc') {
+                    toast({ title: `Resetting ${cleanId}...`, description: "Updating to latest sample data." });
+                }
+                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+                const BATCH_LIMIT = 499;
+
+                for (const sub of SUBCOLLECTIONS) {
+                    const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
+                    const snap = await getDocs(subcollectionRef);
+
+                    if (snap.empty) continue;
+
+                    if (sub === "students") {
+                        for (const studentDoc of snap.docs) {
+                            const activitiesRef = collection(studentDoc.ref, "activities");
+                            const activitiesSnap = await getDocs(activitiesRef);
+                            if (activitiesSnap.empty) continue;
+                            
+                            for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
+                                const batch = writeBatch(firestore);
+                                activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                                await batch.commit();
+                            }
+                        }
+                    }
+                    
+                    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+                        const batch = writeBatch(firestore);
+                        snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                        await batch.commit();
+                    }
+                }
+            } else {
+                // It's a regular school that already exists, so bail.
                 playSound('error');
                 toast({ variant: 'destructive', title: `School ID "${cleanId}" already exists.` });
+                return null;
             }
-            return null;
         }
+
 
         let schoolData: Record<string, any>, newPasscode;
         if (cleanId === 'yeshiva') {

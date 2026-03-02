@@ -190,25 +190,20 @@ export default function DeveloperPage() {
     });
   }, [loginState, firestore, allSchools, schoolsLoading, auth]);
 
-  // Automatically create the sample schools once on developer login
+  // Automatically creates or resets the sample schools on developer login
   useEffect(() => {
     if (loginState !== 'developer' || !firestore || !createSchool) return;
 
-    const createSampleSchoolIfNeeded = async (schoolId: string) => {
-      const schoolDocRef = doc(firestore, 'schools', schoolId);
+    const createOrResetSampleSchool = async (schoolId: string) => {
       try {
-        const docSnap = await getDoc(schoolDocRef);
-        if (!docSnap.exists()) {
-          console.log(`Creating '${schoolId}' sample school...`);
-          await createSchool(schoolId);
-        }
+        await createSchool(schoolId);
       } catch (error) {
-        console.error(`Failed to check or create '${schoolId}' school:`, error);
+        console.error(`Failed to create or reset '${schoolId}' school:`, error);
       }
     };
 
-    createSampleSchoolIfNeeded('yeshiva');
-    createSampleSchoolIfNeeded('schoolabc');
+    createOrResetSampleSchool('yeshiva');
+    createOrResetSampleSchool('schoolabc');
   }, [loginState, firestore, createSchool]);
 
   const handleFindLatestBackup = async () => {
