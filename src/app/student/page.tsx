@@ -60,6 +60,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Helper } from '@/components/ui/helper';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
   const firestore = useFirestore();
@@ -231,22 +232,24 @@ function StudentDashboardInner({
         <div className="lg:col-span-2 space-y-5">
           <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
             <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <Helper content="Enter a coupon code to add points to your account. You can type it in manually or use the camera to scan a QR code.">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    </div>
+                    Redeem Coupon Code
+                  </CardTitle>
+                  <div className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
+                      isKioskLocked
+                          ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                          : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
+                  )}>
+                      <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
                   </div>
-                  Redeem Coupon Code
-                </CardTitle>
-                <div className={cn(
-                    "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
-                    isKioskLocked
-                        ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
-                )}>
-                    <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
                 </div>
-              </div>
+              </Helper>
             </CardHeader>
             <CardContent className="pt-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -263,7 +266,7 @@ function StudentDashboardInner({
                   <div className="space-y-6">
                     <div className="flex gap-3">
                       <Input
-                        placeholder="try 123123 as sample"
+                        placeholder="Enter coupon code..."
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
@@ -297,15 +300,17 @@ function StudentDashboardInner({
           {/* Eligible Rewards - Bottom Wide Section */}
           <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <Helper content="These are prizes you currently have enough points to redeem. Go to the Prize Shop to make a purchase.">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
+                    <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
-                  <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-                </div>
-              </div>
+              </Helper>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -332,12 +337,14 @@ function StudentDashboardInner({
         {/* Right Section: Activity */}
         <Card className="lg:col-span-1 border-none shadow-lg bg-white dark:bg-slate-900 flex flex-col">
           <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-            <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              </div>
-              Activity
-            </CardTitle>
+            <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
+                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  </div>
+                  Activity
+                </CardTitle>
+            </Helper>
           </CardHeader>
           <CardContent className="flex-1 pt-4">
             <StudentActivityList schoolId={schoolId} studentId={student.id} />
@@ -402,15 +409,6 @@ export default function StudentLoginPage() {
       setIsLogoutDialogOpen(false);
     }
   }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast]);
-
-  const handleBackToPortalClick = (e: React.MouseEvent) => {
-    if (isKioskLocked) {
-      e.preventDefault();
-      setIsLogoutDialogOpen(true);
-    } else {
-      playSound('swoosh');
-    }
-  };
 
   const handleUnlockRequest = () => {
     setIsUnlockDialogOpen(true);

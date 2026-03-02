@@ -9,7 +9,7 @@ import { SchoolGate } from '@/components/SchoolGate';
 import {
   BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   Printer, Edit, History, Users, User, Gift, UploadCloud,
-  Trophy, ShieldCheck, LayoutDashboard, Award,
+  Trophy, ShieldCheck, LayoutDashboard, Award, Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -59,6 +59,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { Helper } from '@/components/ui/helper';
 
 function AdminDashboardSkeleton() {
   return (
@@ -181,7 +182,7 @@ function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
 function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
-    addClass, deleteClass, deleteCategory, addCategory, addCoupons,
+    addClass, deleteClass, deleteCategory, addCategory,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
     deleteAchievement, awardPoints,
@@ -189,9 +190,8 @@ function AdminDashboardInner() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const playSound = useArcadeSound();
-  const backupFileInputRef = useRef<HTMLInputElement>(null);
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
-  const { settings, updateSettings } = useSettings();
+  const { settings } = useSettings();
 
   // Data fetching hooks
   const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
@@ -232,14 +232,6 @@ function AdminDashboardInner() {
   const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
 
-  const [printTeacher, setPrintTeacher] = useState('Admin');
-  const [printCategoryId, setPrintCategoryId] = useState('');
-  const [printValue, setPrintValue] = useState('10');
-
-  const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
-  const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
-  const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
-
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
 
   const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading || achievementsLoading;
@@ -258,19 +250,12 @@ function AdminDashboardInner() {
   const getClassName = (classId: string) => {
     return classes?.find((c) => c.id === classId)?.name || 'Unassigned';
   };
-
-  useEffect(() => {
-    if (categories && categories.length > 0 && !printCategoryId) {
-      setPrintCategoryId(categories[0].id);
-    }
-  }, [categories, printCategoryId]);
-
-  useEffect(() => {
-    const category = categories?.find(c => c.id === printCategoryId);
-    if (category) {
-      setPrintValue(category.points.toString());
-    }
-  }, [printCategoryId, categories]);
+  
+  const getStudentName = (studentId?: string) => {
+    if (!studentId) return 'N/A';
+    const student = students?.find(s => s.id === studentId);
+    return student ? `${student.firstName} ${student.lastName}` : `ID: ${studentId}`;
+  };
 
   if (isDbLoading) {
     return <AdminDashboardSkeleton />;
@@ -335,27 +320,6 @@ function AdminDashboardInner() {
     setNewCategoryPoints('10');
   };
 
-  const handleAddPrintCategory = async () => {
-    if (!newPrintCategoryName || !newPrintCategoryPoints) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
-      return;
-    }
-    const points = parseInt(newPrintCategoryPoints);
-    if (isNaN(points) || points <= 0) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
-      return;
-    }
-    const newCategory = await addCategory({ name: newPrintCategoryName, points });
-    if (newCategory) {
-      setPrintCategoryId(newCategory.id);
-    }
-    setNewPrintCategoryName('');
-    setNewPrintCategoryPoints('10');
-    setIsPrintCategoryDialogOpen(false);
-  };
-
   const handleOpenStudentModal = (student: Student | null) => {
     setEditingStudent(student);
     setIsStudentModalOpen(true);
@@ -373,35 +337,6 @@ function AdminDashboardInner() {
 
   const handleOpenActivityModal = (student: Student) => {
     setActivityStudent(student);
-  };
-
-  const handlePrintSheet = async () => {
-    const value = parseInt(printValue);
-    if (!value || value <= 0) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Invalid Value', description: 'Coupon value must be a positive number.' });
-      return;
-    }
-    const selectedCategory = categories?.find(c => c.id === printCategoryId);
-    if (!selectedCategory) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Category Not Found', description: 'Please select a valid category.' });
-      return;
-    }
-    const couponsToCreate = Array.from({ length: 24 }, () => {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      return {
-        id: code,
-        code,
-        value: value,
-        category: selectedCategory.name,
-        teacher: printTeacher,
-        used: false,
-        createdAt: Date.now(),
-      };
-    });
-    await addCoupons(couponsToCreate);
-    setCouponsToPrint(couponsToCreate);
   };
 
   const handleCreateBackup = async () => {
@@ -446,30 +381,22 @@ function AdminDashboardInner() {
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
   const totalPointsAwarded = coupons?.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0) || 0;
 
-  const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
-  const previewCoupon: Coupon = {
-    id: 'PREVIEW',
-    code: 'PREVIEW',
-    value: parseInt(printValue) || 0,
-    category: selectedCategoryForPreview?.name || 'Category',
-    teacher: printTeacher,
-    used: false,
-    createdAt: Date.now(),
-  };
-
   const handleStudentCsvUpload = () => {
     studentCsvInputRef.current?.click();
   }
 
+  const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
+  const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt || 0) - (a.usedAt || 0)) || [];
+
   return (
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
-        <div className="space-y-0.5">
+        <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
             <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
             <p className="text-muted-foreground">
                 Manage students, classes, prizes, and system settings.
             </p>
-        </div>
+        </Helper>
         <Tabs defaultValue="students" className="space-y-6">
           <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto">
@@ -497,7 +424,7 @@ function AdminDashboardInner() {
                 </TabsTrigger>
               )}
               <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Printer className="w-4 h-4" /> Coupons
+                <Ticket className="w-4 h-4" /> Coupons
               </TabsTrigger>
               <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Database className="w-4 h-4" /> Backups
@@ -508,7 +435,9 @@ function AdminDashboardInner() {
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-chart-1 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-chart-1" /> Classes</CardTitle>
+                <Helper content="Manage class groups for your school.">
+                    <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-chart-1" /> Classes</CardTitle>
+                </Helper>
                 <CardDescription>Manage class groups for your school.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -536,7 +465,9 @@ function AdminDashboardInner() {
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-purple-500 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-purple-500" /> Teachers</CardTitle>
+                <Helper content="Add and manage teachers who can issue coupons.">
+                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-purple-500" /> Teachers</CardTitle>
+                </Helper>
                 <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -564,7 +495,9 @@ function AdminDashboardInner() {
           <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-chart-2 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-chart-2" /> Reward Categories</CardTitle>
+                <Helper content="Define categories and default point values for coupons.">
+                    <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-chart-2" /> Reward Categories</CardTitle>
+                </Helper>
                 <CardDescription>Define categories and point values for coupons.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -598,12 +531,12 @@ function AdminDashboardInner() {
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-primary shadow-md overflow-hidden">
               <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Users className="text-primary w-6 h-6" /> Students
-                  </CardTitle>
-                  <CardDescription>Manage your enrollments and view student activity.</CardDescription>
-                </div>
+                <Helper content="Manage your enrollments, view student activity, award points, and print ID cards.">
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                        <Users className="text-primary w-6 h-6" /> Students
+                    </CardTitle>
+                </Helper>
+                <CardDescription>Manage your enrollments and view student activity.</CardDescription>
                 <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-full px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
                   <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
@@ -650,12 +583,12 @@ function AdminDashboardInner() {
           <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-chart-3 shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gift className="text-chart-3 w-5 h-5" /> Prize Shop
-                  </CardTitle>
-                  <CardDescription>Items available for student redemption.</CardDescription>
-                </div>
+                <Helper content="Manage items available for student redemption in the Prize Shop.">
+                    <CardTitle className="flex items-center gap-2">
+                        <Gift className="text-chart-3 w-5 h-5" /> Prize Shop
+                    </CardTitle>
+                </Helper>
+                <CardDescription>Items available for student redemption.</CardDescription>
                 <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-full px-6 shadow-md shadow-chart-3/20">
                   <Plus className="mr-2 h-4 w-4" /> Add Prize
                 </Button>
@@ -692,12 +625,12 @@ function AdminDashboardInner() {
             <TabsContent value="achievements" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <Card className="border-t-4 border-amber-500 shadow-md">
                 <CardHeader className="flex flex-row justify-between items-center py-6">
-                  <div>
+                  <Helper content="Create and manage badges that students can earn by reaching specific milestones, like earning a certain number of points.">
                     <CardTitle className="flex items-center gap-2">
-                      <Trophy className="text-amber-500 w-5 h-5" /> Achievements
+                        <Trophy className="text-amber-500 w-5 h-5" /> Achievements
                     </CardTitle>
-                    <CardDescription>Badges for student milestones.</CardDescription>
-                  </div>
+                  </Helper>
+                  <CardDescription>Badges for student milestones.</CardDescription>
                   <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-full px-4 border-amber-200 hover:bg-amber-50">
                     <Plus className="mr-2 h-4 w-4" /> Add Achievement
                   </Button>
@@ -737,59 +670,70 @@ function AdminDashboardInner() {
           )}
 
           <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-primary shadow-md overflow-hidden bg-primary/5">
-              <CardHeader className="py-6">
-                <CardTitle className="flex items-center gap-2">
-                  <Printer className="text-primary w-5 h-5" /> Coupon Generation
-                </CardTitle>
-                <CardDescription>Batch create and print physical point rewards.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col lg:flex-row gap-8 pb-10">
-                <div className="flex-grow space-y-6 max-w-xl">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="font-bold opacity-70">Issued By</Label>
-                      <Select value={printTeacher} onValueChange={setPrintTeacher}>
-                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="Admin">Admin</SelectItem>
-                          {teachers?.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+            <Card className="border-t-4 border-blue-500 shadow-md">
+                <CardHeader>
+                    <Helper content="This section shows all coupons that have been generated in the system, separated into those that are still available and those that have already been redeemed by a student.">
+                        <CardTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-blue-500" /> Coupon Management</CardTitle>
+                    </Helper>
+                    <CardDescription>View all available and redeemed coupons in the system.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">Available Coupons ({availableCoupons.length})</h3>
+                        <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
+                            {availableCoupons.length > 0 ? (
+                                <ul className="p-3 space-y-2">
+                                    {availableCoupons.map(coupon => (
+                                        <li key={coupon.id} className="p-3 bg-card rounded-lg border">
+                                            <div className="flex justify-between items-center font-bold">
+                                                <span className="font-code text-primary">{coupon.code}</span>
+                                                <span>{coupon.value} pts</span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                <p>{coupon.category} / by {coupon.teacher}</p>
+                                                <p>Created on {new Date(coupon.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center text-sm text-muted-foreground p-8">No available coupons.</p>
+                            )}
+                        </ScrollArea>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="font-bold opacity-70">Reward Category</Label>
-                      <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                        <SelectTrigger className="rounded-xl h-12 bg-background"><SelectValue /></SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          {categories?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.points}p)</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">Redeemed Coupons ({redeemedCoupons.length})</h3>
+                        <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
+                            {redeemedCoupons.length > 0 ? (
+                                <ul className="p-3 space-y-2">
+                                    {redeemedCoupons.map(coupon => (
+                                        <li key={coupon.id} className="p-3 bg-card rounded-lg border opacity-70">
+                                            <div className="flex justify-between items-center font-bold">
+                                                <span className="font-code">{coupon.code}</span>
+                                                <span>{coupon.value} pts</span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                <p>{coupon.category} / by {coupon.teacher}</p>
+                                                <p>Used by {getStudentName(coupon.usedBy)} on {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-center text-sm text-muted-foreground p-8">No redeemed coupons.</p>
+                            )}
+                        </ScrollArea>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold opacity-70">Custom Point Value</Label>
-                    <Input type="number" value={printValue} onChange={e => setPrintValue(e.target.value)} className="rounded-xl h-12 bg-background font-bold text-lg" />
-                  </div>
-                  <Button onClick={handlePrintSheet} className="w-full font-bold h-14 rounded-2xl text-lg shadow-lg shadow-primary/20 hover:scale-[1.01] transition-transform">
-                    <Printer className="mr-3 w-6 h-6" /> Print Sheet (24 Coupons)
-                  </Button>
-                </div>
-                <div className="w-full lg:w-80 flex flex-col items-center justify-center p-8 border border-dashed border-primary/40 rounded-3xl bg-background/50 backdrop-blur-sm self-center">
-                  <p className="text-xs font-bold text-primary mb-6 uppercase tracking-widest bg-primary/10 px-4 py-1.5 rounded-full">DESIGN PREVIEW</p>
-                  <div className="hover:scale-105 transition-transform duration-500">
-                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
-                  </div>
-                  <p className="mt-6 text-[10px] text-muted-foreground italic text-center max-w-[200px]">This is how each individual coupon will look when printed.</p>
-                </div>
-              </CardContent>
+                </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-slate-800 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /> System Stats</CardTitle>
+                <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
+                    <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /> System Stats</CardTitle>
+                </Helper>
                 <CardDescription>Overview of your school data at a glance.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
@@ -813,12 +757,12 @@ function AdminDashboardInner() {
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-chart-4 shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="text-chart-4 w-5 h-5" /> System Backups
-                  </CardTitle>
-                  <CardDescription>Create and restore data snapshots.</CardDescription>
-                </div>
+                <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
+                    <CardTitle className="flex items-center gap-2">
+                        <Database className="text-chart-4 w-5 h-5" /> System Backups
+                    </CardTitle>
+                </Helper>
+                <CardDescription>Create and restore data snapshots.</CardDescription>
                 <Button onClick={handleCreateBackup} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
               </CardHeader>
               <CardContent className="p-6">
