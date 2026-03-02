@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -281,17 +282,19 @@ export default function HallOfFamePage() {
                     <div className="absolute bottom-[0%] right-[-20%] w-[60%] h-[50%] bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
 
                     {/* Dark header */}
-                    <div className="flex items-center justify-between mb-8 relative">
-                        <div className="flex items-center gap-4">
-                            <Trophy className="w-10 h-10 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.7)]" />
-                            <div>
-                                <h1 className="text-3xl font-black text-white tracking-tighter">Hall of Fame</h1>
-                                <p className="text-sm text-white/50 font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                    <div className="bg-slate-900/70 backdrop-blur-lg border border-white/10 rounded-2xl p-4 md:p-6 mb-8 relative shadow-lg">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <Trophy className="w-10 h-10 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.7)]" />
+                                <div>
+                                    <h1 className="text-3xl font-black text-white tracking-tighter">Hall of Fame</h1>
+                                    <p className="text-sm text-white/50 font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                                </div>
                             </div>
+                            <Button asChild variant="ghost" size="sm" className="text-white/50 hover:text-white hover:bg-white/10">
+                                <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
+                            </Button>
                         </div>
-                        <Button asChild variant="ghost" size="sm" className="text-white/50 hover:text-white hover:bg-white/10">
-                            <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
-                        </Button>
                     </div>
 
                     {/* Podium */}

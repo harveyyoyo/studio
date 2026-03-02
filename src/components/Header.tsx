@@ -143,7 +143,7 @@ export default function Header() {
   return (
     <header className={cn(
       "no-print w-full max-w-6xl rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center relative overflow-hidden",
-      isGraphic ? 'bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
+      isGraphic ? 'bg-slate-900/70 backdrop-blur-lg border border-white/10 shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
     )}>
 
       <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest italic select-none hidden sm:block opacity-40">
