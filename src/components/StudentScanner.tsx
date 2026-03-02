@@ -180,7 +180,7 @@ export function StudentScanner({
                                     value={nfcId}
                                     onChange={(e) => setNfcId(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleLookup(nfcId)}
-                                    placeholder="e.g. 100"
+                                    placeholder="try 100 as sample"
                                     autoFocus
                                 />
                                 <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
