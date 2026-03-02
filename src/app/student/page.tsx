@@ -277,6 +277,9 @@ function StudentDashboardInner({
                         Redeem
                       </Button>
                     </div>
+                     <p className="text-xs text-center text-muted-foreground pt-2">
+                        Hint: Available coupon codes can be viewed in the Admin panel.
+                    </p>
                   </div>
                 ) : (
                   <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
