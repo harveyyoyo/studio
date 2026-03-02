@@ -158,14 +158,10 @@ function StudentDashboardInner({
   }, [hookHasPermission]);
 
   const resetTimer = useCallback(() => {
-    if (!isLocked) {
-      setLogoutTimer(10);
-    }
-  }, [isLocked]);
+    setLogoutTimer(10);
+  }, []);
 
   useEffect(() => {
-    if (isLocked) return;
-
     if (logoutTimer <= 0) {
       onDone();
       return;
@@ -175,7 +171,7 @@ function StudentDashboardInner({
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone, isLocked]);
+  }, [logoutTimer, onDone]);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
