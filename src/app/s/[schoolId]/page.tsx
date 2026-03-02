@@ -138,13 +138,10 @@ export default function SchoolLoginPage() {
                 )}>
 
                     <div className="text-center mb-8">
-                        <p className={cn("text-xs font-bold uppercase tracking-wider mb-2", isGraphic ? 'text-muted-foreground' : 'text-slate-400')}>
-                            Welcome to
-                        </p>
                         <h2 className={cn("text-2xl font-black tracking-tight mb-1", isGraphic ? 'graphic-text-glow' : 'text-slate-800')}>
-                            {schoolName}
+                            School Passcode
                         </h2>
-                        <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                        <p className={cn("text-sm text-muted-foreground", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
                             Enter your passcode to continue.
                         </p>
                     </div>

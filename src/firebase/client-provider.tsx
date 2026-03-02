@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { type ReactNode } from 'react';
+import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
 
@@ -10,9 +10,9 @@ interface FirebaseClientProviderProps {
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  // Initialize Firebase. useMemo is removed to allow server-side pre-rendering.
-  // initializeFirebase is idempotent, so it's safe to call.
-  const firebaseServices = initializeFirebase();
+  // useMemo ensures this only runs once on the client, preventing re-initializations
+  // that can cause hydration errors.
+  const firebaseServices = useMemo(() => initializeFirebase(), []);
 
   return (
     <FirebaseProvider
