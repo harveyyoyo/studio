@@ -1,4 +1,3 @@
-
 'use client';
 // Force rebuild for hydration sync
 import { useState, useEffect } from 'react';
@@ -45,10 +44,10 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  const isSchoolLoginPage = pathname.startsWith('/s/');
+  const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isGraphic = settings.graphicMode === 'graphics';
 
-  if (isSchoolLoginPage) {
+  if (isLoginPage) {
     return (
       <header className={cn(
         "no-print w-full max-w-6xl p-4 md:p-6 mb-6 flex justify-center items-center relative"
