@@ -24,7 +24,7 @@ const nextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_VERSION: 'v1.0.6',
+    NEXT_PUBLIC_VERSION: 'beta',
   },
 };
 
