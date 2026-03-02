@@ -6,12 +6,14 @@ import { useAppContext } from '@/components/AppProvider';
 import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Star, Gift, ArrowRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
+    const playSound = useArcadeSound();
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -79,7 +81,7 @@ export default function PortalPage() {
                     const gc = colorMap[p.color];
 
                     return (
-                        <Link key={p.href} href={p.href} className="block group">
+                        <Link key={p.href} href={p.href} className="block group" onClick={() => playSound('click')}>
                         <Card className={`h-full min-h-[200px] sm:min-h-[220px] border-t-4 transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative ${isGraphic
                                 ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
                                 : `bg-white border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
