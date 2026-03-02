@@ -239,8 +239,7 @@ function StudentDashboardInner({
                     "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
                     isKioskLocked
                         ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",
-                    !isKioskLocked && "animate-pulse"
+                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
                 )}>
                     <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
                 </div>
@@ -479,6 +478,24 @@ export default function StudentLoginPage() {
       };
     }
 }, [isKioskLocked, setIsLogoutDialogOpen]);
+
+useEffect(() => {
+    if (isKioskLocked) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        // This is the standard way to trigger the confirmation prompt.
+        // Modern browsers will show their own generic message, not this custom one.
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to exit? The kiosk is locked.';
+        return e.returnValue;
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [isKioskLocked]);
 
 
   if (!isInitialized || loginState !== 'school') {

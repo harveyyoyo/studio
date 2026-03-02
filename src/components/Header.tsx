@@ -80,7 +80,7 @@ export default function Header() {
     return (
       <>
         <header className={`no-print w-full flex justify-between items-center relative z-20 mb-4 ${isGraphicApp ? 'text-white' : 'text-foreground'}`}>
-            <Link href="/" className="flex items-center gap-3 relative z-10 group">
+            <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
                 <div className={`overflow-hidden rounded-lg shadow-md ${isGraphicApp ? 'ring-2 ring-primary/20' : ''}`}>
                     <Logo className="w-8 h-8" />
                 </div>
@@ -131,7 +131,7 @@ export default function Header() {
         {schoolId?.replace(/_/g, '') || 'SCHOOLABC'}
       </div>
 
-      <Link href="/" className="flex items-center gap-3 relative z-10 group">
+      <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
         <div className={`overflow-hidden rounded-lg shadow-md group-hover:scale-110 transition-transform ${isGraphic ? 'ring-4 ring-primary/20' : ''}`}>
           <Logo className="w-10 h-10" />
         </div>
