@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,7 @@ export default function PortalPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-background text-muted-foreground'}`}>
+            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
                 <p className="font-medium">Just a moment…</p>
                 <p className="text-sm">Loading your school.</p>
             </div>
@@ -40,11 +41,11 @@ export default function PortalPage() {
     ];
 
     const colorMap: Record<string, { bg: string; border: string; glow: string; text: string; iconBg: string }> = {
-        'chart-1': { bg: 'from-blue-600/20 to-blue-900/40', border: 'border-blue-500/40', glow: 'shadow-blue-500/20', text: 'text-blue-400', iconBg: 'bg-blue-100' },
-        'chart-2': { bg: 'from-purple-600/20 to-purple-900/40', border: 'border-purple-500/40', glow: 'shadow-purple-500/20', text: 'text-purple-400', iconBg: 'bg-purple-100' },
-        'chart-3': { bg: 'from-amber-600/20 to-amber-900/40', border: 'border-amber-400/40', glow: 'shadow-amber-400/20', text: 'text-amber-400', iconBg: 'bg-amber-100' },
-        'destructive': { bg: 'from-red-600/20 to-red-900/40', border: 'border-red-500/40', glow: 'shadow-red-500/20', text: 'text-red-400', iconBg: 'bg-red-100' },
-        'chart-5': { bg: 'from-orange-600/20 to-orange-900/40', border: 'border-orange-400/40', glow: 'shadow-orange-400/20', text: 'text-orange-400', iconBg: 'bg-orange-100' },
+        'chart-1': { bg: 'from-chart-1/20 to-chart-1/5', border: 'border-chart-1/40', glow: 'shadow-chart-1/20', text: 'text-chart-1', iconBg: 'bg-blue-100' },
+        'chart-2': { bg: 'from-chart-2/20 to-chart-2/5', border: 'border-chart-2/40', glow: 'shadow-chart-2/20', text: 'text-chart-2', iconBg: 'bg-purple-100' },
+        'chart-3': { bg: 'from-chart-3/20 to-chart-3/5', border: 'border-chart-3/40', glow: 'shadow-chart-3/20', text: 'text-chart-3', iconBg: 'bg-amber-100' },
+        'destructive': { bg: 'from-destructive/20 to-destructive/5', border: 'border-destructive/40', glow: 'shadow-destructive/20', text: 'text-destructive', iconBg: 'bg-red-100' },
+        'chart-5': { bg: 'from-chart-5/20 to-chart-5/5', border: 'border-chart-5/40', glow: 'shadow-chart-5/20', text: 'text-chart-5', iconBg: 'bg-orange-100' },
     };
     const borderTopClass: Record<string, string> = {
         'chart-1': 'border-t-blue-500',
@@ -64,16 +65,15 @@ export default function PortalPage() {
     return (
         <div className={cn(
             "min-h-screen transition-colors duration-500 relative overflow-hidden font-sans",
-            settings.displayMode === 'app' ? 'pb-24' : 'pb-8',
-            isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+            settings.displayMode === 'app' ? 'pb-24' : 'pb-8'
         )}>
 
             {/* Graphic Decoration */}
             {isGraphic && (
                 <>
-                    <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[30%] bg-blue-600/15 blur-[100px] rounded-full pointer-events-none" />
-                    <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[30%] bg-purple-600/15 blur-[100px] rounded-full pointer-events-none" />
-                    <div className="absolute top-[30%] right-[10%] w-[30%] h-[20%] bg-amber-500/10 blur-[80px] rounded-full pointer-events-none" />
+                    <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[30%] bg-chart-1/15 dark:bg-chart-1/15 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[30%] bg-chart-5/15 dark:bg-chart-5/15 blur-[100px] rounded-full pointer-events-none" />
+                    <div className="absolute top-[30%] right-[10%] w-[30%] h-[20%] bg-chart-3/10 dark:bg-chart-3/10 blur-[80px] rounded-full pointer-events-none" />
                 </>
             )}
 
@@ -81,8 +81,8 @@ export default function PortalPage() {
                 
                 {isGraphic && (
                     <div className="text-center mb-8">
-                        <h1 className="text-4xl font-black tracking-tighter text-white uppercase graphic-text-glow">Select Portal</h1>
-                        <p className="text-sm text-white/50 font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                        <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
+                        <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
                     </div>
                 )}
 
@@ -110,27 +110,27 @@ export default function PortalPage() {
                                     <CardHeader className="space-y-3 pt-5 pb-5">
                                         <div className={cn(
                                             "w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px]",
-                                            isGraphic ? 'bg-white/10 border border-white/10' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
+                                            isGraphic ? 'bg-foreground/5 border border-border' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
                                         )}>
                                             <Icon className={cn("w-8 h-8", isGraphic ? gc.text : (iconTextClassic[p.color] ?? ''))} />
                                         </div>
                                         <div>
                                             <CardTitle className={cn(
                                                 "text-lg font-black tracking-tight",
-                                                isGraphic ? 'text-white' : 'text-slate-800'
+                                                isGraphic ? 'text-foreground' : 'text-slate-800'
                                             )}>
                                                 {p.label}
                                             </CardTitle>
                                             <CardDescription className={cn(
                                                 "text-xs font-medium mt-1 leading-relaxed",
-                                                isGraphic ? 'text-white/50' : 'text-slate-500'
+                                                isGraphic ? 'text-muted-foreground' : 'text-slate-500'
                                             )}>
                                                 {p.desc}
                                             </CardDescription>
                                         </div>
                                     </CardHeader>
 
-                                    <div className={cn("absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100", isGraphic ? 'text-white/30' : 'text-slate-300')}>
+                                    <div className={cn("absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100", isGraphic ? 'text-muted-foreground' : 'text-slate-300')}>
                                         <ArrowRight className="w-5 h-5" />
                                     </div>
                                 </Card>

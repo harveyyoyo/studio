@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
     Dialog,
@@ -103,8 +104,8 @@ export function SettingsModal() {
                                             <Monitor className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-slate-800 dark:text-white">Arcade Mode</h4>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Gamified arcade-style UI</p>
+                                            <h4 className="font-bold text-foreground">Graphic Mode</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Gamified arcade-style UI</p>
                                         </div>
                                     </div>
                                     <Switch
@@ -123,8 +124,8 @@ export function SettingsModal() {
                                             <Palette className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-slate-800 dark:text-white">Color Scheme</h4>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Classic mode colors</p>
+                                            <h4 className="font-bold text-foreground">Color Scheme</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Classic mode colors</p>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
@@ -150,8 +151,8 @@ export function SettingsModal() {
                                             {settings.darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-slate-800 dark:text-white">Dark Mode</h4>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Immersive dark interface</p>
+                                            <h4 className="font-bold text-foreground">Dark Mode</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Immersive dark interface</p>
                                         </div>
                                     </div>
                                     <Switch
@@ -165,13 +166,13 @@ export function SettingsModal() {
                             {/* Display Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center gap-3 mb-3">
-                                    {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-slate-600 dark:text-slate-400" /> : <Monitor className="w-5 h-5 text-slate-600 dark:text-slate-400" />}
+                                    {settings.displayMode === 'app' ? <Smartphone className="w-5 h-5 text-muted-foreground" /> : <Monitor className="w-5 h-5 text-muted-foreground" />}
                                     <div>
-                                        <h4 className="font-bold text-slate-800 dark:text-white">Display Mode</h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">UI layout style</p>
+                                        <h4 className="font-bold text-foreground">Display Mode</h4>
+                                        <p className="text-xs text-muted-foreground mt-0.5">UI layout style</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center gap-2 bg-background p-1 rounded-lg border border-border">
                                     <button
                                         onClick={() => handleToggle('displayMode', 'web')}
                                         className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold transition-all ${settings.displayMode === 'web' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}

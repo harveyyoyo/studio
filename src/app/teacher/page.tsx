@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -146,22 +147,22 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
     return (
         <TooltipProvider>
-            <div className={`min-h-screen transition-colors duration-500 ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} ${isGraphic ? 'bg-slate-900 text-white' : 'bg-background text-foreground'}`}>
+            <div className={`min-h-screen transition-colors duration-500 ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'}`}>
 
                 {/* Unified Header */}
-                <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-[#0c1a3a] border-b border-indigo-500/20 shadow-lg' : 'bg-white border-b'}`}>
+                <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-background/10 border-b border-border/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div className="flex items-center gap-4">
-                            <Button variant="ghost" asChild className={isGraphic ? 'text-white/60 hover:text-white hover:bg-white/5' : ''}>
+                            <Button variant="ghost" asChild className={isGraphic ? 'text-muted-foreground hover:text-foreground hover:bg-accent' : ''}>
                                 <Link href="/portal"><ArrowLeft className="w-5 h-5 mr-2" /> Back to portal</Link>
                             </Button>
                             <div>
-                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Print Coupons</h1>
-                                <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-amber-400' : 'text-primary'}`}>{teacherName}</p>
-                                <p className={`text-xs mt-0.5 ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
+                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Print Coupons</h1>
+                                <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-3' : 'text-primary'}`}>{teacherName}</p>
+                                <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
                             </div>
                         </div>
-                        <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-white/10 text-white/60 hover:text-white hover:bg-white/5' : ''}`}>
+                        <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-border text-muted-foreground hover:text-foreground hover:bg-accent' : ''}`}>
                             <LogOut className="w-4 h-4" /> Switch Teacher
                         </Button>
                     </div>
@@ -172,7 +173,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
                         {/* Coupon Printer Section */}
                         <Card className={`border-t-4 transition-all ${isGraphic
-                            ? 'bg-slate-800/50 backdrop-blur-md border-primary shadow-2xl'
+                            ? 'bg-card/50 backdrop-blur-md border-primary shadow-2xl'
                             : 'bg-white border-primary shadow-lg'
                             }`}>
                             <CardHeader>
@@ -180,7 +181,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                     <Printer className={isGraphic ? 'text-primary' : 'text-primary'} />
                                     Coupon Printer
                                 </CardTitle>
-                                <CardDescription className={isGraphic ? 'text-slate-400' : ''}>
+                                <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
                                     Generate a sheet of 24 unique QR codes.
                                 </CardDescription>
                             </CardHeader>
@@ -189,10 +190,10 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                     <div className="space-y-6">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Category</Label>
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Category</Label>
                                                 <div className="flex items-center gap-2">
                                                     <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                                                        <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-white/5 border-white/10 text-white' : ''}`}>
+                                                        <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : ''}`}>
                                                             <SelectValue placeholder="Select..." />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -201,22 +202,22 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                                     </Select>
                                                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
                                                         <DialogTrigger asChild>
-                                                            <Button variant="outline" size="icon" className={`h-12 w-12 rounded-xl ${isGraphic ? 'bg-white/5 border-white/10' : ''}`}>
+                                                            <Button variant="outline" size="icon" className={`h-12 w-12 rounded-xl ${isGraphic ? 'bg-foreground/5 border-border' : ''}`}>
                                                                 <Plus className="h-4 w-4" />
                                                             </Button>
                                                         </DialogTrigger>
-                                                        <DialogContent className={isGraphic ? 'bg-slate-900 text-white border-white/10' : ''}>
+                                                        <DialogContent className={isGraphic ? 'bg-background text-foreground border-border' : ''}>
                                                             <DialogHeader>
                                                                 <DialogTitle>Add Category</DialogTitle>
                                                             </DialogHeader>
                                                             <div className="grid gap-4 py-4">
                                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                                     <Label htmlFor="name" className="text-right">Name</Label>
-                                                                    <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-white/5 border-white/10' : ''}`} />
+                                                                    <Input id="name" value={newPrintCategoryName} onChange={e => setNewPrintCategoryName(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-foreground/5 border-border' : ''}`} />
                                                                 </div>
                                                                 <div className="grid grid-cols-4 items-center gap-4">
                                                                     <Label htmlFor="pts" className="text-right">Points</Label>
-                                                                    <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-white/5 border-white/10' : ''}`} />
+                                                                    <Input id="pts" type="number" value={newPrintCategoryPoints} onChange={e => setNewPrintCategoryPoints(e.target.value)} className={`col-span-3 ${isGraphic ? 'bg-foreground/5 border-border' : ''}`} />
                                                                 </div>
                                                             </div>
                                                             <DialogFooter>
@@ -227,19 +228,19 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Points Value</Label>
-                                                <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-white/5 border-white/10 text-white' : 'bg-slate-50'}`} />
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Points Value</Label>
+                                                <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'bg-slate-50'}`} />
                                             </div>
                                         </div>
 
-                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-slate-800 hover:bg-slate-700'
+                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-primary-foreground ${isGraphic ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20' : 'bg-slate-800 hover:bg-slate-700'
                                             }`}>
                                             <Printer className="w-5 h-5 mr-3" /> Generate Sheet
                                         </Button>
 
-                                        <div className="flex flex-col items-center pt-6 border-t border-dashed border-slate-700/50">
+                                        <div className="flex flex-col items-center pt-6 border-t border-dashed border-border/50">
                                             <p className={`text-[10px] font-black uppercase tracking-widest mb-4 opacity-40`}>Preview</p>
-                                            <div className="w-full max-w-[220px] shadow-2xl rounded-lg overflow-hidden border border-white/5">
+                                            <div className="w-full max-w-[220px] shadow-2xl rounded-lg overflow-hidden border border-border/50">
                                                 <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
                                             </div>
                                         </div>
@@ -301,7 +302,7 @@ export default function TeacherPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-[#0c133a] text-cyan-400' : 'bg-background text-muted-foreground'}`}>
+            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
                 Loading...
             </div>
         );
@@ -313,27 +314,27 @@ export default function TeacherPage() {
 
     return (
         <ErrorBoundary name="TeacherPage">
-            <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-500 py-10 px-4 ${isGraphic ? 'bg-gradient-to-br from-indigo-950 to-slate-900 text-white' : 'bg-slate-100'}`}>
+            <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-500 py-10 px-4 ${isGraphic ? 'bg-gradient-to-br from-indigo-950/20 to-slate-900/20' : 'bg-slate-100'}`}>
                 <Card className={`w-full max-w-md border-t-8 transition-all ${isGraphic
-                    ? 'bg-slate-900/80 backdrop-blur-xl border-indigo-500 shadow-[0_0_50px_rgba(99,102,241,0.2)]'
+                    ? 'bg-card/80 backdrop-blur-xl border-blue-500 shadow-[0_0_50px_hsl(var(--chart-1)/0.2)]'
                     : 'bg-white border-chart-1 shadow-2xl'
                     }`}>
                     <CardHeader className="text-center space-y-4">
-                        <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 ${isGraphic ? 'bg-primary text-white' : 'bg-slate-800 text-white'
+                        <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 ${isGraphic ? 'bg-primary text-primary-foreground' : 'bg-slate-800 text-white'
                             }`}>
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>Print Coupons</CardTitle>
-                            <CardDescription className={isGraphic ? 'text-slate-400' : ''}>Select your name to start granting rewards.</CardDescription>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Print Coupons</CardTitle>
+                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Select your name to start granting rewards.</CardDescription>
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {teachersLoading ? <Skeleton className="h-10 w-full" /> : (
                             <div className="space-y-2">
-                                <Label htmlFor="teacher-name" className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-slate-400' : 'text-slate-500'}`}>Select Your Name</Label>
+                                <Label htmlFor="teacher-name" className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Select Your Name</Label>
                                 <Select value={selectedLoginName} onValueChange={setSelectedLoginName}>
-                                    <SelectTrigger id="teacher-name" className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-white/5 border-white/10' : 'bg-slate-50'}`}>
+                                    <SelectTrigger id="teacher-name" className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -344,13 +345,13 @@ export default function TeacherPage() {
                             </div>
                         )}
 
-                        <Button onClick={handleLogin} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
+                        <Button onClick={handleLogin} className={`w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground ${isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700'
                             }`} disabled={teachersLoading}>
                             <LogIn className="mr-3 w-6 h-6" /> Login
                         </Button>
 
-                        <div className="text-center pt-4 border-t border-dashed border-slate-700/50">
-                            <Link href="/portal" className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isGraphic ? 'text-white/40 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                        <div className="text-center pt-4 border-t border-dashed border-border/50">
+                            <Link href="/portal" className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isGraphic ? 'text-muted-foreground hover:text-foreground' : 'text-slate-500 hover:text-slate-800'
                                 }`}>
                                 <ArrowLeft className="w-3 h-3" /> Back to Portal Selection
                             </Link>

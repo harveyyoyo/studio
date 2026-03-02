@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ export default function LoginPage() {
   const router = useRouter();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
-  const isClassic = settings.graphicMode === 'classic';
+  const isGraphic = settings.graphicMode === 'graphics';
 
   const handleSchoolLogin = async () => {
     if (!schoolId || !schoolPasscode) {
@@ -86,28 +87,25 @@ export default function LoginPage() {
     }
   };
 
-  const isGraphic = settings.graphicMode === 'graphics';
-
   return (
     <div className={cn(
       "min-h-screen relative overflow-hidden font-sans flex flex-col items-center transition-colors duration-500",
-      settings.displayMode === 'app' ? 'pb-24' : 'pb-8',
-      isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+      settings.displayMode === 'app' ? 'pb-24' : 'pb-8'
     )}>
 
       {/* Background Decor - Only for Graphic Mode */}
       {isGraphic && (
         <>
           <div className="absolute inset-0 z-0 opacity-20">
-            <Sparkles className="absolute top-10 left-10 w-8 h-8 text-cyan-300 animate-float" style={{ animationDelay: '0s' }} />
-            <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-white/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
-            <Sparkles className="absolute top-40 right-16 w-6 h-6 text-purple-300 animate-float" style={{ animationDelay: '2s' }} />
-            <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-white/50 rotate-12 animate-float" style={{ animationDelay: '3s' }}/>
-            <Sparkles className="absolute bottom-40 left-12 w-10 h-10 text-pink-300 animate-float" style={{ animationDelay: '4s' }}/>
-            <Gamepad2 className="absolute bottom-32 right-12 w-12 h-12 text-white/50 -rotate-12 animate-float" style={{ animationDelay: '5s' }}/>
-            <Sparkles className="absolute bottom-20 right-24 w-8 h-8 text-yellow-300 animate-float" style={{ animationDelay: '6s' }}/>
+            <Sparkles className="absolute top-10 left-10 w-8 h-8 text-chart-1 animate-float" style={{ animationDelay: '0s' }} />
+            <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
+            <Sparkles className="absolute top-40 right-16 w-6 h-6 text-chart-5 animate-float" style={{ animationDelay: '2s' }} />
+            <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-foreground/50 rotate-12 animate-float" style={{ animationDelay: '3s' }}/>
+            <Sparkles className="absolute bottom-40 left-12 w-10 h-10 text-chart-2 animate-float" style={{ animationDelay: '4s' }}/>
+            <Gamepad2 className="absolute bottom-32 right-12 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '5s' }}/>
+            <Sparkles className="absolute bottom-20 right-24 w-8 h-8 text-chart-3 animate-float" style={{ animationDelay: '6s' }}/>
           </div>
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-indigo-900/30 via-purple-900/30 to-orange-600/30 opacity-30" />
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-chart-1/10 via-chart-5/10 to-chart-3/10" />
         </>
       )}
 
@@ -116,17 +114,17 @@ export default function LoginPage() {
         {/* Login Card - Unified DOM */}
         <div className={cn(
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
-          isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
+          isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
         )}>
 
           <div className="text-center mb-8">
             <h2 className={cn(
               "text-xl font-black tracking-widest uppercase mb-1",
-              isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-slate-800'
+              isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
             )}>
               {isDeveloper ? 'Developer Mode' : 'School Login'}
             </h2>
-            <p className={cn("text-xs font-medium", isGraphic ? 'text-white/80' : 'text-slate-500')}>
+            <p className={cn("text-xs font-medium", isGraphic ? 'text-foreground/80' : 'text-muted-foreground')}>
               {isDeveloper ? 'Enter system dev passcode.' : 'Enter your school ID and passcode to continue.'}
             </p>
           </div>
@@ -134,18 +132,18 @@ export default function LoginPage() {
           {!isDeveloper && (
             <div className={cn(
               "mb-8 p-1.5 rounded-2xl border italic",
-              isGraphic ? 'bg-black/20 border-white/10' : 'bg-slate-100/50 border-slate-100'
+              isGraphic ? 'bg-foreground/10 border-border/50' : 'bg-slate-100/50 border-slate-100'
             )}>
               <p className={cn(
                 "text-center text-[10px] font-black uppercase tracking-tighter mb-2",
-                isGraphic ? 'text-white/60' : 'text-slate-400'
+                isGraphic ? 'text-muted-foreground' : 'text-slate-400'
               )}>Try a demo school</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSampleLogin('schoolabc')}
                   className={cn(
                     "flex-1 font-black text-[10px] uppercase tracking-wider py-3 rounded-xl transition-all active:scale-95 shadow-sm border",
-                    isGraphic ? 'bg-indigo-600 border-indigo-500 hover:bg-indigo-500 text-white' : 'bg-white border-slate-200 text-indigo-600 hover:bg-indigo-50'
+                    isGraphic ? 'bg-blue-600 border-blue-500 hover:bg-blue-500 text-primary-foreground' : 'bg-white border-slate-200 text-indigo-600 hover:bg-indigo-50'
                   )}
                 >
                   School ABC
@@ -154,7 +152,7 @@ export default function LoginPage() {
                   onClick={() => handleSampleLogin('yeshiva')}
                   className={cn(
                     "flex-1 font-black text-[10px] uppercase tracking-wider py-3 rounded-xl transition-all active:scale-95 shadow-sm border",
-                    isGraphic ? 'bg-emerald-600 border-emerald-500 hover:bg-emerald-500 text-white' : 'bg-white border-slate-200 text-emerald-600 hover:bg-emerald-50'
+                    isGraphic ? 'bg-emerald-600 border-emerald-500 hover:bg-emerald-500 text-primary-foreground' : 'bg-white border-slate-200 text-emerald-600 hover:bg-emerald-50'
                   )}
                 >
                   Yeshiva
@@ -166,10 +164,10 @@ export default function LoginPage() {
           <div className="space-y-6">
             {!isDeveloper && (
               <div className="space-y-2">
-                <Label htmlFor="schoolId" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-white/60' : 'text-slate-400')}>School ID</Label>
+                <Label htmlFor="schoolId" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-400')}>School ID</Label>
                 <input
                   id="schoolId"
-                  className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-bold", isGraphic ? 'bg-white/10 border border-white/10 text-white placeholder-white/20 focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 placeholder-slate-300 focus:ring-indigo-100')}
+                  className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-bold", isGraphic ? 'bg-transparent border border-border text-foreground placeholder:text-muted-foreground focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 placeholder-slate-300 focus:ring-indigo-100')}
                   placeholder="e.g. schoolabc"
                   value={schoolId}
                   onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
@@ -178,13 +176,13 @@ export default function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="passcode" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-white/60' : 'text-slate-400')}>
+              <Label htmlFor="passcode" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-400')}>
                 {isDeveloper ? 'Developer Passcode' : 'Access Passcode'}
               </Label>
               <input
                 id="passcode"
                 type="password"
-                className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center", isGraphic ? 'bg-white/10 border border-white/10 text-white focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100')}
+                className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center", isGraphic ? 'bg-transparent border border-border text-foreground focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100')}
                 value={schoolPasscode}
                 onChange={(e) => setSchoolPasscode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && (isDeveloper ? handleDeveloperLogin() : handleSchoolLogin())}
@@ -196,7 +194,7 @@ export default function LoginPage() {
                 onClick={isDeveloper ? handleDeveloperLogin : handleSchoolLogin}
                 className={cn(
                   "w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl",
-                  isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                  isGraphic ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'
                 )}
               >
                 {isDeveloper ? 'Dev Login' : 'Login'}
@@ -204,7 +202,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsDeveloper(!isDeveloper)}
-                className={cn("text-xs font-medium", isGraphic ? 'text-white/50 hover:text-white' : 'text-slate-500 hover:text-slate-700')}
+                className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground hover:text-foreground' : 'text-slate-500 hover:text-slate-700')}
               >
                 {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
               </button>
@@ -217,7 +215,7 @@ export default function LoginPage() {
       {settings.displayMode === 'app' && (
       <div className={cn(
         "fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors",
-        isGraphic ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/10' : 'bg-card border-border shadow-lg'
+        isGraphic ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-card border-border shadow-lg'
       )}>
         <Link href="/" className={cn(
           "flex flex-col items-center gap-0.5 transition-colors min-h-[44px] min-w-[44px] justify-center",

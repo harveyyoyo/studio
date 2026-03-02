@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -127,12 +128,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (!isLoaded) return;
         const root = document.documentElement;
-        if (settings.darkMode || settings.graphicMode === 'graphics') {
+        if (settings.darkMode) {
             root.classList.add('dark');
         } else {
             root.classList.remove('dark');
         }
-    }, [settings.darkMode, settings.graphicMode, isLoaded]);
+    }, [settings.darkMode, isLoaded]);
 
     // Apply color scheme data attribute for classic mode
     useEffect(() => {

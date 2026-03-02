@@ -109,7 +109,7 @@ export default function HallOfFamePage() {
     const others = topStudents?.slice(3) || [];
 
     return (
-        <div className={cn(isClassic ? '' : 'min-h-screen bg-[#0c133a] pb-20')}>
+        <div className={cn(isClassic ? '' : 'pb-20')}>
             {isClassic ? (
                 /* ===== CLASSIC MODE ===== */
                 <div className="space-y-6">
@@ -278,20 +278,19 @@ export default function HallOfFamePage() {
             ) : (
                 /* ===== GRAPHIC MODE ===== */
                 <div className="relative z-10 max-w-4xl mx-auto px-6 pt-10">
-                    <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[50%] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
-                    <div className="absolute bottom-[0%] right-[-20%] w-[60%] h-[50%] bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
+                    <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[50%] bg-chart-5/10 dark:bg-chart-5/10 blur-[120px] rounded-full pointer-events-none" />
+                    <div className="absolute bottom-[0%] right-[-20%] w-[60%] h-[50%] bg-chart-1/10 dark:bg-chart-1/10 blur-[120px] rounded-full pointer-events-none" />
 
-                    {/* Dark header */}
-                    <div className="bg-slate-900/70 backdrop-blur-lg border border-white/10 rounded-2xl p-4 md:p-6 mb-8 relative shadow-lg">
+                    <div className="bg-card/70 backdrop-blur-lg border border-border rounded-2xl p-4 md:p-6 mb-8 relative shadow-lg">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <Trophy className="w-10 h-10 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.7)]" />
+                                <Trophy className="w-10 h-10 text-chart-3 drop-shadow-[0_0_15px_hsl(var(--chart-3)/0.7)]" />
                                 <div>
-                                    <h1 className="text-3xl font-black text-white tracking-tighter">Hall of Fame</h1>
-                                    <p className="text-sm text-white/50 font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                                    <h1 className="text-3xl font-black text-foreground tracking-tighter">Hall of Fame</h1>
+                                    <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
                                 </div>
                             </div>
-                            <Button asChild variant="ghost" size="sm" className="text-white/50 hover:text-white hover:bg-white/10">
+                            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-accent">
                                 <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
                             </Button>
                         </div>
@@ -303,39 +302,39 @@ export default function HallOfFamePage() {
                              {/* 2nd Place */}
                             {podium.length > 1 && (
                                 <div className="text-center md:order-1 animate-in fade-in zoom-in-90 duration-500 delay-300">
-                                    <div className="bg-white/5 backdrop-blur-sm border border-slate-400/20 rounded-2xl p-4 relative h-64 flex flex-col justify-end">
-                                        <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-slate-400 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-slate-400/20">2</div>
-                                        <Avatar className="w-16 h-16 mx-auto mb-2 border-2 border-slate-400/50">
-                                            <AvatarFallback className="bg-slate-800 text-slate-300 text-lg">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
+                                    <div className="bg-card/5 backdrop-blur-sm border border-muted/20 rounded-2xl p-4 relative h-64 flex flex-col justify-end">
+                                        <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-lg shadow-lg shadow-muted/20">2</div>
+                                        <Avatar className="w-16 h-16 mx-auto mb-2 border-2 border-muted/50">
+                                            <AvatarFallback className="bg-secondary text-foreground text-lg">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-bold text-white text-lg truncate">{podium[1].firstName}</p>
-                                        <p className="text-amber-400 font-bold text-xl mt-1">{(podium[1].lifetimePoints || 0).toLocaleString()}</p>
+                                        <p className="font-bold text-foreground text-lg truncate">{podium[1].firstName}</p>
+                                        <p className="text-chart-3 font-bold text-xl mt-1">{(podium[1].lifetimePoints || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
                             {/* 1st Place */}
                             <div className="text-center md:order-2 animate-in fade-in zoom-in-90 duration-500">
-                                <div className="bg-gradient-to-b from-amber-500/20 to-amber-900/10 backdrop-blur-sm border border-amber-400/30 rounded-t-full p-5 relative shadow-[0_0_40px_rgba(251,191,36,0.25)] h-80 flex flex-col justify-end">
+                                <div className="bg-gradient-to-b from-chart-3/20 to-accent/10 backdrop-blur-sm border border-chart-3/30 rounded-t-full p-5 relative shadow-[0_0_40px_hsl(var(--chart-3)/0.25)] h-80 flex flex-col justify-end">
                                     <div className="absolute top-0 left-1/2 -translate-x-1/2 animate-float">
-                                        <Crown className="w-12 h-12 text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]" />
+                                        <Crown className="w-12 h-12 text-chart-3 drop-shadow-[0_0_10px_hsl(var(--chart-3)/0.8)]" />
                                     </div>
-                                    <Avatar className="w-24 h-24 mx-auto mb-2 border-2 border-amber-400/50">
-                                        <AvatarFallback className="bg-amber-900/50 text-amber-300 text-2xl">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
+                                    <Avatar className="w-24 h-24 mx-auto mb-2 border-2 border-chart-3/50">
+                                        <AvatarFallback className="bg-accent/50 text-chart-3 text-2xl">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
                                     </Avatar>
-                                    <p className="font-bold text-white text-2xl truncate">{podium[0].firstName}</p>
-                                    <p className="text-amber-300 font-black text-3xl mt-1 graphic-text-glow">{(podium[0].lifetimePoints || 0).toLocaleString()}</p>
+                                    <p className="font-bold text-foreground text-2xl truncate">{podium[0].firstName}</p>
+                                    <p className="text-chart-3 font-black text-3xl mt-1 graphic-text-glow">{(podium[0].lifetimePoints || 0).toLocaleString()}</p>
                                 </div>
                             </div>
                             {/* 3rd Place */}
                             {podium.length > 2 && (
                                 <div className="text-center md:order-3 animate-in fade-in zoom-in-90 duration-500 delay-500">
-                                    <div className="bg-white/5 backdrop-blur-sm border border-orange-600/20 rounded-2xl p-4 relative h-56 flex flex-col justify-end">
+                                    <div className="bg-card/5 backdrop-blur-sm border border-orange-600/20 rounded-2xl p-4 relative h-56 flex flex-col justify-end">
                                         <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-orange-600/20">3</div>
                                         <Avatar className="w-14 h-14 mx-auto mb-2 border-2 border-orange-500/50">
                                             <AvatarFallback className="bg-orange-900/50 text-orange-300 text-md">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-bold text-white text-md truncate">{podium[2].firstName}</p>
-                                        <p className="text-amber-400 font-bold text-lg mt-1">{(podium[2].lifetimePoints || 0).toLocaleString()}</p>
+                                        <p className="font-bold text-foreground text-md truncate">{podium[2].firstName}</p>
+                                        <p className="text-chart-3 font-bold text-lg mt-1">{(podium[2].lifetimePoints || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
@@ -344,24 +343,24 @@ export default function HallOfFamePage() {
 
                     {/* Leaderboard list */}
                     {others.length > 0 && (
-                        <div className="mt-12 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden animate-in fade-in-0 slide-in-from-bottom-5 duration-500 delay-700">
-                            <div className="px-5 py-3 border-b border-white/5">
-                                <h3 className="text-sm font-bold text-white/60 uppercase tracking-wider">Top 50 Leaderboard</h3>
+                        <div className="mt-12 bg-card/5 backdrop-blur-sm border border-border rounded-2xl overflow-hidden animate-in fade-in-0 slide-in-from-bottom-5 duration-500 delay-700">
+                            <div className="px-5 py-3 border-b border-border/50">
+                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Top 50 Leaderboard</h3>
                             </div>
-                            <div className="divide-y divide-white/5">
+                            <div className="divide-y divide-border/50">
                                 {others.map((student, index) => (
-                                    <div key={student.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors">
+                                    <div key={student.id} className="flex items-center justify-between px-5 py-3 hover:bg-accent transition-colors">
                                         <div className="flex items-center gap-4">
-                                            <span className="text-sm font-bold text-white/30 w-6 text-center">{index + 4}</span>
+                                            <span className="text-sm font-bold text-muted-foreground w-6 text-center">{index + 4}</span>
                                             <Avatar className="w-8 h-8">
-                                                <AvatarFallback className="bg-white/10 text-white/60 text-xs">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
+                                                <AvatarFallback className="bg-secondary text-secondary-foreground text-xs">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
                                             </Avatar>
                                             <div>
-                                                <p className="font-bold text-white text-sm">{student.firstName} {student.lastName}</p>
-                                                <p className="text-xs text-white/40">{getClassName(student.classId)}</p>
+                                                <p className="font-bold text-foreground text-sm">{student.firstName} {student.lastName}</p>
+                                                <p className="text-xs text-muted-foreground">{getClassName(student.classId)}</p>
                                             </div>
                                         </div>
-                                        <span className="text-sm font-bold text-amber-400">{(student.lifetimePoints || 0).toLocaleString()}</span>
+                                        <span className="text-sm font-bold text-chart-3">{(student.lifetimePoints || 0).toLocaleString()}</span>
                                     </div>
                                 ))}
                             </div>
@@ -369,7 +368,7 @@ export default function HallOfFamePage() {
                     )}
 
                     {(!topStudents || topStudents.length === 0) && (
-                        <div className="text-center py-20 text-white/30">
+                        <div className="text-center py-20 text-muted-foreground">
                             No students have earned points yet.
                         </div>
                     )}

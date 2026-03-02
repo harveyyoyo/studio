@@ -1,3 +1,4 @@
+
 'use client';
 // Force rebuild for hydration sync
 import { useState, useEffect } from 'react';
@@ -61,7 +62,7 @@ export default function Header() {
           </div>
           <h1 className={cn(
             "text-2xl md:text-3xl font-bold leading-none font-headline",
-            isGraphic ? 'text-white' : 'text-foreground'
+            isGraphic ? 'text-foreground' : 'text-foreground'
           )}>
             levelUp EDU
           </h1>
@@ -103,7 +104,7 @@ export default function Header() {
       <>
         <header className={cn(
           "no-print w-full flex justify-between items-center relative z-20 mb-4",
-          isGraphicApp ? 'text-white' : 'text-foreground'
+          isGraphicApp ? 'text-foreground' : 'text-foreground'
         )}>
             <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
                 <div className={cn(
@@ -120,7 +121,7 @@ export default function Header() {
                       </h1>
                       <p className={cn(
                         "text-xs font-bold leading-tight",
-                        isGraphicApp ? 'text-white/60' : 'text-muted-foreground'
+                        isGraphicApp ? 'text-muted-foreground' : 'text-muted-foreground'
                       )}>{appTitle}</p>
                     </>
                   ) : (
@@ -133,7 +134,7 @@ export default function Header() {
             <div className="z-[101]">
                 <div className={cn(
                   "backdrop-blur-md rounded-xl shadow-lg border p-1",
-                  isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'
+                  isGraphicApp ? 'bg-card/10 border-border' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'
                 )}>
                     <SettingsModal />
                 </div>
@@ -143,14 +144,14 @@ export default function Header() {
         {loginState === 'school' && (
           <nav className={cn(
             "fixed bottom-0 left-0 right-0 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-[100] no-print border-t transition-colors",
-            isGraphicApp ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-200 shadow-lg'
+            isGraphicApp ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-white border-slate-200 shadow-lg'
           )}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
                 const activeClass = isActive
                   ? (isGraphicApp ? 'text-primary graphic-text-glow' : 'text-indigo-600')
-                  : (isGraphicApp ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800');
+                  : (isGraphicApp ? 'text-muted-foreground hover:text-foreground' : 'text-slate-400 hover:text-slate-800');
                 return (
                   <Link key={href} href={href} className={`flex flex-col items-center transition-colors px-2 py-1 ${activeClass}`} {...(href === '/portal' && { 'data-home-button': 'true' })}>
                     <Icon className="w-5 h-5" />
@@ -168,10 +169,10 @@ export default function Header() {
   return (
     <header className={cn(
       "no-print w-full max-w-6xl rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center relative overflow-hidden",
-      isGraphic ? 'bg-slate-900/70 backdrop-blur-lg border border-white/10 shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
+      isGraphic ? 'bg-card/70 backdrop-blur-lg border border-border shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
     )}>
 
-      <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest italic select-none hidden sm:block opacity-40">
+      <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-muted-foreground/20 dark:text-muted-foreground/10 uppercase tracking-widest italic select-none hidden sm:block opacity-40">
         {schoolId?.replace(/_/g, '') || 'SCHOOLABC'}
       </div>
 
@@ -187,7 +188,7 @@ export default function Header() {
                 <>
                     <h1 className={cn(
                         "text-xl md:text-2xl font-bold leading-none font-headline",
-                        isGraphic ? 'text-white' : 'text-foreground'
+                        isGraphic ? 'text-foreground' : 'text-foreground'
                     )}>
                         {schoolId.replace(/_/g, ' ')}
                     </h1>
@@ -198,7 +199,7 @@ export default function Header() {
             ) : (
                 <h1 className={cn(
                     "text-xl md:text-2xl font-bold leading-none font-headline",
-                    isGraphic ? 'text-white' : 'text-foreground'
+                    isGraphic ? 'text-foreground' : 'text-foreground'
                 )}>
                     {getTitle()}
                 </h1>
@@ -212,14 +213,14 @@ export default function Header() {
             <>
               <Button variant="outline" size="sm" className={cn(
                 "hidden sm:flex items-center gap-1 text-xs font-bold",
-                isGraphic ? 'bg-white/5 border-white/10 text-white/60' : 'text-muted-foreground bg-background/50'
+                isGraphic ? 'bg-foreground/5 border-border text-muted-foreground' : 'text-muted-foreground bg-background/50'
               )}>
                 {syncStatus === 'synced' && <><Zap className="w-3 h-3 text-green-500" /><span>Live Sync</span></>}
                 {syncStatus === 'syncing' && <><Zap className="w-3 h-3 text-yellow-500 animate-pulse" /><span>Syncing...</span></>}
                 {syncStatus === 'offline' && <><CloudOff className="w-3 h-3 text-slate-500" /><span>Offline</span></>}
                 {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
               </Button>
-              <Button asChild className={isGraphic ? 'bg-white/10 text-white hover:bg-white/20' : ''}>
+              <Button asChild className={isGraphic ? 'bg-foreground/10 text-foreground hover:bg-foreground/20' : ''}>
                 <Link href="/portal" data-home-button="true"><Home className="mr-2" /> Home</Link>
               </Button>
             </>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -77,7 +78,7 @@ export default function SchoolLoginPage() {
         return (
             <div className={cn(
                 "min-h-screen flex flex-col items-center justify-center gap-4 font-sans",
-                isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-muted-foreground'
+                isGraphic ? 'bg-background text-foreground' : 'bg-background text-muted-foreground'
             )}>
                 <Loader2 className="w-8 h-8 animate-spin" />
                 <p className="font-medium text-sm">Loading&hellip;</p>
@@ -89,22 +90,22 @@ export default function SchoolLoginPage() {
         return (
             <div className={cn(
                 "min-h-screen flex flex-col items-center justify-center gap-6 px-6 font-sans",
-                isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+                isGraphic ? 'bg-background text-foreground' : 'bg-background text-foreground'
             )}>
                 <div className={cn(
                     "w-full max-w-sm rounded-2xl p-8 text-center border",
-                    isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20' : 'bg-card border-border shadow-lg'
+                    isGraphic ? 'bg-card/10 backdrop-blur-xl border-border' : 'bg-card border-border shadow-lg'
                 )}>
-                    <AlertCircle className={cn("w-12 h-12 mx-auto mb-4", isGraphic ? 'text-red-400' : 'text-red-500')} />
+                    <AlertCircle className={cn("w-12 h-12 mx-auto mb-4", isGraphic ? 'text-destructive' : 'text-red-500')} />
                     <h2 className="text-lg font-bold mb-2">School Not Found</h2>
-                    <p className={cn("text-sm mb-6", isGraphic ? 'text-white/60' : 'text-slate-500')}>
+                    <p className={cn("text-sm mb-6", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
                         There is no school with the ID <span className="font-bold font-code">{schoolId}</span>. Please check the link and try again.
                     </p>
                     <button
                         onClick={() => router.push('/')}
                         className={cn(
                             "w-full h-12 font-bold rounded-xl transition-all",
-                            isGraphic ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                            isGraphic ? 'bg-foreground/10 hover:bg-foreground/20 text-foreground' : 'bg-slate-800 hover:bg-slate-700 text-white'
                         )}
                     >
                         Go to Login
@@ -116,49 +117,48 @@ export default function SchoolLoginPage() {
 
     return (
         <div className={cn(
-            "min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500",
-            isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+            "min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500"
         )}>
 
             {isGraphic && (
                 <>
                   <div className="absolute inset-0 z-0 opacity-20">
-                    <Sparkles className="absolute top-10 left-10 w-8 h-8 text-cyan-300 animate-float" style={{ animationDelay: '0s' }} />
-                    <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-white/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
-                    <Sparkles className="absolute top-40 right-16 w-6 h-6 text-purple-300 animate-float" style={{ animationDelay: '2s' }} />
+                    <Sparkles className="absolute top-10 left-10 w-8 h-8 text-chart-1 animate-float" style={{ animationDelay: '0s' }} />
+                    <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
+                    <Sparkles className="absolute top-40 right-16 w-6 h-6 text-chart-5 animate-float" style={{ animationDelay: '2s' }} />
                   </div>
-                  <div className="absolute inset-0 z-0 bg-gradient-to-br from-indigo-900/30 via-purple-900/30 to-orange-600/30 opacity-30" />
+                  <div className="absolute inset-0 z-0 bg-gradient-to-br from-chart-1/10 via-chart-5/10 to-chart-3/10" />
                 </>
             )}
 
             <div className="relative z-10 w-full max-w-md px-6 pt-16 sm:pt-24 flex flex-col items-center animate-in fade-in zoom-in duration-500">
                 <div className={cn(
                     "w-full rounded-[2.5rem] p-8 relative transition-all border",
-                    isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
+                    isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
                 )}>
 
                     <div className="text-center mb-8">
-                        <p className={cn("text-xs font-bold uppercase tracking-wider mb-2", isGraphic ? 'text-white/50' : 'text-slate-400')}>
+                        <p className={cn("text-xs font-bold uppercase tracking-wider mb-2", isGraphic ? 'text-muted-foreground' : 'text-slate-400')}>
                             Welcome to
                         </p>
                         <h2 className={cn("text-2xl font-black tracking-tight mb-1", isGraphic ? 'graphic-text-glow' : 'text-slate-800')}>
                             {schoolName}
                         </h2>
-                        <p className={cn("text-xs font-medium", isGraphic ? 'text-white/80' : 'text-slate-500')}>
+                        <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
                             Enter your passcode to continue.
                         </p>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="passcode" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-white/60' : 'text-slate-400')}>
+                            <Label htmlFor="passcode" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-400')}>
                                 Passcode
                             </Label>
                             <input
                                 id="passcode"
                                 type="password"
                                 autoFocus
-                                className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center", isGraphic ? 'bg-white/10 border border-white/10 text-white focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100')}
+                                className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center", isGraphic ? 'bg-transparent border border-border text-foreground focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100')}
                                 value={passcode}
                                 onChange={(e) => setPasscode(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
@@ -168,7 +168,7 @@ export default function SchoolLoginPage() {
                         <div className="pt-4">
                             <button
                                 onClick={handleLogin}
-                                className={cn("w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl", isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white')}
+                                className={cn("w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl", isGraphic ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white')}
                             >
                                 Login
                             </button>
