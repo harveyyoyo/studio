@@ -536,9 +536,11 @@ useEffect(() => {
           />
           <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
-            <Link href="/portal" onClick={handleBackToPortalClick} className="text-primary hover:underline flex items-center gap-1 group">
-              <ArrowLeft className="w-3 h-3" /> Back to portal <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            {isKioskLocked ? (
+              <span className="text-red-500 flex items-center gap-1"><Lock className="w-3 h-3" /> Locked</span>
+            ) : (
+              <span className="text-green-600 flex items-center gap-1"><Unlock className="w-3 h-3" /> Unlocked</span>
+            )}
           </div>
         </div>
         <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>

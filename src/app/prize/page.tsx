@@ -259,18 +259,6 @@ export default function PrizePage() {
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-8 h-8" />}
                 />
-                <div className="text-center mt-6">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button asChild variant="link" className="text-xs h-auto p-0">
-                                <Link href="/portal"><ArrowLeft className="mr-2" /> Back to portal</Link>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Return to the main portal selection screen.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
             </div>
         </TooltipProvider>
     );

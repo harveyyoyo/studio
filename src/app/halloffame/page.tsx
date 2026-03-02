@@ -122,9 +122,6 @@ export default function HallOfFamePage() {
                                 </h2>
                                 <CardDescription>Top all-time point earners</CardDescription>
                             </div>
-                            <Button asChild variant="secondary" size="sm">
-                                <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
-                            </Button>
                         </div>
                         <div className="mt-4 pt-4 border-t">
                             <CardDescription>
@@ -290,9 +287,6 @@ export default function HallOfFamePage() {
                                     <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
                                 </div>
                             </div>
-                            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-accent">
-                                <Link href="/portal"><ArrowLeft className="mr-2 h-4 w-4" /> Back to portal</Link>
-                            </Button>
                         </div>
                     </div>
 

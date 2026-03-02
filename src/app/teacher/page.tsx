@@ -152,15 +152,10 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 {/* Unified Header */}
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-background/10 border-b border-border/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <Button variant="ghost" asChild className={isGraphic ? 'text-muted-foreground hover:text-foreground hover:bg-accent' : ''}>
-                                <Link href="/portal"><ArrowLeft className="w-5 h-5 mr-2" /> Back to portal</Link>
-                            </Button>
-                            <div>
-                                <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Print Coupons</h1>
-                                <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-3' : 'text-primary'}`}>{teacherName}</p>
-                                <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
-                            </div>
+                        <div>
+                            <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Print Coupons</h1>
+                            <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-3' : 'text-primary'}`}>{teacherName}</p>
+                            <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
                         </div>
                         <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-border text-muted-foreground hover:text-foreground hover:bg-accent' : ''}`}>
                             <LogOut className="w-4 h-4" /> Switch Teacher
@@ -351,10 +346,6 @@ export default function TeacherPage() {
                         </Button>
 
                         <div className="text-center pt-4 border-t border-dashed border-border/50">
-                            <Link href="/portal" className={`inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isGraphic ? 'text-muted-foreground hover:text-foreground' : 'text-slate-500 hover:text-slate-800'
-                                }`}>
-                                <ArrowLeft className="w-3 h-3" /> Back to Portal Selection
-                            </Link>
                         </div>
                     </CardContent>
                 </Card>
