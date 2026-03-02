@@ -259,14 +259,14 @@ export function SettingsModal() {
 
                     {view === 'features' && (
                         <div className="space-y-1 animate-in slide-in-from-right-4 duration-300">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Guidance</p>
+                            <FeatureRow id="enableHelperMode" label="Helper Mode" desc="Show helpful tips on each page" icon={<HelpCircle className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
+                            
+                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Engagement</p>
                             <FeatureRow id="enableAchievements" label="Achievements" desc="Digital badges for milestones" icon={<Trophy className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
                             <FeatureRow id="enableLevels" label="Level System" desc="Students level up with points" icon={<Zap className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
                             <FeatureRow id="enableStreaks" label="Daily Streaks" desc="Track consecutive earning days" icon={<History className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Guidance</p>
-                            <FeatureRow id="enableHelperMode" label="Helper Mode" desc="Show helpful tips on each page" icon={<HelpCircle className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Insights</p>

@@ -31,6 +31,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { Helper } from '@/components/ui/helper';
 
 
 interface SchoolInfo {
@@ -370,17 +371,23 @@ export default function DeveloperPage() {
     <TooltipProvider>
       <div className="space-y-6">
         <Card className="bg-card border-b-4 border-slate-700 dark:border-slate-500 p-6 shadow-lg flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
-              <Server /> Developer Mode
-            </h2>
-            <p className="text-slate-400 text-sm">Manage all school databases.</p>
-          </div>
+          <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
+            <div>
+              <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
+                <Server /> Developer Mode
+              </h2>
+              <p className="text-slate-400 text-sm">Manage all school databases.</p>
+            </div>
+          </Helper>
         </Card>
 
         <Alert variant="destructive" className="border-2">
-          <LifeBuoy className="h-4 w-4" />
-          <AlertTitle className="font-bold">Emergency Data Recovery</AlertTitle>
+          <Helper content="This tool attempts to recover the main document for a school that was accidentally deleted or had its data overwritten. It finds the most recent backup file and restores it. You must know the exact School ID.">
+            <AlertTitle className="font-bold flex items-center gap-2">
+              <LifeBuoy className="h-4 w-4" />
+              Emergency Data Recovery
+            </AlertTitle>
+          </Helper>
           <AlertDescription>
             If a school was accidentally deleted or its data overwritten, you can attempt to restore it here. This will restore the main school document from its most recent backup. You may then need to use the "Migrate Data" tool on the school.
           </AlertDescription>
@@ -429,15 +436,19 @@ export default function DeveloperPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Global Actions</CardTitle>
+            <Helper content="These actions affect all schools in the system simultaneously.">
+              <CardTitle>Global Actions</CardTitle>
+            </Helper>
             <CardDescription>Perform actions across all school databases.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col justify-between bg-secondary p-4 rounded-lg border">
-              <div>
-                <h3 className="font-bold flex items-center gap-2"><Database />One-Click Backup</h3>
-                <p className="text-sm text-muted-foreground mt-1">Create a new backup for every school instance instantly.</p>
-              </div>
+              <Helper content="This will create a full data snapshot for every single school instance in the database. This is useful for creating a system-wide save point.">
+                <div>
+                  <h3 className="font-bold flex items-center gap-2"><Database />One-Click Backup</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Create a new backup for every school instance instantly.</p>
+                </div>
+              </Helper>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="secondary" className="mt-4">Backup All Schools</Button>
@@ -471,27 +482,24 @@ export default function DeveloperPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>School Instances</span>
-              <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
-            </CardTitle>
+            <Helper content="This is a list of all separate school databases in the system. You can create new schools or manage existing ones from here.">
+              <CardTitle className="flex items-center justify-between">
+                <span>School Instances</span>
+                <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
+              </CardTitle>
+            </Helper>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-2 mb-6">
-              <Input
-                placeholder="New School ID (e.g. 'washington_hs')"
-                value={newSchoolId}
-                onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                onKeyDown={e => e.key === 'Enter' && handleCreateSchool()}
-              />
-              <Tooltip>
-                <TooltipTrigger asChild>
+                <Input
+                  placeholder="New School ID (e.g. 'washington_hs')"
+                  value={newSchoolId}
+                  onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  onKeyDown={e => e.key === 'Enter' && handleCreateSchool()}
+                />
+                <Helper content="Create a new, empty school database instance. Use a simple, lowercase ID with underscores instead of spaces.">
                   <Button onClick={handleCreateSchool}><Plus className="mr-2" />Create School</Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Create a new, empty school database instance. <br /> Use a simple, lowercase ID with underscores instead of spaces.</p>
-                </TooltipContent>
-              </Tooltip>
+                </Helper>
             </div>
             {schoolsLoading ? <p>Loading schools...</p> : (
               <ul className="space-y-2">

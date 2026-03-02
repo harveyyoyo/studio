@@ -9,6 +9,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
+import { Helper } from '@/components/ui/helper';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
@@ -33,11 +34,11 @@ export default function PortalPage() {
     }
 
     const portals = [
-        { href: '/admin', label: 'Admin Portal', desc: 'Manage all school data and settings.', icon: UserCog, color: 'destructive' },
-        { href: '/student', label: 'Redeem Coupons / Kiosk', desc: 'Scan student ID to redeem coupons or check points.', icon: GraduationCap, color: 'chart-1' },
-        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
-        { href: '/teacher', label: 'Print Coupons', desc: 'Log in as a teacher to generate and print coupon sheets.', icon: Printer, color: 'chart-2' },
-        { href: '/halloffame', label: 'Hall of Fame', desc: 'View the top student point earners.', icon: Trophy, color: 'chart-5' },
+        { href: '/admin', label: 'Admin Portal', desc: 'Manage all school data and settings.', icon: UserCog, color: 'destructive', help: 'The Admin Portal is the control center for your school. Here you can add students and teachers, manage prizes and coupon categories, and handle system backups.' },
+        { href: '/student', label: 'Redeem Coupons / Kiosk', desc: 'Scan student ID to redeem coupons or check points.', icon: GraduationCap, color: 'chart-1', help: 'This is the main kiosk for students. They can scan their ID card or type their ID to access their account, check their point balance, and redeem coupon codes given by teachers.' },
+        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3', help: 'Students can use their earned points to redeem prizes here. The shop only shows items that are currently in stock.' },
+        { href: '/teacher', label: 'Print Coupons', desc: 'Log in as a teacher to generate and print coupon sheets.', icon: Printer, color: 'chart-2', help: 'Teachers can log in here to generate and print sheets of physical coupons to hand out to students as rewards.' },
+        { href: '/halloffame', label: 'Hall of Fame', desc: 'View the top student point earners.', icon: Trophy, color: 'chart-5', help: 'This leaderboard displays the top students based on their lifetime point earnings, showcasing top achievers in the school.' },
     ];
 
     const colorMap: Record<string, { bg: string; border: string; glow: string; text: string; iconBg: string }> = {
@@ -81,12 +82,16 @@ export default function PortalPage() {
                 
                 {isGraphic ? (
                     <div className="text-center mb-8">
-                        <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
+                        <Helper content="This is the main hub for your school. Each card takes you to a different part of the app with specific functions.">
+                            <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
+                        </Helper>
                         <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
                     </div>
                 ) : (
                     <div className="mb-6">
-                        <h1 className="text-3xl font-bold">Portal</h1>
+                         <Helper content="This is the main hub for your school. Each card takes you to a different part of the app with specific functions.">
+                            <h1 className="text-3xl font-bold">Portal</h1>
+                         </Helper>
                         <p className="text-muted-foreground">Select an area to continue.</p>
                     </div>
                 )}
@@ -121,12 +126,14 @@ export default function PortalPage() {
                                             <Icon className={cn("w-8 h-8", isGraphic ? gc.text : (iconTextClassic[p.color] ?? ''))} />
                                         </div>
                                         <div>
-                                            <CardTitle className={cn(
-                                                "text-lg font-black tracking-tight",
-                                                isGraphic ? 'text-foreground' : 'text-slate-800'
-                                            )}>
-                                                {p.label}
-                                            </CardTitle>
+                                            <Helper content={p.help} side='top'>
+                                                <CardTitle className={cn(
+                                                    "text-lg font-black tracking-tight",
+                                                    isGraphic ? 'text-foreground' : 'text-slate-800'
+                                                )}>
+                                                    {p.label}
+                                                </CardTitle>
+                                            </Helper>
                                             <CardDescription className={cn(
                                                 "text-xs font-medium mt-1 leading-relaxed",
                                                 isGraphic ? 'text-muted-foreground' : 'text-slate-500'

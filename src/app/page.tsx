@@ -12,6 +12,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { SettingsModal } from '@/components/ui/SettingsModal';
 import { cn } from '@/lib/utils';
+import { Helper } from '@/components/ui/helper';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -118,12 +119,18 @@ export default function LoginPage() {
         )}>
 
           <div className="text-center mb-8">
-            <h2 className={cn(
-              "text-xl font-black tracking-widest uppercase mb-1",
-              isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
-            )}>
-              {isDeveloper ? 'Developer Mode' : 'School Login'}
-            </h2>
+            <Helper
+              content="Log in to your school's reward system here. If you are a system administrator, use the 'Developer' login."
+              side="bottom"
+              className="justify-center"
+            >
+              <h2 className={cn(
+                "text-xl font-black tracking-widest uppercase mb-1",
+                isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
+              )}>
+                {isDeveloper ? 'Developer Mode' : 'School Login'}
+              </h2>
+            </Helper>
             <p className={cn("text-xs font-medium", isGraphic ? 'text-foreground/80' : 'text-muted-foreground')}>
               {isDeveloper ? 'Enter system dev passcode.' : 'Enter your school ID and passcode to continue.'}
             </p>
@@ -134,10 +141,16 @@ export default function LoginPage() {
               "mb-8 p-1.5 rounded-2xl border italic",
               isGraphic ? 'bg-foreground/10 border-border/50' : 'bg-slate-100/50 border-slate-100'
             )}>
-              <p className={cn(
-                "text-center text-[10px] font-black uppercase tracking-tighter mb-2",
-                isGraphic ? 'text-muted-foreground' : 'text-slate-400'
-              )}>Try a demo school</p>
+              <Helper
+                content="These sample schools let you explore the app's features without needing real credentials. All data is pre-populated."
+                side="bottom"
+                className="justify-center"
+              >
+                <p className={cn(
+                  "text-center text-[10px] font-black uppercase tracking-tighter mb-2",
+                  isGraphic ? 'text-muted-foreground' : 'text-slate-400'
+                )}>Try a demo school</p>
+              </Helper>
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSampleLogin('schoolabc')}
