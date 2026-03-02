@@ -278,7 +278,7 @@ function StudentDashboardInner({
                       </Button>
                     </div>
                      <p className="text-xs text-center text-muted-foreground pt-2">
-                        Hint: Available coupon codes can be viewed in the Admin panel.
+                        Available coupon codes can be viewed in the Admin panel.
                     </p>
                   </div>
                 ) : (
