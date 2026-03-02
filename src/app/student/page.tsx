@@ -154,10 +154,13 @@ function StudentDashboardInner({
   }, [hookHasPermission]);
 
   const resetTimer = useCallback(() => {
-    setLogoutTimer(10);
-  }, []);
+    if (!isKioskLocked) {
+        setLogoutTimer(10);
+    }
+  }, [isKioskLocked]);
 
   useEffect(() => {
+    if (isKioskLocked) return;
     if (logoutTimer <= 0) {
       onDone();
       return;
@@ -167,7 +170,7 @@ function StudentDashboardInner({
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone]);
+  }, [logoutTimer, onDone, isKioskLocked]);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
@@ -260,7 +263,7 @@ function StudentDashboardInner({
                   <div className="space-y-6">
                     <div className="flex gap-3">
                       <Input
-                        placeholder="Scan or type barcode now..."
+                        placeholder="e.g., SHTEIG-50"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}

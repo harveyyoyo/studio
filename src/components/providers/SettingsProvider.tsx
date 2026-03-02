@@ -40,6 +40,8 @@ interface Settings {
     enableQrLogin: boolean;
     enableParentView: boolean;
     enableMultiAdmin: boolean;
+    // Guidance
+    enableHelperMode: boolean;
 }
 
 interface SettingsContextType {
@@ -85,6 +87,7 @@ const defaultSettings: Settings = {
     enableQrLogin: false,
     enableParentView: false,
     enableMultiAdmin: false,
+    enableHelperMode: false,
 };
 
 export { colorSchemes };
@@ -115,6 +118,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const updateSettings = (updates: Partial<Settings>) => {
         setSettings((prev) => {
             const next = { ...prev, ...updates };
+            
+            if (updates.graphicMode === 'graphics' && !prev.darkMode) {
+              next.darkMode = true;
+            }
+
             localStorage.setItem('arcade_settings', JSON.stringify(next));
 
             // Dispatch a custom event so non-react code or other tabs can listen if needed
