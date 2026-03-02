@@ -92,14 +92,20 @@ export default function Header() {
                     <Logo className="w-8 h-8" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold leading-none font-headline">
-                      {appTitle}
-                  </h1>
-                  {loginState === 'school' && schoolId && (
-                    <p className={cn(
-                      "text-xs font-bold leading-tight",
-                      isGraphicApp ? 'text-white/60' : 'text-primary'
-                    )}>{schoolId.replace(/_/g, ' ')}</p>
+                  {loginState === 'school' && schoolId ? (
+                    <>
+                      <h1 className="text-lg font-bold leading-none font-headline">
+                        {schoolId.replace(/_/g, ' ')}
+                      </h1>
+                      <p className={cn(
+                        "text-xs font-bold leading-tight",
+                        isGraphicApp ? 'text-white/60' : 'text-muted-foreground'
+                      )}>{appTitle}</p>
+                    </>
+                  ) : (
+                    <h1 className="text-lg font-bold leading-none font-headline">
+                        {appTitle}
+                    </h1>
                   )}
                 </div>
             </Link>
@@ -158,15 +164,26 @@ export default function Header() {
           <Logo className="w-10 h-10" />
         </div>
         <div>
-          <h1 className={cn(
-            "text-xl md:text-2xl font-bold leading-none font-headline",
-            isGraphic ? 'text-white' : 'text-foreground'
-          )}>
-            {getTitle()}
-          </h1>
-           {loginState === 'school' && schoolId && (
-             <p className={cn("text-sm font-bold", isGraphic ? 'text-primary/80 graphic-text-glow' : 'text-primary')}>{schoolId.replace(/_/g, ' ')}</p>
-          )}
+            {loginState === 'school' && schoolId ? (
+                <>
+                    <h1 className={cn(
+                        "text-xl md:text-2xl font-bold leading-none font-headline",
+                        isGraphic ? 'text-white' : 'text-foreground'
+                    )}>
+                        {schoolId.replace(/_/g, ' ')}
+                    </h1>
+                    <p className={cn("text-sm font-bold", isGraphic ? 'text-primary/80' : 'text-muted-foreground')}>
+                        {getTitle()}
+                    </p>
+                </>
+            ) : (
+                <h1 className={cn(
+                    "text-xl md:text-2xl font-bold leading-none font-headline",
+                    isGraphic ? 'text-white' : 'text-foreground'
+                )}>
+                    {getTitle()}
+                </h1>
+            )}
         </div>
       </Link>
 
