@@ -50,6 +50,8 @@ interface AuthContextType {
         credentials: { schoolId?: string; passcode?: string }
     ) => Promise<boolean>;
     logout: () => void;
+    isKioskLocked: boolean;
+    setIsKioskLocked: (locked: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loginState, setLoginState] = useState<LoginState>('loggedOut');
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+    const [isKioskLocked, setIsKioskLocked] = useState(false);
 
     const [isAdmin, setIsAdmin] = useState(false);
 
@@ -228,15 +231,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoginState('loggedOut');
         setSchoolId(null);
         setIsAdmin(false);
+        setIsKioskLocked(false);
         router.push('/');
     }, [router, playSound]);
 
     const value = useMemo(
         () => ({
             isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus,
+            isKioskLocked, setIsKioskLocked,
             login, logout,
         }),
-        [isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus, login, logout]
+        [isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout]
     );
 
     return (

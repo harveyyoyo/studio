@@ -40,6 +40,8 @@ interface AppContextType {
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
   login: (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }) => Promise<boolean>;
   logout: () => void;
+  isKioskLocked: boolean;
+  setIsKioskLocked: (locked: boolean) => void;
   // Print
   setCouponsToPrint: (coupons: Coupon[]) => void;
   setStudentsToPrint: (students: Student[]) => void;

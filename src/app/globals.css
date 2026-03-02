@@ -381,3 +381,7 @@
   font-weight: 700 !important;
 }
 
+[data-home-button][aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

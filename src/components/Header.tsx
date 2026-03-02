@@ -109,7 +109,7 @@ export default function Header() {
                   ? (isGraphicApp ? 'text-primary' : 'text-indigo-600')
                   : (isGraphicApp ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800');
                 return (
-                  <Link key={href} href={href} className={`flex flex-col items-center transition-colors px-2 py-1 ${activeClass}`}>
+                  <Link key={href} href={href} className={`flex flex-col items-center transition-colors px-2 py-1 ${activeClass}`} {...(href === '/portal' && { 'data-home-button': 'true' })}>
                     <Icon className="w-5 h-5" />
                     <span className="text-[10px] font-bold mt-0.5">{label}</span>
                   </Link>
@@ -156,7 +156,7 @@ export default function Header() {
                 {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
               </Button>
               <Button asChild>
-                <Link href="/portal"><Home className="mr-2" /> Home</Link>
+                <Link href="/portal" data-home-button="true"><Home className="mr-2" /> Home</Link>
               </Button>
             </>
           )}

@@ -109,16 +109,12 @@ function StudentActivityList({ schoolId, studentId }: { schoolId: string; studen
 function StudentDashboardInner({
   studentId,
   onDone,
-  isLocked,
-  onLogoutRequest,
 }: {
   studentId: string;
   onDone: () => void;
-  isLocked: boolean;
-  onLogoutRequest: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId } = useAppContext();
+  const { redeemCoupon, schoolId, isKioskLocked } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
   const { toast } = useToast();
@@ -241,11 +237,11 @@ function StudentDashboardInner({
                 </CardTitle>
                 <div className={cn(
                     "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
-                    isLocked
+                    isKioskLocked
                         ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
                         : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800 animate-pulse"
                 )}>
-                    {isLocked ? 'Kiosk Locked' : `Auto-logout in ${logoutTimer}s`}
+                    <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
                 </div>
               </div>
             </CardHeader>
@@ -344,7 +340,7 @@ function StudentDashboardInner({
             <StudentActivityList schoolId={schoolId} studentId={student.id} />
           </CardContent>
           <div className="p-4 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <Button variant="outline" onClick={onLogoutRequest} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+            <Button variant="outline" onClick={onDone} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
               <LogOut className="h-4 w-4" /> Log Out Now
             </Button>
           </div>
@@ -356,7 +352,7 @@ function StudentDashboardInner({
 }
 
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId } = useAppContext();
+  const { loginState, isInitialized, schoolId, isKioskLocked, setIsKioskLocked } = useAppContext();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -366,23 +362,18 @@ export default function StudentLoginPage() {
   const functions = useFunctions();
 
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
-  const [isLocked, setIsLocked] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
   const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false);
   const [unlockPasscode, setUnlockPasscode] = useState('');
 
   const handleDone = useCallback(() => {
-    setActiveStudentId(null);
-  }, []);
-
-  const handleLogoutRequest = () => {
-    if (isLocked) {
+    if (isKioskLocked) {
       setIsLogoutDialogOpen(true);
     } else {
-      handleDone();
+      setActiveStudentId(null);
     }
-  };
+  }, [isKioskLocked]);
 
   const handleConfirmLogout = useCallback(async () => {
     if (!schoolId) return;
@@ -414,7 +405,7 @@ export default function StudentLoginPage() {
   }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast]);
 
   const handleBackToPortalClick = (e: React.MouseEvent) => {
-    if (isLocked) {
+    if (isKioskLocked) {
       e.preventDefault();
       setIsLogoutDialogOpen(true);
     } else {
@@ -432,8 +423,8 @@ export default function StudentLoginPage() {
       const verify = httpsCallable(functions, 'verifySchoolPasscode');
       await verify({ schoolId, passcode: unlockPasscode });
       playSound('swoosh');
-      setIsLocked(false);
-      toast({ title: "Kiosk Unlocked", description: "Auto-logout is now enabled." });
+      setIsKioskLocked(false);
+      toast({ title: "Kiosk Unlocked" });
     } catch (e) {
       playSound('error');
       toast({
@@ -445,7 +436,52 @@ export default function StudentLoginPage() {
       setUnlockPasscode('');
       setIsUnlockDialogOpen(false);
     }
-  }, [schoolId, functions, unlockPasscode, playSound, toast]);
+  }, [schoolId, functions, unlockPasscode, playSound, toast, setIsKioskLocked]);
+
+  useEffect(() => {
+    // This effect hijacks the home buttons in the header when the kiosk is locked.
+    const homeButtons = document.querySelectorAll('[data-home-button="true"]');
+    if (homeButtons.length === 0) return;
+
+    const handleClick = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsLogoutDialogOpen(true);
+    };
+
+    if (isKioskLocked) {
+      homeButtons.forEach(button => {
+        button.setAttribute('aria-disabled', 'true');
+        button.addEventListener('click', handleClick, true); // Use capture phase
+      });
+    }
+
+    return () => {
+      homeButtons.forEach(button => {
+        button.removeAttribute('aria-disabled');
+        button.removeEventListener('click', handleClick, true);
+      });
+    };
+  }, [isKioskLocked, setIsLogoutDialogOpen]);
+
+  useEffect(() => {
+    // This effect traps the browser's back button when the kiosk is locked.
+    if (isKioskLocked) {
+      window.history.pushState({ locked: true }, '');
+
+      const handlePopState = (event: PopStateEvent) => {
+        if (isKioskLocked) {
+          window.history.pushState({ locked: true }, '');
+          setIsLogoutDialogOpen(true);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+}, [isKioskLocked, setIsLogoutDialogOpen]);
 
 
   if (!isInitialized || loginState !== 'school') {
@@ -464,8 +500,6 @@ export default function StudentLoginPage() {
           <StudentDashboardInner
             studentId={activeStudentId}
             onDone={handleDone}
-            isLocked={isLocked}
-            onLogoutRequest={handleLogoutRequest}
           />
         </SchoolGate>
       </ErrorBoundary>
@@ -479,8 +513,8 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={setActiveStudentId}
             title="Student Kiosk"
-            isLocked={isLocked}
-            setIsLocked={setIsLocked}
+            isLocked={isKioskLocked}
+            setIsLocked={setIsKioskLocked}
             onUnlockRequest={handleUnlockRequest}
           />
           <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
@@ -521,7 +555,7 @@ export default function StudentLoginPage() {
             <DialogHeader>
               <DialogTitle className="text-xl font-black text-slate-800">Unlock Kiosk?</DialogTitle>
               <DialogDescription className="text-slate-500 font-medium text-sm">
-                Enter the school passcode to unlock the kiosk and re-enable auto-logout.
+                Enter the school passcode to unlock the kiosk.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
