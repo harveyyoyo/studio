@@ -93,7 +93,7 @@ export function SettingsModal() {
                     </DialogHeader>
                 </div>
 
-                <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                <div key={view} className="px-6 py-4 max-h-[70vh] overflow-y-auto">
                     {view === 'main' && (
                         <>
                             {/* Graphic Mode */}
@@ -104,8 +104,8 @@ export function SettingsModal() {
                                             <Monitor className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-foreground">Graphic Mode</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5">Gamified arcade-style UI</p>
+                                            <h4 className="font-bold text-foreground">Arcade Mode</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Gamified UI with special effects</p>
                                         </div>
                                     </div>
                                     <Switch

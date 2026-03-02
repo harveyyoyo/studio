@@ -87,7 +87,7 @@ const defaultSettings: Settings = {
     enableQrLogin: false,
     enableParentView: false,
     enableMultiAdmin: false,
-    enableHelperMode: false,
+    enableHelperMode: true,
 };
 
 export { colorSchemes };
@@ -120,7 +120,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const next = { ...prev, ...updates };
             
             if (updates.graphicMode === 'graphics' && !prev.darkMode) {
-              next.darkMode = true;
+              // next.darkMode = true; // This line is now removed
             }
 
             localStorage.setItem('arcade_settings', JSON.stringify(next));
