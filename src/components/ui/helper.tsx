@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -27,18 +28,25 @@ export function Helper({ children, content, side = 'right', className, iconClass
   }
 
   return (
-    <Popover>
-      <div className={cn("inline-flex items-center gap-1.5", className)}>
-        {children}
+    <div className={cn("inline-flex items-center gap-1.5", className)}>
+      {children}
+      <Popover>
         <PopoverTrigger asChild>
-          <button type="button" className={cn("text-muted-foreground/50 hover:text-muted-foreground transition-colors focus:outline-none", iconClassName)}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            className={cn("text-muted-foreground/50 hover:text-muted-foreground transition-colors focus:outline-none", iconClassName)}
+          >
             <HelpCircle style={{ width: iconSize, height: iconSize }} />
           </button>
         </PopoverTrigger>
-      </div>
-      <PopoverContent side={side} className="max-w-xs z-[101] text-sm p-3 bg-background border-2 shadow-lg w-auto">
-        {content}
-      </PopoverContent>
-    </Popover>
+        <PopoverContent side={side} className="max-w-xs z-[101] text-sm p-3 bg-background border-2 shadow-lg w-auto">
+          {content}
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

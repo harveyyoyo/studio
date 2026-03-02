@@ -492,9 +492,7 @@ export default function DeveloperPage() {
                   onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && handleCreateSchool()}
                 />
-                <Helper content="Create a new, empty school database instance. Use a simple, lowercase ID with underscores instead of spaces.">
-                  <Button onClick={handleCreateSchool}><Plus className="mr-2" />Create School</Button>
-                </Helper>
+                <Button onClick={handleCreateSchool}><Plus className="mr-2" />Create School</Button>
             </div>
             {schoolsLoading ? <p>Loading schools...</p> : (
               <ul className="space-y-2">
