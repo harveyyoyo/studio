@@ -22,28 +22,34 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 type SettingsView = 'main' | 'advanced' | 'features';
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void;
+    settings: any; onToggle: (key: string, val: any) => void; isImplemented?: boolean;
 }) {
     const isEnabled = settings[id] || false;
     return (
         <div className="flex items-center justify-between py-2.5 px-2">
-            <div className="flex items-center gap-3">
-                <div className={`p-1.5 rounded-lg transition-colors ${isEnabled ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' : 'bg-slate-200 text-slate-400 dark:bg-slate-700'}`}>
+            <div className={`flex items-center gap-3 ${!isImplemented && 'opacity-60'}`}>
+                <div className={`p-1.5 rounded-lg transition-colors ${(isEnabled && isImplemented) ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' : 'bg-slate-200 text-slate-400 dark:bg-slate-700'}`}>
                     {icon}
                 </div>
                 <div>
-                    <Label className="font-bold text-sm cursor-pointer block text-slate-700 dark:text-slate-200" htmlFor={id}>{label}</Label>
+                    <Label className="font-bold text-sm block text-slate-700 dark:text-slate-200" htmlFor={isImplemented ? id : undefined}>{label}</Label>
                     <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{desc}</p>
                 </div>
             </div>
-            <Switch
-                id={id}
-                checked={isEnabled}
-                onCheckedChange={(checked) => onToggle(id, checked)}
-                className="data-[state=checked]:bg-amber-500"
-            />
+            {isImplemented ? (
+                <Switch
+                    id={id}
+                    checked={isEnabled}
+                    onCheckedChange={(checked) => onToggle(id, checked)}
+                    className="data-[state=checked]:bg-amber-500"
+                />
+            ) : (
+                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                    Soon
+                </div>
+            )}
         </div>
     );
 }
@@ -253,31 +259,31 @@ export function SettingsModal() {
                     {view === 'features' && (
                         <div className="space-y-1 animate-in slide-in-from-right-4 duration-300">
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Engagement</p>
-                            <FeatureRow id="enableAchievements" label="Achievements" desc="Digital badges for milestones" icon={<Trophy className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableLevels" label="Level System" desc="Students level up with points" icon={<Zap className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableStreaks" label="Daily Streaks" desc="Track consecutive earning days" icon={<History className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableAchievements" label="Achievements" desc="Digital badges for milestones" icon={<Trophy className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
+                            <FeatureRow id="enableLevels" label="Level System" desc="Students level up with points" icon={<Zap className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableStreaks" label="Daily Streaks" desc="Track consecutive earning days" icon={<History className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Insights</p>
-                            <FeatureRow id="enableTeacherCharts" label="Teacher Charts" desc="Class-level data visualization" icon={<BarChart3 className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableAdminAnalytics" label="School Analytics" desc="School-wide data trends" icon={<ShieldCheck className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableStudentReports" label="Printable Reports" desc="PDF reports for meetings" icon={<Printer className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableTeacherCharts" label="Teacher Charts" desc="Class-level data visualization" icon={<BarChart3 className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableAdminAnalytics" label="School Analytics" desc="School-wide data trends" icon={<ShieldCheck className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableStudentReports" label="Printable Reports" desc="PDF reports for meetings" icon={<Printer className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Social</p>
-                            <FeatureRow id="enableNotifications" label="In-App Alerts" desc="Notify students on points earned" icon={<Bell className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableShoutouts" label="Public Shoutouts" desc="Teacher recognition feed" icon={<MessageSquare className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableNotifications" label="In-App Alerts" desc="Notify students on points earned" icon={<Bell className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableShoutouts" label="Public Shoutouts" desc="Teacher recognition feed" icon={<MessageSquare className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Experience</p>
-                            <FeatureRow id="enablePrizeImages" label="Prize Images" desc="Upload photos for shop items" icon={<ShoppingBag className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableWishlist" label="Wishlists" desc="Students save for prizes" icon={<Star className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableQrLogin" label="QR Card Login" desc="Login via QR code scanning" icon={<LayoutDashboard className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enablePrizeImages" label="Prize Images" desc="Upload photos for shop items" icon={<ShoppingBag className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableWishlist" label="Wishlists" desc="Students save for prizes" icon={<Star className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableQrLogin" label="QR Card Login" desc="Login via QR code scanning" icon={<LayoutDashboard className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Workflow</p>
-                            <FeatureRow id="enableBulkPoints" label="Bulk Assignment" desc="Points to a whole class at once" icon={<Users className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
-                            <FeatureRow id="enableAuditLog" label="System Logs" desc="Track admin changes & actions" icon={<Database className="w-4 h-4" />} settings={settings} onToggle={handleToggle} />
+                            <FeatureRow id="enableBulkPoints" label="Bulk Assignment" desc="Points to a whole class at once" icon={<Users className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <FeatureRow id="enableAuditLog" label="System Logs" desc="Track admin changes & actions" icon={<Database className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
                         </div>
                     )}
                 </div>
