@@ -13,14 +13,16 @@ export function Logo({ className }: { className?: string }) {
   }
   
   return (
-    <Image
-      src={logoImage.imageUrl}
-      width={100}
-      height={100}
-      alt={logoImage.description}
-      className={cn(className)}
-      data-ai-hint={logoImage.imageHint}
-      priority
-    />
+    <div className={cn("relative", className)}>
+        <Image
+          src={logoImage.imageUrl}
+          fill
+          alt={logoImage.description}
+          className="object-cover"
+          data-ai-hint={logoImage.imageHint}
+          sizes="(max-width: 768px) 32px, 40px"
+          priority
+        />
+    </div>
   );
 }
