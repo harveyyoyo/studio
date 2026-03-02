@@ -291,6 +291,10 @@
   animation: fly-up 1.5s ease-out forwards;
 }
 
+.graphic-text-glow {
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+}
+
 /* Color Schemes for Classic Mode */
 [data-color-scheme="sky"]:not(.dark) {
   --background: 204 100% 97%;
