@@ -24,6 +24,7 @@ interface StudentScannerProps {
     isActive?: boolean;
     isLocked: boolean;
     setIsLocked: (locked: boolean) => void;
+    onUnlockRequest: () => void;
 }
 
 export function StudentScanner({
@@ -34,6 +35,7 @@ export function StudentScanner({
     isActive = true,
     isLocked,
     setIsLocked,
+    onUnlockRequest,
 }: StudentScannerProps) {
     const { schoolId } = useAppContext();
     const firestore = useFirestore();
@@ -108,13 +110,19 @@ export function StudentScanner({
                                 variant="ghost"
                                 size="icon"
                                 className="h-9 w-9 rounded-full"
-                                onClick={() => setIsLocked(!isLocked)}
+                                onClick={() => {
+                                    if (isLocked) {
+                                        onUnlockRequest();
+                                    } else {
+                                        setIsLocked(true);
+                                    }
+                                }}
                             >
                                 {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>{isLocked ? 'Kiosk is locked. Passcode needed to exit.' : 'Lock kiosk to prevent auto-logout.'}</p>
+                            <p>{isLocked ? 'Kiosk is locked. Click to unlock with passcode.' : 'Lock kiosk to prevent auto-logout.'}</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>

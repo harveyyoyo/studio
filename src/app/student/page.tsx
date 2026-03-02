@@ -110,13 +110,11 @@ function StudentDashboardInner({
   studentId,
   onDone,
   isLocked,
-  setIsLocked,
   onLogoutRequest,
 }: {
   studentId: string;
   onDone: () => void;
   isLocked: boolean;
-  setIsLocked: (locked: boolean) => void;
   onLogoutRequest: () => void;
 }) {
   const router = useRouter();
@@ -245,30 +243,13 @@ function StudentDashboardInner({
                   </div>
                   Redeem Coupon Code
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                    <div className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
-                        isLocked
-                            ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                            : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800 animate-pulse"
-                    )}>
-                        {isLocked ? 'Kiosk Locked' : `Auto-logout in ${logoutTimer}s`}
-                    </div>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 rounded-full"
-                                onClick={() => setIsLocked(!isLocked)}
-                            >
-                                {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{isLocked ? 'Unlock Kiosk (Enable Auto-Logout)' : 'Lock Kiosk (Disable Auto-Logout)'}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                <div className={cn(
+                    "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
+                    isLocked
+                        ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800 animate-pulse"
+                )}>
+                    {isLocked ? 'Kiosk Locked' : `Auto-logout in ${logoutTimer}s`}
                 </div>
               </div>
             </CardHeader>
@@ -392,7 +373,8 @@ export default function StudentLoginPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
-
+  const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false);
+  const [unlockPasscode, setUnlockPasscode] = useState('');
 
   const handleDone = useCallback(() => {
     setActiveStudentId(null);
@@ -440,6 +422,31 @@ export default function StudentLoginPage() {
     }
   };
 
+  const handleUnlockRequest = () => {
+    setIsUnlockDialogOpen(true);
+  };
+
+  const handleConfirmUnlock = useCallback(async () => {
+    if (!schoolId) return;
+    try {
+      const verify = httpsCallable(functions, 'verifySchoolPasscode');
+      await verify({ schoolId, passcode: unlockPasscode });
+      playSound('swoosh');
+      setIsLocked(false);
+      toast({ title: "Kiosk Unlocked", description: "Auto-logout is now enabled." });
+    } catch (e) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Incorrect Passcode',
+        description: 'The passcode you entered is incorrect.',
+      });
+    } finally {
+      setUnlockPasscode('');
+      setIsUnlockDialogOpen(false);
+    }
+  }, [schoolId, functions, unlockPasscode, playSound, toast]);
+
 
   if (!isInitialized || loginState !== 'school') {
     return (
@@ -458,7 +465,6 @@ export default function StudentLoginPage() {
             studentId={activeStudentId}
             onDone={handleDone}
             isLocked={isLocked}
-            setIsLocked={setIsLocked}
             onLogoutRequest={handleLogoutRequest}
           />
         </SchoolGate>
@@ -475,6 +481,7 @@ export default function StudentLoginPage() {
             title="Student Kiosk"
             isLocked={isLocked}
             setIsLocked={setIsLocked}
+            onUnlockRequest={handleUnlockRequest}
           />
           <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
@@ -506,6 +513,32 @@ export default function StudentLoginPage() {
             <DialogFooter className="flex gap-2 sm:justify-between">
               <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
               <Button onClick={handleConfirmLogout} className="rounded-xl flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200">Confirm Exit</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={isUnlockDialogOpen} onOpenChange={setIsUnlockDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-800">Unlock Kiosk?</DialogTitle>
+              <DialogDescription className="text-slate-500 font-medium text-sm">
+                Enter the school passcode to unlock the kiosk and re-enable auto-logout.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="unlock-passcode" className="font-black text-slate-700 uppercase tracking-widest text-[10px] ml-1">School Passcode</Label>
+              <Input
+                id="unlock-passcode"
+                type="password"
+                className="mt-2 text-xl rounded-xl h-14 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
+                value={unlockPasscode}
+                onChange={(e) => setUnlockPasscode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmUnlock()}
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="flex gap-2 sm:justify-between">
+              <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsUnlockDialogOpen(false); setUnlockPasscode(''); }}>Cancel</Button>
+              <Button onClick={handleConfirmUnlock} className="rounded-xl flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-bold text-sm">Confirm Unlock</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
