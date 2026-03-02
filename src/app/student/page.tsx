@@ -381,7 +381,11 @@ export default function StudentLoginPage() {
   }, []);
 
   const handleLogoutRequest = () => {
-    setIsLogoutDialogOpen(true);
+    if (isLocked) {
+      setIsLogoutDialogOpen(true);
+    } else {
+      handleDone();
+    }
   };
 
   const handleConfirmLogout = useCallback(async () => {
