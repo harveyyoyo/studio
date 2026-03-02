@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -40,6 +41,8 @@ import {
   ChevronRight,
   GraduationCap,
   Settings,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -124,6 +127,7 @@ function StudentDashboardInner({
 
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
+  const [isLocked, setIsLocked] = useState(false);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
   const animationKey = useRef(0);
   const playSound = useArcadeSound();
@@ -153,9 +157,15 @@ function StudentDashboardInner({
     setHasCameraPermission(hookHasPermission);
   }, [hookHasPermission]);
 
-  const resetTimer = useCallback(() => setLogoutTimer(10), []);
+  const resetTimer = useCallback(() => {
+    if (!isLocked) {
+      setLogoutTimer(10);
+    }
+  }, [isLocked]);
 
   useEffect(() => {
+    if (isLocked) return;
+
     if (logoutTimer <= 0) {
       onDone();
       return;
@@ -165,7 +175,7 @@ function StudentDashboardInner({
     }, 1000);
 
     return () => clearTimeout(timerId);
-  }, [logoutTimer, onDone]);
+  }, [logoutTimer, onDone, isLocked]);
 
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
@@ -209,6 +219,7 @@ function StudentDashboardInner({
   }
 
   return (
+    <TooltipProvider>
     <div className={`space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`}>
       {/* Graphic Elements */}
       {isGraphic && (
@@ -248,8 +259,30 @@ function StudentDashboardInner({
                   </div>
                   Redeem Coupon Code
                 </CardTitle>
-                <div className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold uppercase tracking-widest border border-amber-100 dark:border-amber-800 animate-pulse">
-                  Auto-logout in {logoutTimer}s
+                <div className="flex items-center gap-2">
+                    <div className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
+                        isLocked
+                            ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                            : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800 animate-pulse"
+                    )}>
+                        {isLocked ? 'Kiosk Locked' : `Auto-logout in ${logoutTimer}s`}
+                    </div>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full"
+                                onClick={() => setIsLocked(!isLocked)}
+                            >
+                                {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{isLocked ? 'Unlock Kiosk (Enable Auto-Logout)' : 'Lock Kiosk (Disable Auto-Logout)'}</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
               </div>
             </CardHeader>
@@ -383,6 +416,7 @@ function StudentDashboardInner({
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }
 
