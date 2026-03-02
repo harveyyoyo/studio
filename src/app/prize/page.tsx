@@ -232,10 +232,21 @@ export default function PrizePage() {
     const { toast } = useToast();
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+    const [isLocked, setIsLocked] = useState(false);
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
     }, []);
+
+    const handleUnlockRequest = () => {
+        // Simple unlock for now, just toggle state
+        // In a real app, this would probably open a password modal
+        setIsLocked(false);
+        toast({
+            title: "Unlocked",
+            description: "Scanner unlocked."
+        });
+    };
 
     if (!isInitialized || loginState !== 'school') {
         return (
@@ -258,6 +269,9 @@ export default function PrizePage() {
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-8 h-8" />}
+                    isLocked={isLocked}
+                    setIsLocked={setIsLocked}
+                    onUnlockRequest={handleUnlockRequest}
                 />
             </div>
         </TooltipProvider>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
 import { Nfc, Type, Camera, GraduationCap, Lock, Unlock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -207,7 +207,7 @@ export function StudentScanner({
                     <TabsContent value="camera">
                         <div className="py-2 space-y-4">
                             <div className="relative border-2 border-border rounded-xl overflow-hidden shadow-xl bg-black">
-                                <video ref={videoRef} className="w-full aspect-square object-cover" playsInline muted />
+                                <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full aspect-square object-cover" playsInline muted />
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="w-3/4 h-3/4 border-2 border-white/30 rounded-[1.5rem] border-dashed animate-pulse" />
                                 </div>

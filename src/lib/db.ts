@@ -53,6 +53,8 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
     nfcId: studentData.nfcId || newStudentId,
     points: 0,
     lifetimePoints: 0,
+    categoryPoints: {},
+    earnedAchievements: [],
   };
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   try {
@@ -600,6 +602,8 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       points: 0,
       lifetimePoints: 0,
       classId: classObj?.id || '',
+      categoryPoints: {},
+      earnedAchievements: [],
     };
 
     studentsToCreate.push(newStudent);

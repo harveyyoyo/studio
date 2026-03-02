@@ -21,7 +21,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import type { HistoryItem } from '@/lib/types';
+import type { HistoryItem, Student } from '@/lib/types';
 import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
 
@@ -62,7 +62,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 if (cleanId === 'schoolabc') {
                     toast({ title: `Resetting ${cleanId}...`, description: "Updating to latest sample data." });
                 }
-                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons", "achievements"];
                 const BATCH_LIMIT = 499;
 
                 for (const sub of SUBCOLLECTIONS) {
@@ -118,9 +118,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                     lastName: 'Student',
                     nfcId: '100',
                     points: 0,
-                    lifetimePoints: 0,
                     classId: '',
-                    history: [],
                 }],
             };
         }
@@ -144,28 +142,15 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             if (!list) return;
             for (const item of list) {
                 const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
-                if (collectionName === 'students' && item.history) {
-                    const { history, ...studentData } = item;
-                    const currentPoints = history.reduce((acc: number, activity: HistoryItem) => acc + activity.amount, 0);
-                    const lifetimePoints = history.reduce((acc: number, activity: HistoryItem) => {
-                        return activity.amount > 0 ? acc + activity.amount : acc;
-                    }, 0);
-                    const categoryPoints = history.reduce((acc: { [key: string]: number }, activity: HistoryItem) => {
-                        if (activity.amount > 0 && activity.desc.includes('coupon:')) {
-                            const match = activity.desc.match(/\(([^)]+)\)/);
-                            if (match && match[1]) {
-                                const category = match[1];
-                                acc[category] = (acc[category] || 0) + activity.amount;
-                            }
-                        }
-                        return acc;
-                    }, {});
-                    const finalStudentData = { ...studentData, points: currentPoints, lifetimePoints, categoryPoints };
-                    allOps.push({ ref: itemRef, data: finalStudentData });
-                    for (const historyItem of history) {
-                        const historyRef = doc(collection(itemRef, 'activities'));
-                        allOps.push({ ref: historyRef, data: historyItem });
-                    }
+                if (collectionName === 'students') {
+                    const studentData: Student = {
+                        ...item,
+                        points: item.points || 0,
+                        lifetimePoints: item.lifetimePoints || item.points || 0,
+                        categoryPoints: item.categoryPoints || {},
+                        earnedAchievements: item.earnedAchievements || [],
+                    };
+                    allOps.push({ ref: itemRef, data: studentData });
                 } else {
                     allOps.push({ ref: itemRef, data: item });
                 }
