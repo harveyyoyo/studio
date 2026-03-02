@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Nfc, Type, Camera, GraduationCap } from 'lucide-react';
+import { Nfc, Type, Camera, GraduationCap, Lock, Unlock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { lookupStudentId } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface StudentScannerProps {
     onStudentFound: (studentId: string) => void;
@@ -20,6 +22,8 @@ interface StudentScannerProps {
     description?: string;
     icon?: React.ReactNode;
     isActive?: boolean;
+    isLocked: boolean;
+    setIsLocked: (locked: boolean) => void;
 }
 
 export function StudentScanner({
@@ -27,7 +31,9 @@ export function StudentScanner({
     title = "Student Identification",
     description = "TAP CARD OR SCAN TO UNLOCK",
     icon = <GraduationCap className="w-8 h-8" />,
-    isActive = true
+    isActive = true,
+    isLocked,
+    setIsLocked,
 }: StudentScannerProps) {
     const { schoolId } = useAppContext();
     const firestore = useFirestore();
@@ -95,6 +101,23 @@ export function StudentScanner({
             )}
 
             <div className={`p-6 text-center relative z-10 ${isGraphic ? 'bg-primary/5 border-b border-primary/10' : 'bg-slate-50 border-b'}`}>
+                <div className="absolute top-3 right-3">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 rounded-full"
+                                onClick={() => setIsLocked(!isLocked)}
+                            >
+                                {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{isLocked ? 'Kiosk is locked. Passcode needed to exit.' : 'Lock kiosk to prevent auto-logout.'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
                 <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0 ${isGraphic ? 'bg-primary text-white' : 'bg-slate-800 text-white'}`}>
                     {icon}
                 </div>

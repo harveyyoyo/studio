@@ -109,9 +109,15 @@ function StudentActivityList({ schoolId, studentId }: { schoolId: string; studen
 function StudentDashboardInner({
   studentId,
   onDone,
+  isLocked,
+  setIsLocked,
+  onLogoutRequest,
 }: {
   studentId: string;
-  onDone: () => void
+  onDone: () => void;
+  isLocked: boolean;
+  setIsLocked: (locked: boolean) => void;
+  onLogoutRequest: () => void;
 }) {
   const router = useRouter();
   const { redeemCoupon, schoolId } = useAppContext();
@@ -127,7 +133,6 @@ function StudentDashboardInner({
 
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
-  const [isLocked, setIsLocked] = useState(false);
   const [animatedValue, setAnimatedValue] = useState<number | null>(null);
   const animationKey = useRef(0);
   const playSound = useArcadeSound();
@@ -136,9 +141,6 @@ function StudentDashboardInner({
   const isGraphic = settings.graphicMode === 'graphics';
 
   const [showRedeem, setShowRedeem] = useState(true);
-
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [logoutPasscode, setLogoutPasscode] = useState('');
 
   const [activeTab, setActiveTab] = useState('manual');
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -197,22 +199,6 @@ function StudentDashboardInner({
     }
     setCouponCode('');
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
-
-  const handleLogoutConfirm = useCallback(async () => {
-    if (!schoolId) return;
-    try {
-      const verify = httpsCallable(functions, 'verifySchoolPasscode');
-      await verify({ schoolId, passcode: logoutPasscode });
-      playSound('swoosh');
-      onDone();
-      toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    } catch {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Incorrect Passcode', description: 'The passcode you entered is incorrect.' });
-    }
-    setLogoutPasscode('');
-    setIsLogoutDialogOpen(false);
-  }, [schoolId, functions, logoutPasscode, onDone, playSound, toast]);
 
   if (studentLoading || !student || !schoolId) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
@@ -381,40 +367,12 @@ function StudentDashboardInner({
             <StudentActivityList schoolId={schoolId} studentId={student.id} />
           </CardContent>
           <div className="p-4 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <Button variant="outline" onClick={() => setIsLogoutDialogOpen(true)} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+            <Button variant="outline" onClick={onLogoutRequest} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
               <LogOut className="h-4 w-4" /> Log Out Now
             </Button>
           </div>
         </Card>
       </div>
-
-      <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-        {/* ... dialog content ... */}
-        <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black text-slate-800">Exit Kiosk?</DialogTitle>
-            <DialogDescription className="text-slate-500 font-medium text-sm">
-              To protect student privacy, a passcode is required to exit the student kiosk.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="logout-passcode-unified" className="font-black text-slate-700 uppercase tracking-widest text-[10px] ml-1">School Passcode</Label>
-            <Input
-              id="logout-passcode-unified"
-              type="password"
-              className="mt-2 text-xl rounded-xl h-14 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
-              value={logoutPasscode}
-              onChange={(e) => setLogoutPasscode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogoutConfirm()}
-              autoFocus
-            />
-          </div>
-          <DialogFooter className="flex gap-2 sm:justify-between">
-            <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
-            <Button onClick={handleLogoutConfirm} className="rounded-xl flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200">Confirm Exit</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
     </TooltipProvider>
   );
@@ -428,12 +386,60 @@ export default function StudentLoginPage() {
   const playSound = useArcadeSound();
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
+  const functions = useFunctions();
 
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [logoutPasscode, setLogoutPasscode] = useState('');
+
 
   const handleDone = useCallback(() => {
     setActiveStudentId(null);
   }, []);
+
+  const handleLogoutRequest = () => {
+    setIsLogoutDialogOpen(true);
+  };
+
+  const handleConfirmLogout = useCallback(async () => {
+    if (!schoolId) return;
+    try {
+      const verify = httpsCallable(functions, 'verifySchoolPasscode');
+      await verify({ schoolId, passcode: logoutPasscode });
+      playSound('swoosh');
+
+      if (activeStudentId) {
+        // Logging out from student dashboard, go back to scanner
+        setActiveStudentId(null);
+        toast({ title: "Logged Out", description: "Returning to kiosk home." });
+      } else {
+        // Exiting from scanner page, go back to main portal
+        router.push('/portal');
+      }
+
+    } catch (e) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Incorrect Passcode',
+        description: 'The passcode you entered is incorrect.',
+      });
+    } finally {
+      setLogoutPasscode('');
+      setIsLogoutDialogOpen(false);
+    }
+  }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast]);
+
+  const handleBackToPortalClick = (e: React.MouseEvent) => {
+    if (isLocked) {
+      e.preventDefault();
+      setIsLogoutDialogOpen(true);
+    } else {
+      playSound('swoosh');
+    }
+  };
+
 
   if (!isInitialized || loginState !== 'school') {
     return (
@@ -448,7 +454,13 @@ export default function StudentLoginPage() {
     return (
       <ErrorBoundary name="StudentDashboard">
         <SchoolGate>
-          <StudentDashboardInner studentId={activeStudentId} onDone={handleDone} />
+          <StudentDashboardInner
+            studentId={activeStudentId}
+            onDone={handleDone}
+            isLocked={isLocked}
+            setIsLocked={setIsLocked}
+            onLogoutRequest={handleLogoutRequest}
+          />
         </SchoolGate>
       </ErrorBoundary>
     );
@@ -461,14 +473,42 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={setActiveStudentId}
             title="Student Kiosk"
+            isLocked={isLocked}
+            setIsLocked={setIsLocked}
           />
           <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
-            <Link href="/portal" className="text-primary hover:underline flex items-center gap-1 group">
+            <Link href="/portal" onClick={handleBackToPortalClick} className="text-primary hover:underline flex items-center gap-1 group">
               <ArrowLeft className="w-3 h-3" /> Back to portal <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         </div>
+        <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+          <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-800">Exit Kiosk?</DialogTitle>
+              <DialogDescription className="text-slate-500 font-medium text-sm">
+                To protect student privacy, a passcode is required to exit the student kiosk.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="logout-passcode-unified" className="font-black text-slate-700 uppercase tracking-widest text-[10px] ml-1">School Passcode</Label>
+              <Input
+                id="logout-passcode-unified"
+                type="password"
+                className="mt-2 text-xl rounded-xl h-14 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
+                value={logoutPasscode}
+                onChange={(e) => setLogoutPasscode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmLogout()}
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="flex gap-2 sm:justify-between">
+              <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
+              <Button onClick={handleConfirmLogout} className="rounded-xl flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200">Confirm Exit</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </TooltipProvider>
     </ErrorBoundary>
   );
