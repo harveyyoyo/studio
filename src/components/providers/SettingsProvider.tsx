@@ -127,12 +127,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (!isLoaded) return;
         const root = document.documentElement;
-        if (settings.darkMode) {
+        if (settings.darkMode || settings.graphicMode === 'graphics') {
             root.classList.add('dark');
         } else {
             root.classList.remove('dark');
         }
-    }, [settings.darkMode, isLoaded]);
+    }, [settings.darkMode, settings.graphicMode, isLoaded]);
 
     // Apply color scheme data attribute for classic mode
     useEffect(() => {
