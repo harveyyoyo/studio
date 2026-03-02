@@ -70,24 +70,35 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
-    if (!auth) { 
+    if (!auth) {
       setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not available.") });
       return;
     }
+
+    let isInitialCheck = true;
 
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
         if (firebaseUser) {
-            setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+          // A user is found (from cache or new anonymous session)
+          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+          isInitialCheck = false;
         } else {
-            // First, set loading to false to allow initial render.
-            setUserAuthState({ user: null, isUserLoading: false, userError: null });
-            // Then, attempt to sign in anonymously in the background.
+          // No user found
+          if (isInitialCheck) {
+            // First time running, no cached user. Try to sign in anonymously.
+            // isUserLoading remains true until the listener fires again.
+            isInitialCheck = false;
             signInAnonymously(auth).catch((error) => {
-                console.error("FirebaseProvider: Anonymous sign-in failed:", error);
-                setUserAuthState({ user: null, isUserLoading: false, userError: error });
+              // This is a critical failure.
+              console.error("FirebaseProvider: Anonymous sign-in failed:", error);
+              setUserAuthState({ user: null, isUserLoading: false, userError: error });
             });
+          } else {
+            // This means a user was previously logged in and has now signed out.
+            setUserAuthState({ user: null, isUserLoading: false, userError: null });
+          }
         }
       },
       (error) => {
@@ -95,8 +106,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe(); 
-  }, [auth]); 
+    return () => unsubscribe();
+  }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth && functions);

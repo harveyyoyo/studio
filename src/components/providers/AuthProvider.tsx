@@ -57,6 +57,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [isMounted, setIsMounted] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     const [loginState, setLoginState] = useState<LoginState>('loggedOut');
     const [schoolId, setSchoolId] = useState<string | null>(null);
@@ -68,58 +69,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { auth, firestore, functions, isUserLoading } = useFirebase();
     const playSound = useArcadeSound();
     const router = useRouter();
+    
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
-        if (isUserLoading) {
-            return; // Wait for Firebase to determine the user state
+        if (!isMounted || isUserLoading) {
+            // Wait until the component is mounted on the client AND Firebase auth is ready.
+            return;
         }
-    
-        let cancelled = false;
 
         const restore = async () => {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
 
             if (savedState === 'school' && savedSchoolId) {
-                let provisioned = false;
-                // Since isUserLoading is false, auth.currentUser is now reliable
                 if (auth && firestore && auth.currentUser) {
                     try {
-                        provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
+                        const provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
                         if (provisioned) {
-                            // Give firestore rules a moment to propagate
-                            await new Promise((r) => setTimeout(r, 1000));
+                            await new Promise((r) => setTimeout(r, 200)); // Short delay for propagation
+                            setLoginState('school');
+                            setSchoolId(savedSchoolId);
+                            setIsAdmin(true);
+                        } else {
+                            localStorage.removeItem('loginState');
+                            localStorage.removeItem('schoolId');
                         }
                     } catch (e) {
-                        console.error('[AuthProvider] Failed to provision admin role during restore:', e);
+                         console.error('[AuthProvider] Failed to provision admin role during restore:', e);
+                         localStorage.removeItem('loginState');
+                         localStorage.removeItem('schoolId');
                     }
                 }
-
-                if (cancelled) return;
-
-                if (provisioned) {
-                    setLoginState('school');
-                    setSchoolId(savedSchoolId);
-                    setIsAdmin(true);
-                } else {
-                    // If provisioning failed (e.g. user was signed out), clear the stored state.
-                    localStorage.removeItem('loginState');
-                    localStorage.removeItem('schoolId');
-                }
             } else if (savedState) {
-                if (cancelled) return;
                 setLoginState(savedState);
                 if (savedState === 'developer') setIsAdmin(true);
             }
-
-            if (!cancelled) {
-                setIsInitialized(true);
-            }
+            
+            setIsInitialized(true);
         };
 
         restore();
-        return () => { cancelled = true; };
-    }, [isUserLoading, firestore, auth]);
+    }, [isMounted, isUserLoading, auth, firestore]);
 
     const provisionedUidRef = useRef<string | null>(null);
     useEffect(() => {
@@ -243,6 +236,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
         [isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout]
     );
+
+    if (!isMounted) {
+        return null;
+    }
 
     return (
         <AuthContext.Provider value={value}>
