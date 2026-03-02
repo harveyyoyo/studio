@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 500;
@@ -20,7 +21,7 @@ export function SchoolGate({
   fallback?: React.ReactNode;
 }) {
   const { schoolId, isAdmin } = useAppContext();
-  const { auth } = useFirebase();
+  const { auth, firestore } = useFirebase();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
 
@@ -30,23 +31,15 @@ export function SchoolGate({
       return;
     }
     const user = auth.currentUser;
-    if (!schoolId || !user) return;
+    if (!schoolId || !user || !firestore) return;
 
     let cancelled = false;
 
     (async () => {
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const idToken = await user.getIdToken();
-          const res = await fetch('/api/auth/provision', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ schoolId }),
-          });
-          if (!res.ok) throw new Error(`Provision failed: ${res.status}`);
+          const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', user.uid);
+          await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
 
           // Add a small delay for Firestore replication/propagation
           await new Promise((r) => setTimeout(r, 1000));
@@ -64,7 +57,7 @@ export function SchoolGate({
     })();
 
     return () => { cancelled = true; };
-  }, [schoolId, auth]);
+  }, [schoolId, auth, firestore, isAdmin]);
 
   if (error) {
     return (

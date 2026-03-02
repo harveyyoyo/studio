@@ -15,24 +15,23 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
 import {
     doc,
-    onSnapshot,
+    setDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
-async function provisionAdminViaServer(auth: import('firebase/auth').Auth, schoolId: string): Promise<boolean> {
+async function provisionAdminViaClient(firestore: import('firebase/firestore').Firestore, auth: import('firebase/auth').Auth, schoolId: string): Promise<boolean> {
     const user = auth.currentUser;
     if (!user) return false;
-    const idToken = await user.getIdToken();
-    const res = await fetch('/api/auth/provision', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ schoolId }),
-    });
-    return res.ok;
+
+    try {
+        const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', user.uid);
+        await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
+        return true;
+    } catch (e) {
+        console.error("Client-side admin provisioning failed:", e);
+        return false;
+    }
 }
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -66,9 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const playSound = useArcadeSound();
     const router = useRouter();
 
-    // Restore session and provision admin role before any child renders.
-    // All state mutations are guarded by `cancelled` so React 18 StrictMode's
-    // double-invocation of effects doesn't set schoolId from a stale closure.
     useEffect(() => {
         let cancelled = false;
 
@@ -77,15 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const savedSchoolId = localStorage.getItem('schoolId');
 
             if (savedState === 'school' && savedSchoolId) {
-                // Provision admin role via server-side API route (Admin SDK)
-                // so the write bypasses Firestore Security Rules entirely.
-                // Client-side writes fail when sign_in_provider is "custom"
-                // (injected by Firebase App Hosting).
                 let provisioned = false;
-                if (auth) {
+                if (auth && firestore) {
                     try {
-                        provisioned = await provisionAdminViaServer(auth, savedSchoolId);
-                        // Add a small delay for Firestore replication/propagation
+                        provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
                         if (provisioned) await new Promise((r) => setTimeout(r, 1000));
                     } catch (e) {
                         console.error('[AuthProvider] Failed to provision admin role during restore:', e);
@@ -117,24 +108,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => { cancelled = true; };
     }, [firestore, auth]);
 
-    // If the Firebase auth user changes mid-session (e.g. custom token expires
-    // and is replaced by anonymous auth), re-provision the admin role for the
-    // new UID so existing Firestore listeners don't hit permission errors.
     const provisionedUidRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!auth) return;
+        if (!auth || !firestore) return;
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (!user || !schoolId || loginState !== 'school') return;
             if (user.uid === provisionedUidRef.current) return;
             provisionedUidRef.current = user.uid;
-            provisionAdminViaServer(auth, schoolId).catch((e) =>
+            provisionAdminViaClient(firestore, auth, schoolId).catch((e) =>
                 console.error('[AuthProvider] Re-provision on auth change failed:', e)
             );
         });
         return unsubscribe;
-    }, [auth, schoolId, loginState]);
+    }, [auth, firestore, schoolId, loginState]);
 
-    // Data sync & network status listener
     useEffect(() => {
         const handleOnline = () => setSyncStatus('syncing');
         const handleOffline = () => setSyncStatus('offline');
@@ -182,7 +169,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             credentials: { schoolId?: string; passcode?: string }
         ): Promise<boolean> => {
             if (type === 'developer') {
-                // Validate via server-side API route so passcode never reaches client bundle
                 try {
                     const res = await fetch('/api/auth/dev-login', {
                         method: 'POST',
@@ -205,8 +191,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
 
-                    if (auth) {
-                        await provisionAdminViaServer(auth, lowerSchoolId);
+                    if (auth && firestore) {
+                        await provisionAdminViaClient(firestore, auth, lowerSchoolId);
                     }
 
                     setSchoolId(lowerSchoolId);
@@ -222,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return false;
         },
-        [firestore, functions]
+        [firestore, functions, auth]
     );
 
     const logout = useCallback(() => {
