@@ -1,4 +1,3 @@
-
 'use client';
 // Force rebuild for hydration sync
 import { useState, useEffect } from 'react';
@@ -45,8 +44,30 @@ export default function Header() {
     setMounted(true);
   }, []);
 
-  if (pathname.startsWith('/s/')) {
-    return null;
+  const isSchoolLoginPage = pathname.startsWith('/s/');
+  const isGraphic = settings.graphicMode === 'graphics';
+
+  if (isSchoolLoginPage) {
+    return (
+      <header className={cn(
+        "no-print w-full max-w-6xl p-4 md:p-6 mb-6 flex justify-center items-center relative"
+      )}>
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "overflow-hidden rounded-lg shadow-md",
+            isGraphic && 'animate-pulse-glow'
+          )}>
+            <Logo className="w-10 h-10" />
+          </div>
+          <h1 className={cn(
+            "text-2xl md:text-3xl font-bold leading-none font-headline",
+            isGraphic ? 'text-white' : 'text-foreground'
+          )}>
+            levelUp EDU
+          </h1>
+        </div>
+      </header>
+    );
   }
 
   const getTitle = () => {
@@ -143,8 +164,6 @@ export default function Header() {
       </>
     );
   }
-
-  const isGraphic = settings.graphicMode === 'graphics';
 
   return (
     <header className={cn(
