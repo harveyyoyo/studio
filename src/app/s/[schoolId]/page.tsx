@@ -9,7 +9,8 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertCircle, Star, Gamepad2 } from 'lucide-react';
+import { Loader2, AlertCircle, Star, Gamepad2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function SchoolLoginPage() {
     const { schoolId } = useParams<{ schoolId: string }>();
@@ -74,7 +75,10 @@ export default function SchoolLoginPage() {
 
     if (loading || !isInitialized) {
         return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-muted-foreground'}`}>
+            <div className={cn(
+                "min-h-screen flex flex-col items-center justify-center gap-4 font-sans",
+                isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-muted-foreground'
+            )}>
                 <Loader2 className="w-8 h-8 animate-spin" />
                 <p className="font-medium text-sm">Loading&hellip;</p>
             </div>
@@ -83,16 +87,25 @@ export default function SchoolLoginPage() {
 
     if (notFound) {
         return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-6 px-6 font-sans ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
-                <div className={`w-full max-w-sm rounded-2xl p-8 text-center border ${isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20' : 'bg-card border-border shadow-lg'}`}>
-                    <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${isGraphic ? 'text-red-400' : 'text-red-500'}`} />
+            <div className={cn(
+                "min-h-screen flex flex-col items-center justify-center gap-6 px-6 font-sans",
+                isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+            )}>
+                <div className={cn(
+                    "w-full max-w-sm rounded-2xl p-8 text-center border",
+                    isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20' : 'bg-card border-border shadow-lg'
+                )}>
+                    <AlertCircle className={cn("w-12 h-12 mx-auto mb-4", isGraphic ? 'text-red-400' : 'text-red-500')} />
                     <h2 className="text-lg font-bold mb-2">School Not Found</h2>
-                    <p className={`text-sm mb-6 ${isGraphic ? 'text-white/60' : 'text-slate-500'}`}>
+                    <p className={cn("text-sm mb-6", isGraphic ? 'text-white/60' : 'text-slate-500')}>
                         There is no school with the ID <span className="font-bold font-code">{schoolId}</span>. Please check the link and try again.
                     </p>
                     <button
                         onClick={() => router.push('/')}
-                        className={`w-full h-12 font-bold rounded-xl transition-all ${isGraphic ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                        className={cn(
+                            "w-full h-12 font-bold rounded-xl transition-all",
+                            isGraphic ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                        )}
                     >
                         Go to Login
                     </button>
@@ -102,42 +115,50 @@ export default function SchoolLoginPage() {
     }
 
     return (
-        <div className={`min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500 ${isGraphic ? 'bg-gradient-to-br from-indigo-900 via-purple-900 to-orange-600 text-white' : 'bg-background text-foreground'}`}>
+        <div className={cn(
+            "min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500",
+            isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+        )}>
 
             {isGraphic && (
-                <div className="absolute inset-0 z-0 opacity-10">
-                    <Star className="absolute top-10 left-10 w-8 h-8 text-yellow-300" />
-                    <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-white/50 -rotate-12" />
-                    <Star className="absolute top-40 right-16 w-6 h-6 text-yellow-300" />
-                    <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-white/50 rotate-12" />
-                </div>
+                <>
+                  <div className="absolute inset-0 z-0 opacity-20">
+                    <Sparkles className="absolute top-10 left-10 w-8 h-8 text-cyan-300 animate-float" style={{ animationDelay: '0s' }} />
+                    <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-white/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
+                    <Sparkles className="absolute top-40 right-16 w-6 h-6 text-purple-300 animate-float" style={{ animationDelay: '2s' }} />
+                  </div>
+                  <div className="absolute inset-0 z-0 bg-gradient-to-br from-indigo-900/30 via-purple-900/30 to-orange-600/30 opacity-30" />
+                </>
             )}
 
             <div className="relative z-10 w-full max-w-md px-6 pt-16 sm:pt-24 flex flex-col items-center animate-in fade-in zoom-in duration-500">
-                <div className={`w-full rounded-[2.5rem] p-8 relative transition-all border ${isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl' : 'bg-card border-border shadow-lg'}`}>
+                <div className={cn(
+                    "w-full rounded-[2.5rem] p-8 relative transition-all border",
+                    isGraphic ? 'bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
+                )}>
 
                     <div className="text-center mb-8">
-                        <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${isGraphic ? 'text-white/50' : 'text-slate-400'}`}>
+                        <p className={cn("text-xs font-bold uppercase tracking-wider mb-2", isGraphic ? 'text-white/50' : 'text-slate-400')}>
                             Welcome to
                         </p>
-                        <h2 className={`text-2xl font-black tracking-tight mb-1 ${isGraphic ? 'drop-shadow-md' : 'text-slate-800'}`}>
+                        <h2 className={cn("text-2xl font-black tracking-tight mb-1", isGraphic ? 'graphic-text-glow' : 'text-slate-800')}>
                             {schoolName}
                         </h2>
-                        <p className={`text-xs font-medium ${isGraphic ? 'text-white/80' : 'text-slate-500'}`}>
+                        <p className={cn("text-xs font-medium", isGraphic ? 'text-white/80' : 'text-slate-500')}>
                             Enter your passcode to continue.
                         </p>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <Label htmlFor="passcode" className={`text-[10px] font-black uppercase tracking-widest ml-1 ${isGraphic ? 'text-white/60' : 'text-slate-400'}`}>
+                            <Label htmlFor="passcode" className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-white/60' : 'text-slate-400')}>
                                 Passcode
                             </Label>
                             <input
                                 id="passcode"
                                 type="password"
                                 autoFocus
-                                className={`w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center ${isGraphic ? 'bg-white/10 border border-white/10 text-white focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100'}`}
+                                className={cn("w-full h-14 rounded-xl px-5 focus:outline-none focus:ring-4 transition-all font-mono tracking-[0.5em] text-center", isGraphic ? 'bg-white/10 border border-white/10 text-white focus:ring-primary/20' : 'bg-slate-50 border-2 border-slate-100 text-slate-800 focus:ring-indigo-100')}
                                 value={passcode}
                                 onChange={(e) => setPasscode(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
@@ -147,7 +168,7 @@ export default function SchoolLoginPage() {
                         <div className="pt-4">
                             <button
                                 onClick={handleLogin}
-                                className={`w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl ${isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'}`}
+                                className={cn("w-full h-16 font-black text-lg uppercase tracking-widest rounded-2xl transition-all transform active:scale-95 shadow-xl", isGraphic ? 'bg-primary hover:bg-primary/90 text-white shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white')}
                             >
                                 Login
                             </button>

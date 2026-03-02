@@ -7,6 +7,7 @@ import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Star, Gift, Arrow
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { cn } from '@/lib/utils';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
@@ -61,7 +62,11 @@ export default function PortalPage() {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 relative overflow-hidden font-sans ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'} ${isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'}`}>
+        <div className={cn(
+            "min-h-screen transition-colors duration-500 relative overflow-hidden font-sans",
+            settings.displayMode === 'app' ? 'pb-24' : 'pb-8',
+            isGraphic ? 'bg-[#0c133a] text-white' : 'bg-background text-foreground'
+        )}>
 
             {/* Graphic Decoration */}
             {isGraphic && (
@@ -73,6 +78,13 @@ export default function PortalPage() {
             )}
 
             <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6 animate-in fade-in duration-500">
+                
+                {isGraphic && (
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl font-black tracking-tighter text-white uppercase graphic-text-glow">Select Portal</h1>
+                        <p className="text-sm text-white/50 font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                    </div>
+                )}
 
                 {/* Portal Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -82,10 +94,12 @@ export default function PortalPage() {
 
                     return (
                         <Link key={p.href} href={p.href} className="block group" onClick={() => playSound('click')}>
-                        <Card className={`h-full min-h-[200px] sm:min-h-[220px] border-t-4 transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative ${isGraphic
+                        <Card className={cn(
+                            'h-full min-h-[200px] sm:min-h-[220px] transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative',
+                            isGraphic
                                 ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
-                                : `bg-white border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
-                            }`}>
+                                : `bg-white border-t-4 border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
+                            )}>
                                     {/* Decorative Elements for Graphic Mode */}
                                     {isGraphic && (
                                         <div className="absolute -top-4 -right-4 w-12 h-12 opacity-5">
@@ -94,21 +108,29 @@ export default function PortalPage() {
                                     )}
 
                                     <CardHeader className="space-y-3 pt-5 pb-5">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px] ${isGraphic ? 'bg-white/10 border border-white/10' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
-                                            }`}>
-                                            <Icon className={`w-8 h-8 ${isGraphic ? gc.text : (iconTextClassic[p.color] ?? '')}`} />
+                                        <div className={cn(
+                                            "w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px]",
+                                            isGraphic ? 'bg-white/10 border border-white/10' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
+                                        )}>
+                                            <Icon className={cn("w-8 h-8", isGraphic ? gc.text : (iconTextClassic[p.color] ?? ''))} />
                                         </div>
                                         <div>
-                                            <CardTitle className={`text-lg font-black tracking-tight ${isGraphic ? 'text-white' : 'text-slate-800'}`}>
+                                            <CardTitle className={cn(
+                                                "text-lg font-black tracking-tight",
+                                                isGraphic ? 'text-white' : 'text-slate-800'
+                                            )}>
                                                 {p.label}
                                             </CardTitle>
-                                            <CardDescription className={`text-xs font-medium mt-1 leading-relaxed ${isGraphic ? 'text-white/50' : 'text-slate-500'}`}>
+                                            <CardDescription className={cn(
+                                                "text-xs font-medium mt-1 leading-relaxed",
+                                                isGraphic ? 'text-white/50' : 'text-slate-500'
+                                            )}>
                                                 {p.desc}
                                             </CardDescription>
                                         </div>
                                     </CardHeader>
 
-                                    <div className={`absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100 ${isGraphic ? 'text-white/30' : 'text-slate-300'}`}>
+                                    <div className={cn("absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100", isGraphic ? 'text-white/30' : 'text-slate-300')}>
                                         <ArrowRight className="w-5 h-5" />
                                     </div>
                                 </Card>

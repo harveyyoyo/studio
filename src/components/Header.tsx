@@ -33,6 +33,7 @@ import {
 import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
 import { Logo } from './Logo';
+import { cn } from '@/lib/utils';
 
 export default function Header() {
   const pathname = usePathname();
@@ -79,9 +80,15 @@ export default function Header() {
 
     return (
       <>
-        <header className={`no-print w-full flex justify-between items-center relative z-20 mb-4 ${isGraphicApp ? 'text-white' : 'text-foreground'}`}>
+        <header className={cn(
+          "no-print w-full flex justify-between items-center relative z-20 mb-4",
+          isGraphicApp ? 'text-white' : 'text-foreground'
+        )}>
             <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
-                <div className={`overflow-hidden rounded-lg shadow-md ${isGraphicApp ? 'ring-2 ring-primary/20' : ''}`}>
+                <div className={cn(
+                  "overflow-hidden rounded-lg shadow-md",
+                  isGraphicApp && 'animate-pulse-glow'
+                )}>
                     <Logo className="w-8 h-8" />
                 </div>
                 <div>
@@ -89,24 +96,33 @@ export default function Header() {
                       {appTitle}
                   </h1>
                   {loginState === 'school' && schoolId && (
-                    <p className={`text-xs font-bold leading-tight ${isGraphicApp ? 'text-white/60' : 'text-primary'}`}>{schoolId.replace(/_/g, ' ')}</p>
+                    <p className={cn(
+                      "text-xs font-bold leading-tight",
+                      isGraphicApp ? 'text-white/60' : 'text-primary'
+                    )}>{schoolId.replace(/_/g, ' ')}</p>
                   )}
                 </div>
             </Link>
             <div className="z-[101]">
-                <div className={`backdrop-blur-md rounded-xl shadow-lg border p-1 ${isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'}`}>
+                <div className={cn(
+                  "backdrop-blur-md rounded-xl shadow-lg border p-1",
+                  isGraphicApp ? 'bg-white/10 border-white/20' : 'bg-white/80 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800'
+                )}>
                     <SettingsModal />
                 </div>
             </div>
         </header>
 
         {loginState === 'school' && (
-          <nav className={`fixed bottom-0 left-0 right-0 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-[100] no-print border-t transition-colors ${isGraphicApp ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-200 shadow-lg'}`}>
+          <nav className={cn(
+            "fixed bottom-0 left-0 right-0 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] z-[100] no-print border-t transition-colors",
+            isGraphicApp ? 'bg-[#070b1f]/95 backdrop-blur-md border-white/5' : 'bg-white border-slate-200 shadow-lg'
+          )}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
                 const activeClass = isActive
-                  ? (isGraphicApp ? 'text-primary' : 'text-indigo-600')
+                  ? (isGraphicApp ? 'text-primary graphic-text-glow' : 'text-indigo-600')
                   : (isGraphicApp ? 'text-white/30 hover:text-white' : 'text-slate-400 hover:text-slate-800');
                 return (
                   <Link key={href} href={href} className={`flex flex-col items-center transition-colors px-2 py-1 ${activeClass}`} {...(href === '/portal' && { 'data-home-button': 'true' })}>
@@ -125,22 +141,31 @@ export default function Header() {
   const isGraphic = settings.graphicMode === 'graphics';
 
   return (
-    <header className={`no-print w-full max-w-6xl bg-card rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center border-b-4 border-primary shadow-lg relative overflow-hidden ${isGraphic ? 'animate-in fade-in duration-500 shadow-primary/20' : ''}`}>
+    <header className={cn(
+      "no-print w-full max-w-6xl rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center relative overflow-hidden",
+      isGraphic ? 'bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
+    )}>
 
       <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest italic select-none hidden sm:block opacity-40">
         {schoolId?.replace(/_/g, '') || 'SCHOOLABC'}
       </div>
 
       <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
-        <div className={`overflow-hidden rounded-lg shadow-md group-hover:scale-110 transition-transform ${isGraphic ? 'ring-4 ring-primary/20' : ''}`}>
+        <div className={cn(
+          "overflow-hidden rounded-lg shadow-md group-hover:scale-110 transition-transform",
+          isGraphic && 'animate-pulse-glow'
+        )}>
           <Logo className="w-10 h-10" />
         </div>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-foreground leading-none font-headline">
+          <h1 className={cn(
+            "text-xl md:text-2xl font-bold leading-none font-headline",
+            isGraphic ? 'text-white' : 'text-foreground'
+          )}>
             {getTitle()}
           </h1>
            {loginState === 'school' && schoolId && (
-             <p className="text-sm font-bold text-primary">{schoolId.replace(/_/g, ' ')}</p>
+             <p className={cn("text-sm font-bold", isGraphic ? 'text-primary/80 graphic-text-glow' : 'text-primary')}>{schoolId.replace(/_/g, ' ')}</p>
           )}
         </div>
       </Link>
@@ -149,13 +174,16 @@ export default function Header() {
         <div className="flex gap-2 items-center relative z-20">
           {loginState === 'school' && (
             <>
-              <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-1 text-xs font-bold text-muted-foreground bg-background/50">
+              <Button variant="outline" size="sm" className={cn(
+                "hidden sm:flex items-center gap-1 text-xs font-bold",
+                isGraphic ? 'bg-white/5 border-white/10 text-white/60' : 'text-muted-foreground bg-background/50'
+              )}>
                 {syncStatus === 'synced' && <><Zap className="w-3 h-3 text-green-500" /><span>Live Sync</span></>}
                 {syncStatus === 'syncing' && <><Zap className="w-3 h-3 text-yellow-500 animate-pulse" /><span>Syncing...</span></>}
                 {syncStatus === 'offline' && <><CloudOff className="w-3 h-3 text-slate-500" /><span>Offline</span></>}
                 {syncStatus === 'error' && <><AlertTriangle className="w-3 h-3 text-red-500" /><span>Sync Error</span></>}
               </Button>
-              <Button asChild>
+              <Button asChild className={isGraphic ? 'bg-white/10 text-white hover:bg-white/20' : ''}>
                 <Link href="/portal" data-home-button="true"><Home className="mr-2" /> Home</Link>
               </Button>
             </>

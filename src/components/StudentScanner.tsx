@@ -15,6 +15,7 @@ import { lookupStudentId } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface StudentScannerProps {
     onStudentFound: (studentId: string) => void;
@@ -96,13 +97,19 @@ export function StudentScanner({
     }, [isActive, loginTab]);
 
     return (
-        <div className={`w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden relative ${isGraphic ? 'ring-4 ring-primary/5' : ''}`}>
+        <div className={cn(
+            "w-full max-w-sm rounded-3xl overflow-hidden relative",
+            isGraphic ? 'bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-primary/10' : 'bg-white shadow-2xl border border-slate-100'
+        )}>
             {/* Mascot Decoration for Graphic Mode */}
             {isGraphic && (
                 <div className="absolute -top-8 -left-8 w-24 h-24 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
             )}
 
-            <div className={`p-6 text-center relative z-10 ${isGraphic ? 'bg-primary/5 border-b border-primary/10' : 'bg-slate-50 border-b'}`}>
+            <div className={cn(
+                "p-6 text-center relative z-10",
+                isGraphic ? 'border-b border-white/10' : 'bg-slate-50 border-b'
+            )}>
                 <div className="absolute top-3 right-3">
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -126,16 +133,19 @@ export function StudentScanner({
                         </TooltipContent>
                     </Tooltip>
                 </div>
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0 ${isGraphic ? 'bg-primary text-white' : 'bg-slate-800 text-white'}`}>
+                <div className={cn(
+                    "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0",
+                    isGraphic ? 'bg-primary text-white animate-pulse-glow' : 'bg-slate-800 text-white'
+                )}>
                     {icon}
                 </div>
-                <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">{title}</h1>
-                <p className="text-muted-foreground font-bold text-xs mt-1.5 tracking-wide">{description}</p>
+                <h1 className={cn("text-2xl font-black uppercase tracking-tighter", isGraphic ? 'text-white graphic-text-glow' : 'text-slate-800')}>{title}</h1>
+                <p className="font-bold text-xs mt-1.5 tracking-wide text-muted-foreground">{description}</p>
             </div>
 
             <div className="p-6">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-100/50 p-1 rounded-xl mb-6">
+                    <TabsList className={cn("grid w-full grid-cols-3 p-1 rounded-xl mb-6", isGraphic ? 'bg-black/20' : 'bg-slate-100/50')}>
                         <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
                             <Nfc className="mr-2 h-4 w-4" /> Card
                         </TabsTrigger>
@@ -150,13 +160,13 @@ export function StudentScanner({
                     <TabsContent value="nfc" className="text-center">
                         <div className="py-12 space-y-8">
                             <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                                <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${isGraphic ? 'bg-primary' : 'bg-slate-400'}`}></div>
-                                <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all ${isGraphic ? 'bg-white border-primary text-primary' : 'bg-white border-slate-800 text-slate-800'}`}>
+                                <div className={cn("absolute inset-0 rounded-full animate-ping opacity-25", isGraphic ? 'bg-primary' : 'bg-slate-400')}></div>
+                                <div className={cn("w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-slate-900 border-primary text-primary' : 'bg-white border-slate-800 text-slate-800')}>
                                     <Nfc className="w-12 h-12" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <p className="text-slate-800 font-black text-lg">System Ready</p>
+                                <p className={cn("font-black text-lg", isGraphic ? 'text-white' : 'text-slate-800')}>System Ready</p>
                                 <p className="text-muted-foreground text-sm font-medium">Please place your card on the reader</p>
                             </div>
                             <Input
@@ -176,7 +186,10 @@ export function StudentScanner({
                             <div className="space-y-2">
                                 <Label className="font-black text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Student ID Code</Label>
                                 <Input
-                                    className="h-14 rounded-xl text-xl font-mono text-center border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary shadow-inner"
+                                    className={cn(
+                                        "h-14 rounded-xl text-xl font-mono text-center border-2 shadow-inner focus-visible:ring-primary",
+                                        isGraphic ? 'bg-black/20 border-white/10 text-white' : 'border-slate-200 bg-slate-50'
+                                    )}
                                     value={nfcId}
                                     onChange={(e) => setNfcId(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleLookup(nfcId)}
@@ -185,7 +198,7 @@ export function StudentScanner({
                                 />
                                 <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
                             </div>
-                            <Button onClick={() => handleLookup(nfcId)} className={`w-full h-14 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-white ${isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700'}`}>
+                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-14 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-white", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700')}>
                                 Identify Student
                             </Button>
                         </div>
