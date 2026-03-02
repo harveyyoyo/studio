@@ -239,7 +239,8 @@ function StudentDashboardInner({
                     "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
                     isKioskLocked
                         ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800 animate-pulse"
+                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800",
+                    !isKioskLocked && "animate-pulse"
                 )}>
                     <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
                 </div>
@@ -368,12 +369,8 @@ export default function StudentLoginPage() {
   const [unlockPasscode, setUnlockPasscode] = useState('');
 
   const handleDone = useCallback(() => {
-    if (isKioskLocked) {
-      setIsLogoutDialogOpen(true);
-    } else {
-      setActiveStudentId(null);
-    }
-  }, [isKioskLocked]);
+    setActiveStudentId(null);
+  }, []);
 
   const handleConfirmLogout = useCallback(async () => {
     if (!schoolId) return;
