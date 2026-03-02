@@ -131,7 +131,7 @@ export default function SchoolLoginPage() {
                 </>
             )}
 
-            <div className="relative z-10 w-full max-w-md px-6 pt-16 sm:pt-24 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+            <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center animate-in fade-in zoom-in duration-500">
                 <div className={cn(
                     "w-full rounded-[2.5rem] p-8 relative transition-all border",
                     isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'

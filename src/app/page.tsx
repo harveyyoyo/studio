@@ -109,7 +109,7 @@ export default function LoginPage() {
         </>
       )}
 
-      <div className="relative z-10 w-full max-w-md px-6 pt-16 sm:pt-20 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+      <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center animate-in fade-in zoom-in duration-500">
 
         {/* Login Card - Unified DOM */}
         <div className={cn(

@@ -79,12 +79,18 @@ export default function PortalPage() {
 
             <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6 animate-in fade-in duration-500">
                 
-                {isGraphic && (
+                {isGraphic ? (
                     <div className="text-center mb-8">
                         <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
                         <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
                     </div>
+                ) : (
+                    <div className="mb-6">
+                        <h1 className="text-3xl font-bold">Portal</h1>
+                        <p className="text-muted-foreground">Select an area to continue.</p>
+                    </div>
                 )}
+
 
                 {/* Portal Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

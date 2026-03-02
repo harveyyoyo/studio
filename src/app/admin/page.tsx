@@ -464,6 +464,12 @@ function AdminDashboardInner() {
   return (
     <TooltipProvider>
       <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
+        <div className="space-y-0.5">
+            <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
+            <p className="text-muted-foreground">
+                Manage students, classes, prizes, and system settings.
+            </p>
+        </div>
         <Tabs defaultValue="students" className="space-y-6">
           <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto">
