@@ -3,7 +3,7 @@
     {
       "id": "logo",
       "description": "The main application logo, an abstract design.",
-      "imageUrl": "https://images.unsplash.com/photo-1744390166851-82056c6552d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxsb2dvJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzcyNDY1MDM1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://placehold.co/200x200/transparent/8b91c8?text=LUE&font=playfairdisplay",
       "imageHint": "logo abstract"
     }
   ]
