@@ -67,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
+        if (isUserLoading) {
+            return; // Wait for Firebase to determine the user state
+        }
+    
         let cancelled = false;
 
         const restore = async () => {
@@ -75,10 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (savedState === 'school' && savedSchoolId) {
                 let provisioned = false;
-                if (auth && firestore) {
+                // Since isUserLoading is false, auth.currentUser is now reliable
+                if (auth && firestore && auth.currentUser) {
                     try {
                         provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
-                        if (provisioned) await new Promise((r) => setTimeout(r, 1000));
+                        if (provisioned) {
+                            // Give firestore rules a moment to propagate
+                            await new Promise((r) => setTimeout(r, 1000));
+                        }
                     } catch (e) {
                         console.error('[AuthProvider] Failed to provision admin role during restore:', e);
                     }
@@ -91,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setSchoolId(savedSchoolId);
                     setIsAdmin(true);
                 } else {
+                    // If provisioning failed (e.g. user was signed out), clear the stored state.
                     localStorage.removeItem('loginState');
                     localStorage.removeItem('schoolId');
                 }
@@ -107,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         restore();
         return () => { cancelled = true; };
-    }, [firestore, auth]);
+    }, [isUserLoading, firestore, auth]);
 
     const provisionedUidRef = useRef<string | null>(null);
     useEffect(() => {
