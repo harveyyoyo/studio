@@ -24,7 +24,7 @@ const nextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_VERSION: `beta-${new Date().toISOString().slice(0, 10)}`,
+    NEXT_PUBLIC_VERSION: `beta-1.1.0`,
   },
 };
 
