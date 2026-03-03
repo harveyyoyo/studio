@@ -18,7 +18,7 @@ export function Logo({ className }: { className?: string }) {
           src={logoImage.imageUrl}
           fill
           alt={logoImage.description}
-          className="object-contain"
+          className="object-contain dark:invert"
           data-ai-hint={logoImage.imageHint}
           sizes="(max-width: 768px) 32px, 40px"
           priority
