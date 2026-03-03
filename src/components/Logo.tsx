@@ -1,28 +1,26 @@
 'use client';
-
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export function Logo({ className }: { className?: string }) {
-  const logoImage = PlaceHolderImages.find(img => img.id === 'logo');
-
-  if (!logoImage) {
-    // Fallback or empty div if logo isn't found, to avoid crashing.
-    return <div className={cn("w-10 h-10 bg-muted rounded-lg", className)}></div>;
-  }
-  
   return (
-    <div className={cn("relative", className)}>
-        <Image
-          src={logoImage.imageUrl}
-          fill
-          alt={logoImage.description}
-          className="object-contain dark:invert"
-          data-ai-hint={logoImage.imageHint}
-          sizes="(max-width: 768px) 32px, 40px"
-          priority
-        />
+    <div className={cn("relative text-foreground", className)}>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn("w-full h-full dark:invert", className)}
+      >
+        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+        <path d="M13 5v2" />
+        <path d="M13 17v2" />
+        <path d="M13 11v2" />
+      </svg>
     </div>
   );
 }
