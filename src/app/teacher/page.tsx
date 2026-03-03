@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck } from 'lucide-react';
+import type { Coupon, Category, Teacher, Student } from '@/lib/types';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -28,10 +28,12 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
-    const { addCoupons, setCouponsToPrint, addCategory, schoolId } = useAppContext();
+    const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPoints } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings } = useSettings();
@@ -41,18 +43,33 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
+    const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
+    const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+
+    // State for coupon printing
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
-
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
+    // State for direct awarding
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [studentSearch, setStudentSearch] = useState('');
+    const [awardCategoryId, setAwardCategoryId] = useState('');
+    const [awardValue, setAwardValue] = useState('10');
+    const [awardDescription, setAwardDescription] = useState('');
+
     useEffect(() => {
-        if (categories && categories.length > 0 && !printCategoryId) {
-            setPrintCategoryId(categories[0].id);
+        if (categories && categories.length > 0) {
+            if (!printCategoryId) {
+                setPrintCategoryId(categories[0].id);
+            }
+            if (!awardCategoryId) {
+                setAwardCategoryId(categories[0].id);
+            }
         }
-    }, [categories, printCategoryId]);
+    }, [categories, printCategoryId, awardCategoryId]);
 
     useEffect(() => {
         const category = categories?.find(c => c.id === printCategoryId);
@@ -60,6 +77,14 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
             setPrintValue(category.points.toString());
         }
     }, [printCategoryId, categories]);
+
+    useEffect(() => {
+        const category = categories?.find(c => c.id === awardCategoryId);
+        if (category) {
+            setAwardValue(category.points.toString());
+            setAwardDescription(category.name);
+        }
+    }, [awardCategoryId, categories]);
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
@@ -133,6 +158,46 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         await addCoupons(couponsToCreate);
         setCouponsToPrint(couponsToCreate);
     };
+    
+    const handleAwardPoints = async () => {
+        const points = parseInt(awardValue);
+        if (!selectedStudent) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'No student selected.' });
+            return;
+        }
+        if (!awardDescription.trim()) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Description is required.' });
+            return;
+        }
+        if (isNaN(points) || points <= 0) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Points must be a positive number.' });
+            return;
+        }
+
+        const result = await awardPoints(selectedStudent.id, points, awardDescription);
+
+        if (result.success) {
+            let toastDescription = `Awarded ${points} points to ${selectedStudent.firstName}.`;
+            if(result.bonusTotal && result.bonusTotal > 0) {
+              toastDescription += ` They also earned ${result.bonusTotal} bonus points from achievements!`;
+            }
+            playSound('success');
+            toast({ title: 'Points Awarded!', description: toastDescription });
+            setSelectedStudent(null);
+            setStudentSearch('');
+            setAwardDescription('');
+            if (categories && categories.length > 0) {
+                setAwardValue(categories[0].points.toString());
+            }
+        } else {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
+        }
+    };
+
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
@@ -145,17 +210,22 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         createdAt: Date.now(),
     };
 
+    const filteredStudents = (students || []).filter(s =>
+        `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearch.toLowerCase()) ||
+        s.nfcId.toLowerCase().includes(studentSearch.toLowerCase())
+    ).sort((a,b) => a.lastName.localeCompare(b.lastName));
+
+    const isLoading = categoriesLoading || studentsLoading;
+
     return (
         <TooltipProvider>
             <div className={`min-h-screen transition-colors duration-500 ${settings.displayMode === 'app' ? 'pb-24' : 'pb-8'}`}>
-
-                {/* Unified Header */}
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-background/10 border-b border-border/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div>
                             <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Print Coupons</h1>
                             <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-3' : 'text-primary'}`}>{teacherName}</p>
-                            <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Print coupon sheets and manage categories.</p>
+                            <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Generate coupon sheets or award points directly.</p>
                         </div>
                         <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-border text-muted-foreground hover:text-foreground hover:bg-accent' : ''}`}>
                             <LogOut className="w-4 h-4" /> Switch Teacher
@@ -166,7 +236,6 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 <div className="max-w-4xl mx-auto px-6 -mt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                        {/* Coupon Printer Section */}
                         <Card className={`border-t-4 transition-all ${isGraphic
                             ? 'bg-card/50 backdrop-blur-md border-primary shadow-2xl'
                             : 'bg-white border-primary shadow-lg'
@@ -181,7 +250,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {categoriesLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
+                                {isLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
                                     <div className="space-y-6">
                                         <div className="space-y-4">
                                             <div className="space-y-2">
@@ -240,6 +309,89 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                             </div>
                                         </div>
                                     </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card className={`border-t-4 transition-all ${isGraphic
+                            ? 'bg-card/50 backdrop-blur-md border-chart-2 shadow-2xl'
+                            : 'bg-white border-chart-2 shadow-lg'
+                            }`}>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Award className={isGraphic ? 'text-chart-2' : 'text-chart-2'} />
+                                    Direct Award
+                                </CardTitle>
+                                <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
+                                    Digitally award points to a student.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {isLoading ? <Skeleton className="h-48 w-full" /> : (
+                                    selectedStudent ? (
+                                        <div className="space-y-4 animate-in fade-in">
+                                            <div className="p-3 rounded-xl bg-secondary/30 border flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Awarding to:</p>
+                                                    <p className="font-bold">{selectedStudent.firstName} {selectedStudent.lastName}</p>
+                                                </div>
+                                                <Button variant="ghost" size="sm" onClick={() => setSelectedStudent(null)}>Change</Button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Category</Label>
+                                                <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
+                                                    <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : ''}`}>
+                                                        <SelectValue placeholder="Select..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Points Value</Label>
+                                                <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'bg-slate-50'}`} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Description / Reason</Label>
+                                                <Input value={awardDescription} onChange={(e) => setAwardDescription(e.target.value)} className={`h-12 rounded-xl ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'bg-slate-50'}`} />
+                                            </div>
+                                            <Button onClick={handleAwardPoints} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20' : 'bg-slate-800 hover:bg-slate-700'}`}>
+                                                <Award className="w-5 h-5 mr-3" /> Award Points
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                                                <Input placeholder="Search for a student..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="pl-10 h-12 rounded-xl" />
+                                            </div>
+                                            <ScrollArea className="h-96 border rounded-xl">
+                                                {filteredStudents.length > 0 ? (
+                                                    <ul className="p-2 space-y-1">
+                                                        {filteredStudents.map(student => (
+                                                            <li key={student.id}>
+                                                                <button onClick={() => setSelectedStudent(student)} className="w-full text-left p-3 rounded-lg hover:bg-accent flex items-center gap-3 transition-colors">
+                                                                    <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                                                        {student.firstName[0]}{student.lastName[0]}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-sm">{student.lastName}, {student.firstName}</p>
+                                                                        <p className="text-xs text-muted-foreground">ID: {student.nfcId}</p>
+                                                                    </div>
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+                                                        <User className="w-10 h-10 mb-2 opacity-50"/>
+                                                        <p className="text-sm font-medium">No students found.</p>
+                                                    </div>
+                                                )}
+                                            </ScrollArea>
+                                        </div>
+                                    )
                                 )}
                             </CardContent>
                         </Card>
