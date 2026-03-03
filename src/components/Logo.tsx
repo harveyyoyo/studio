@@ -17,9 +17,14 @@ export function Logo({ className }: { className?: string }) {
         className={cn("w-full h-full dark:invert", className)}
       >
         <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
-        <path d="M13 5v2" />
-        <path d="M13 17v2" />
-        <path d="M13 11v2" />
+        {/* Barcode lines */}
+        <g strokeLinecap="butt">
+            <path strokeWidth="1" d="M8 10 V 14" />
+            <path strokeWidth="2" d="M10.5 10 V 14" />
+            <path strokeWidth="1" d="M13 10 V 14" />
+            <path strokeWidth="1.5" d="M15 10 V 14" />
+            <path strokeWidth="1" d="M17 10 V 14" />
+        </g>
       </svg>
     </div>
   );
