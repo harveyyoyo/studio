@@ -19,7 +19,6 @@ import {
     onSnapshot,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 async function provisionAdminViaClient(firestore: import('firebase/firestore').Firestore, auth: import('firebase/auth').Auth, schoolId: string): Promise<boolean> {
     const user = auth.currentUser;
@@ -67,7 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isAdmin, setIsAdmin] = useState(false);
 
     const { auth, firestore, functions, isUserLoading } = useFirebase();
-    const playSound = useArcadeSound();
     const router = useRouter();
     
     useEffect(() => {
@@ -218,7 +216,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const logout = useCallback(() => {
-        playSound('swoosh');
         localStorage.removeItem('loginState');
         localStorage.removeItem('schoolId');
         setLoginState('loggedOut');
@@ -226,7 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin(false);
         setIsKioskLocked(false);
         router.push('/');
-    }, [router, playSound]);
+    }, [router]);
 
     const value = useMemo(
         () => ({

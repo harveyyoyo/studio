@@ -1,3 +1,4 @@
+
 'use client';
 import { usePathname } from 'next/navigation';
 import {
@@ -31,14 +32,21 @@ import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
 import { Logo } from './Logo';
 import { cn } from '@/lib/utils';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 export default function Header() {
   const pathname = usePathname();
   const { loginState, schoolId, isInitialized, syncStatus, logout } = useAppContext();
   const { settings } = useSettings();
+  const playSound = useArcadeSound();
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isGraphic = settings.graphicMode === 'graphics';
+
+  const handleLogout = () => {
+    playSound('swoosh');
+    logout();
+  };
 
   if (isLoginPage) {
     return (
@@ -229,7 +237,7 @@ export default function Header() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Developer Mode</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2" /> Log Out
                 </DropdownMenuItem>
               </DropdownMenuContent>
