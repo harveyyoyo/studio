@@ -1,6 +1,4 @@
 'use client';
-// Force rebuild for hydration sync
-import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   Trophy,
@@ -38,11 +36,6 @@ export default function Header() {
   const pathname = usePathname();
   const { loginState, schoolId, isInitialized, syncStatus, logout } = useAppContext();
   const { settings } = useSettings();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isGraphic = settings.graphicMode === 'graphics';
@@ -248,7 +241,7 @@ export default function Header() {
       <div
         className="absolute bottom-1 right-2 text-[10px] text-muted-foreground/30 font-mono select-none pointer-events-none"
       >
-        {mounted ? (process.env.NEXT_PUBLIC_VERSION || 'v1.0.6') : null}
+        {process.env.NEXT_PUBLIC_VERSION || 'v1.0.6'}
       </div>
     </header>
   );

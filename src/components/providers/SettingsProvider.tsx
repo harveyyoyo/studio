@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthProvider';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -96,11 +97,18 @@ export type { ColorScheme };
 const SettingsContext = createContext<SettingsContextType | null>(null);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+    const { schoolId, isInitialized } = useAuth();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem('arcade_settings');
+        if (!isInitialized) {
+            return; // Wait for auth provider to be ready
+        }
+
+        const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
+        const saved = localStorage.getItem(settingsKey);
+
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -109,21 +117,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 setSettings({ ...defaultSettings, ...parsed });
             } catch (e) {
-                // ignore parsing errors
+                setSettings(defaultSettings);
             }
+        } else {
+            // No settings for this school, use defaults.
+            setSettings(defaultSettings);
         }
         setIsLoaded(true);
-    }, []);
+    }, [schoolId, isInitialized]);
 
     const updateSettings = (updates: Partial<Settings>) => {
+        const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';
         setSettings((prev) => {
             const next = { ...prev, ...updates };
-            
-            if (updates.graphicMode === 'graphics' && !prev.darkMode) {
-              // next.darkMode = true; // This line is now removed
-            }
 
-            localStorage.setItem('arcade_settings', JSON.stringify(next));
+            localStorage.setItem(settingsKey, JSON.stringify(next));
 
             // Dispatch a custom event so non-react code or other tabs can listen if needed
             window.dispatchEvent(new Event('settings-updated'));
