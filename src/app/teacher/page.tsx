@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,6 +30,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SchoolGate } from '@/components/SchoolGate';
 
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
@@ -484,10 +484,39 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+function TeacherPrinterSkeleton() {
+    return (
+        <div className="max-w-4xl mx-auto px-6 -mt-6 animate-pulse">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card className="border-t-4 border-primary">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-48 w-full rounded-xl" />
+                    </CardContent>
+                </Card>
+                <Card className="border-t-4 border-chart-2">
+                    <CardHeader>
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-48 w-full rounded-xl" />
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    )
+}
+
 function TeacherPrinter(props: { teacherName: string, onLogout: () => void }) {
     return (
         <ErrorBoundary name="TeacherPrinter">
-            <TeacherPrinterInner {...props} />
+            <SchoolGate fallback={<TeacherPrinterSkeleton />}>
+                <TeacherPrinterInner {...props} />
+            </SchoolGate>
         </ErrorBoundary>
     );
 }
