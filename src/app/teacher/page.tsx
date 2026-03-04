@@ -29,12 +29,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SchoolGate } from '@/components/SchoolGate';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
-    const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPoints, awardPointsToClass } = useAppContext();
+    const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings } = useSettings();
@@ -57,25 +57,19 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
-    // State for direct awarding
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    // State for direct/bulk awarding
     const [studentSearch, setStudentSearch] = useState('');
+    const [filterClassId, setFilterClassId] = useState('all');
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [awardCategoryId, setAwardCategoryId] = useState('');
     const [awardValue, setAwardValue] = useState('10');
-    
-    // State for bulk awarding
-    const [bulkAwardClassId, setBulkAwardClassId] = useState('');
-    const [bulkAwardCategoryId, setBulkAwardCategoryId] = useState('');
-    const [bulkAwardValue, setBulkAwardValue] = useState('10');
-
 
     useEffect(() => {
         if (categories && categories.length > 0) {
             if (!printCategoryId) setPrintCategoryId(categories[0].id);
             if (!awardCategoryId) setAwardCategoryId(categories[0].id);
-            if (!bulkAwardCategoryId) setBulkAwardCategoryId(categories[0].id);
         }
-    }, [categories, printCategoryId, awardCategoryId, bulkAwardCategoryId]);
+    }, [categories, printCategoryId, awardCategoryId]);
 
     useEffect(() => {
         const category = categories?.find(c => c.id === printCategoryId);
@@ -90,13 +84,6 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
             setAwardValue(category.points.toString());
         }
     }, [awardCategoryId, categories]);
-
-    useEffect(() => {
-        const category = categories?.find(c => c.id === bulkAwardCategoryId);
-        if (category) {
-            setBulkAwardValue(category.points.toString());
-        }
-    }, [bulkAwardCategoryId, categories]);
 
     const handleAddPrintCategory = async () => {
         if (!newPrintCategoryName || !newPrintCategoryPoints) {
@@ -173,9 +160,9 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
     
     const handleAwardPoints = async () => {
         const points = parseInt(awardValue);
-        if (!selectedStudent) {
+        if (selectedStudentIds.length === 0) {
             playSound('error');
-            toast({ variant: 'destructive', title: 'No student selected.' });
+            toast({ variant: 'destructive', title: 'No students selected.' });
             return;
         }
         const selectedCategory = categories?.find(c => c.id === awardCategoryId);
@@ -190,17 +177,12 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
             return;
         }
 
-        const result = await awardPoints(selectedStudent.id, points, selectedCategory.name);
+        const result = await awardPointsToMultipleStudents(selectedStudentIds, points, selectedCategory.name);
 
         if (result.success) {
-            let toastDescription = `Awarded ${points} points to ${selectedStudent.firstName}.`;
-            if(result.bonusTotal && result.bonusTotal > 0) {
-              toastDescription += ` They also earned ${result.bonusTotal} bonus points from achievements!`;
-            }
             playSound('success');
-            toast({ title: 'Points Awarded!', description: toastDescription });
-            setSelectedStudent(null);
-            setStudentSearch('');
+            toast({ title: 'Points Awarded!', description: `Awarded ${points} points to ${result.count} student(s).` });
+            setSelectedStudentIds([]);
             if (categories && categories.length > 0) {
                 setAwardValue(categories[0].points.toString());
             }
@@ -209,37 +191,6 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
             toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
         }
     };
-    
-    const handleBulkAward = async () => {
-        const points = parseInt(bulkAwardValue);
-        if (!bulkAwardClassId) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Please select a class.' });
-            return;
-        }
-        const selectedCategory = categories?.find(c => c.id === bulkAwardCategoryId);
-        if (!selectedCategory) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Please select a category.' });
-            return;
-        }
-        if (isNaN(points) || points <= 0) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Points must be a positive number.' });
-            return;
-        }
-
-        const result = await awardPointsToClass(bulkAwardClassId, points, selectedCategory.name);
-
-        if (result.success) {
-            playSound('success');
-            toast({ title: 'Points Awarded!', description: `Awarded ${points} points to ${result.count} students in the selected class.` });
-        } else {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
-        }
-    };
-
 
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
@@ -252,10 +203,28 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         createdAt: Date.now(),
     };
 
-    const filteredStudents = (students || []).filter(s =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        (s.nfcId || '').toLowerCase().includes(studentSearch.toLowerCase())
-    ).sort((a,b) => a.lastName.localeCompare(b.lastName));
+    const filteredStudents = (students || []).filter(s => {
+        const nameMatch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearch.toLowerCase());
+        const classMatch = filterClassId === 'all' || s.classId === filterClassId;
+        return nameMatch && classMatch;
+    }).sort((a,b) => a.lastName.localeCompare(b.lastName));
+    
+    const toggleSelectAll = () => {
+        if (selectedStudentIds.length === filteredStudents.length) {
+            setSelectedStudentIds([]);
+        } else {
+            setSelectedStudentIds(filteredStudents.map(s => s.id));
+        }
+    };
+    
+    const handleStudentSelect = (studentId: string, isSelected: boolean) => {
+        if (isSelected) {
+            setSelectedStudentIds(prev => [...prev, studentId]);
+        } else {
+            setSelectedStudentIds(prev => prev.filter(id => id !== studentId));
+        }
+    };
+
 
     const isLoading = categoriesLoading || studentsLoading || classesLoading;
 
@@ -365,96 +334,60 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                     Award Points
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
-                                    Award points to a single student or an entire class.
+                                    Select students and award points directly.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                               <Tabs defaultValue="direct">
-                                    <TabsList className="grid w-full grid-cols-2">
-                                        <TabsTrigger value="direct"><User className="mr-2 h-4 w-4"/>Direct</TabsTrigger>
-                                        <TabsTrigger value="bulk"><Users className="mr-2 h-4 w-4"/>Bulk</TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="direct" className="pt-4">
-                                        {isLoading ? <Skeleton className="h-48 w-full" /> : (
-                                            selectedStudent ? (
-                                                <div className="space-y-4 animate-in fade-in">
-                                                    <div className="p-3 rounded-xl bg-secondary/30 border flex justify-between items-center">
-                                                        <div>
-                                                            <p className="text-xs text-muted-foreground">Awarding to:</p>
-                                                            <p className="font-bold">{selectedStudent.firstName} {selectedStudent.lastName}</p>
-                                                        </div>
-                                                        <Button variant="ghost" size="sm" onClick={() => setSelectedStudent(null)}>Change</Button>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Category</Label>
-                                                        <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
-                                                            <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : ''}`}>
-                                                                <SelectValue placeholder="Select..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Points Value</Label>
-                                                        <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'bg-slate-50'}`} />
-                                                    </div>
-                                                    <Button onClick={handleAwardPoints} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20' : 'bg-slate-800 hover:bg-slate-700'}`}>
-                                                        <Award className="w-5 h-5 mr-3" /> Award Points
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div className="relative">
-                                                        <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                                                        <Input placeholder="Search for a student..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="pl-10 h-12 rounded-xl" />
-                                                    </div>
-                                                    <ScrollArea className="h-64 border rounded-xl">
-                                                        {filteredStudents.length > 0 ? (
-                                                            <ul className="p-2 space-y-1">
-                                                                {filteredStudents.map(student => (
-                                                                    <li key={student.id}>
-                                                                        <button onClick={() => setSelectedStudent(student)} className="w-full text-left p-3 rounded-lg hover:bg-accent flex items-center gap-3 transition-colors">
-                                                                            <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                                                                {student.firstName[0]}{student.lastName[0]}
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="font-bold text-sm">{student.lastName}, {student.firstName}</p>
-                                                                                <p className="text-xs text-muted-foreground">ID: {student.nfcId}</p>
-                                                                            </div>
-                                                                        </button>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        ) : (
-                                                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-                                                                <User className="w-10 h-10 mb-2 opacity-50"/>
-                                                                <p className="text-sm font-medium">No students found.</p>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Input placeholder="Search students..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="h-11 rounded-xl" />
+                                        <Select value={filterClassId} onValueChange={setFilterClassId}>
+                                            <SelectTrigger className="h-11 rounded-xl">
+                                                <SelectValue placeholder="Filter by class..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Classes</SelectItem>
+                                                {classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    
+                                    <div className="border rounded-xl">
+                                        <div className="p-2 border-b flex justify-between items-center">
+                                            <Label className="font-medium text-sm text-muted-foreground">{selectedStudentIds.length} of {filteredStudents.length} selected</Label>
+                                            <Button variant="link" size="sm" onClick={toggleSelectAll}>
+                                                {selectedStudentIds.length === filteredStudents.length ? 'Deselect All' : 'Select All'}
+                                            </Button>
+                                        </div>
+                                        <ScrollArea className="h-48">
+                                            {isLoading ? <Skeleton className="h-full w-full" /> : (
+                                                <ul className="p-2 space-y-1">
+                                                {filteredStudents.map(student => (
+                                                    <li key={student.id}>
+                                                        <label className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors w-full text-left cursor-pointer">
+                                                            <Checkbox
+                                                                checked={selectedStudentIds.includes(student.id)}
+                                                                onCheckedChange={checked => handleStudentSelect(student.id, !!checked)}
+                                                            />
+                                                            <div className="flex-grow">
+                                                                <p className="font-bold text-sm">{student.lastName}, {student.firstName}</p>
+                                                                <p className="text-xs text-muted-foreground">ID: {student.nfcId}</p>
                                                             </div>
-                                                        )}
-                                                    </ScrollArea>
-                                                </div>
-                                            )
-                                        )}
-                                    </TabsContent>
-                                    <TabsContent value="bulk" className="pt-4">
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Class</Label>
-                                                <Select value={bulkAwardClassId} onValueChange={setBulkAwardClassId}>
-                                                    <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : ''}`}>
-                                                        <SelectValue placeholder="Select a class..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {classes?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                             <div className="space-y-2">
-                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Category</Label>
-                                                <Select value={bulkAwardCategoryId} onValueChange={setBulkAwardCategoryId}>
-                                                    <SelectTrigger className={`rounded-xl h-12 ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : ''}`}>
+                                                            <span className="font-bold text-sm text-primary">{student.points} pts</span>
+                                                        </label>
+                                                    </li>
+                                                ))}
+                                                </ul>
+                                            )}
+                                        </ScrollArea>
+                                    </div>
+
+                                    <div className="space-y-4 pt-4 border-t">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="space-y-1.5">
+                                                <Label>Category</Label>
+                                                <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
+                                                    <SelectTrigger className="h-11 rounded-xl">
                                                         <SelectValue placeholder="Select..." />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -462,16 +395,19 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className={`text-[10px] font-black uppercase tracking-widest ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Points Value</Label>
-                                                <Input type="number" value={bulkAwardValue} onChange={(e) => setBulkAwardValue(e.target.value)} className={`h-12 rounded-xl text-lg font-black ${isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'bg-slate-50'}`} />
+                                            <div className="space-y-1.5">
+                                                <Label>Points</Label>
+                                                <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className="h-11 rounded-xl text-base font-bold" />
                                             </div>
-                                            <Button onClick={handleBulkAward} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20' : 'bg-slate-800 hover:bg-slate-700'}`}>
-                                                <Users className="w-5 h-5 mr-3" /> Award to Class
-                                            </Button>
                                         </div>
-                                    </TabsContent>
-                               </Tabs>
+                                        <Button 
+                                            onClick={handleAwardPoints} 
+                                            disabled={selectedStudentIds.length === 0}
+                                            className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20' : 'bg-slate-800 hover:bg-slate-700'}`}>
+                                            <Award className="w-5 h-5 mr-3" /> Award to {selectedStudentIds.length} Student(s)
+                                        </Button>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
