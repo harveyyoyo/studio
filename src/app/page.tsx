@@ -1,4 +1,3 @@
-
 'use client';
 import { useState } from 'react';
 import { Label } from '@/components/ui/label';
@@ -125,10 +124,10 @@ export default function LoginPage() {
               className="justify-center"
             >
               <h2 className={cn(
-                "text-xl font-black tracking-widest uppercase mb-1",
+                "text-4xl font-black tracking-widest uppercase mb-1",
                 isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
               )}>
-                {isDeveloper ? 'Developer Mode' : 'School Login'}
+                {isDeveloper ? 'Developer Mode' : 'School Reward System'}
               </h2>
             </Helper>
             <p className={cn("text-xs font-medium", isGraphic ? 'text-foreground/80' : 'text-muted-foreground')}>
@@ -228,7 +227,7 @@ export default function LoginPage() {
       {settings.displayMode === 'app' && (
       <div className={cn(
         "fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors",
-        isGraphic ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-card border-border shadow-lg'
+        isGraphic ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-card border-border'
       )}>
         <Link href="/" className={cn(
           "flex flex-col items-center gap-0.5 transition-colors min-h-[44px] min-w-[44px] justify-center",

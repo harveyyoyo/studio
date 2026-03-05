@@ -85,7 +85,7 @@ export default function PortalPage() {
                         <Helper content="This is the main hub for your school. Each card takes you to a different part of the app with specific functions.">
                             <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
                         </Helper>
-                        <p className="text-sm text-muted-foreground font-bold">{schoolId?.replace(/_/g, ' ')}</p>
+                        <p className="text-4xl font-bold text-muted-foreground">{schoolId?.replace(/_/g, ' ')}</p>
                     </div>
                 ) : (
                     <div className="mb-6">

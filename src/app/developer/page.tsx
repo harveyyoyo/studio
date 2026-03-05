@@ -101,7 +101,9 @@ function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Database Stats for <span className="font-code">{school.id}</span></DialogTitle>
-          <DialogDescription>{school.name}</DialogDescription>
+          <DialogDescription>
+            {`An overview of the database statistics for "${school.name || school.id}".`}
+          </DialogDescription>
         </DialogHeader>
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 text-center">

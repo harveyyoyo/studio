@@ -17,6 +17,17 @@ import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Ach
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+// Helper function to remove undefined values from an object
+const removeUndefined = (obj: any) => {
+  const newObj: any = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      newObj[key] = obj[key];
+    }
+  });
+  return newObj;
+}
+
 /** Look up a student by scanned ID (document ID, nfcId string, or nfcId number). Used by both student kiosk and prize redemption. */
 export const lookupStudentId = async (
   firestore: Firestore,
@@ -58,7 +69,7 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
   };
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   try {
-    await setDoc(studentDocRef, newStudent);
+    await setDoc(studentDocRef, removeUndefined(newStudent));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -90,7 +101,7 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
 
       const finalStudentData = { ...student, lifetimePoints: newLifetimePoints };
 
-      transaction.update(studentDocRef, finalStudentData);
+      transaction.update(studentDocRef, removeUndefined(finalStudentData));
     });
   } catch (error) {
     errorEmitter.emit(
@@ -127,7 +138,7 @@ export const addClass = async (firestore: Firestore, schoolId: string, classData
   const newClass: Class = { ...classData, id: newId };
   const classDocRef = doc(firestore, 'schools', schoolId, 'classes', newClass.id);
   try {
-    await setDoc(classDocRef, newClass);
+    await setDoc(classDocRef, removeUndefined(newClass));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -173,7 +184,7 @@ export const addTeacher = async (firestore: Firestore, schoolId: string, teacher
   const newTeacher: Teacher = { ...teacherData, id: newId };
   const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', newTeacher.id);
   try {
-    await setDoc(teacherDocRef, newTeacher);
+    await setDoc(teacherDocRef, removeUndefined(newTeacher));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -209,7 +220,7 @@ export const addCategory = async (firestore: Firestore, schoolId: string, catego
   const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || '#cccccc' };
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);
   try {
-    await setDoc(categoryDocRef, newCategory);
+    await setDoc(categoryDocRef, removeUndefined(newCategory));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -227,7 +238,7 @@ export const addCategory = async (firestore: Firestore, schoolId: string, catego
 export const updateCategory = async (firestore: Firestore, schoolId: string, updatedCategory: Category) => {
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', updatedCategory.id);
   try {
-    await updateDoc(categoryDocRef, { ...updatedCategory });
+    await updateDoc(categoryDocRef, removeUndefined({ ...updatedCategory }));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -263,7 +274,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
   const newPrize: Prize = { ...prizeData, id: newId };
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', newPrize.id);
   try {
-    await setDoc(prizeDocRef, newPrize);
+    await setDoc(prizeDocRef, removeUndefined(newPrize));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -280,7 +291,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
 export const updatePrize = async (firestore: Firestore, schoolId: string, updatedPrize: Prize) => {
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id);
   try {
-    await updateDoc(prizeDocRef, { ...updatedPrize });
+    await updateDoc(prizeDocRef, removeUndefined({ ...updatedPrize }));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -315,7 +326,7 @@ export const addCoupons = async (firestore: Firestore, schoolId: string, newCoup
   const batch = writeBatch(firestore);
   newCoupons.forEach(coupon => {
     const couponDocRef = doc(firestore, 'schools', schoolId, 'coupons', coupon.id);
-    batch.set(couponDocRef, coupon);
+    batch.set(couponDocRef, removeUndefined(coupon));
   });
   try {
     await batch.commit();
@@ -642,7 +653,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
         const batch = writeBatch(firestore);
         for (const student of chunk) {
           const studentDocRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-          batch.set(studentDocRef, student);
+          batch.set(studentDocRef, removeUndefined(student));
         }
         await batch.commit();
       }
@@ -668,7 +679,7 @@ export const addAchievement = async (firestore: Firestore, schoolId: string, ach
   const newAchievement: Achievement = { ...achievementData, id: newId };
   const achievementDocRef = doc(firestore, 'schools', schoolId, 'achievements', newAchievement.id);
   try {
-    await setDoc(achievementDocRef, newAchievement);
+    await setDoc(achievementDocRef, removeUndefined(newAchievement));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -685,7 +696,7 @@ export const addAchievement = async (firestore: Firestore, schoolId: string, ach
 export const updateAchievement = async (firestore: Firestore, schoolId: string, achievement: Achievement) => {
   const achievementDocRef = doc(firestore, 'schools', schoolId, 'achievements', achievement.id);
   try {
-    await updateDoc(achievementDocRef, { ...achievement });
+    await updateDoc(achievementDocRef, removeUndefined({ ...achievement }));
   } catch (error) {
     errorEmitter.emit(
       'permission-error',

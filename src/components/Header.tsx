@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
-import { Logo } from './Logo';
+import Logo from './Logo';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -75,7 +75,7 @@ export default function Header() {
             "text-2xl md:text-3xl font-bold leading-none font-headline",
             isGraphic ? 'text-foreground' : 'text-foreground'
           )}>
-            levelUp EDU
+            School Reward System
           </h1>
         </div>
       </header>
@@ -84,7 +84,7 @@ export default function Header() {
 
   const getTitle = () => {
     if (loginState === 'developer') return 'Developer Mode';
-    return 'levelUp EDU';
+    return 'School Reward System';
   }
 
   if (settings.displayMode === 'app') {
@@ -118,7 +118,7 @@ export default function Header() {
 
             {loginState === 'school' && schoolId && (
                 <div className="absolute inset-x-0 text-center pointer-events-none">
-                    <h2 className="text-2xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-20">
+                    <h2 className="text-4xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-20">
                         {schoolName}
                     </h2>
                 </div>
@@ -182,7 +182,7 @@ export default function Header() {
 
       {loginState === 'school' && schoolId && (
         <div className="absolute inset-x-0 text-center pointer-events-none z-0">
-             <h2 className="text-4xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-32">
+             <h2 className="text-6xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-32">
                 {schoolName}
             </h2>
         </div>

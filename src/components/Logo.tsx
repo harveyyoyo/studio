@@ -1,7 +1,7 @@
 'use client';
 import { cn } from '@/lib/utils';
 
-export function Logo({ className }: { className?: string }) {
+export default function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("relative text-foreground", className)}>
       <svg
