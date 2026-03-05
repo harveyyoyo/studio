@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -12,6 +13,7 @@ import React, {
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
+import { doc, getDocFromServer } from 'firebase/firestore';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
@@ -44,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const [isAdmin, setIsAdmin] = useState(false);
 
-    const { isUserLoading, functions } = useFirebase();
+    const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
     
     useEffect(() => {
@@ -106,12 +108,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } catch (e) {
                     console.error("Developer login error", e);
                 }
-            } else if (type === 'school' && credentials.schoolId) {
+            } else if (type === 'school' && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 try {
+                    // 1. Call the function to set the role on the backend
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
 
+                    // 2. Poll the server to confirm the admin role is readable
+                    const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
+                    let roleConfirmed = false;
+                    for (let i = 0; i < 15; i++) { // Poll for up to 7.5 seconds
+                        try {
+                            // Force a server read to bypass cache and check for rule consistency
+                            const adminDoc = await getDocFromServer(adminRoleRef);
+                            if (adminDoc.exists() && adminDoc.data().role === 'admin') {
+                                roleConfirmed = true;
+                                break;
+                            }
+                        } catch (e) {
+                            // Ignore permission errors during polling, as they are expected while rules propagate
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retrying
+                    }
+                    
+                    if (!roleConfirmed) {
+                       throw new Error("Could not confirm admin role after login. Your permissions might be out of sync. Please try again.");
+                    }
+
+                    // 3. Only now set the client state
                     setSchoolId(lowerSchoolId);
                     setLoginState('school');
                     setIsAdmin(true);
@@ -125,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return false;
         },
-        [functions]
+        [functions, firestore, auth]
     );
 
     const logout = useCallback(() => {
