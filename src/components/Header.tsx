@@ -1,3 +1,4 @@
+
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -76,12 +77,15 @@ export default function Header() {
           )}>
             <Logo className="w-10 h-10" />
           </div>
-          <h1 className={cn(
-            "text-2xl md:text-3xl font-bold leading-none font-headline",
-            isGraphic ? 'text-foreground' : 'text-foreground'
-          )}>
-            levelUp EDU
-          </h1>
+          <div>
+            <h1 className={cn(
+              "text-2xl md:text-3xl font-bold leading-none font-headline",
+              isGraphic ? 'text-foreground' : 'text-foreground'
+            )}>
+              levelUp EDU
+            </h1>
+            <p className="text-sm text-muted-foreground">School Reward System</p>
+          </div>
         </div>
       </header>
     );
@@ -121,7 +125,7 @@ export default function Header() {
 
             {loginState === 'school' && schoolId && (
                 <div className="absolute inset-x-0 text-center pointer-events-none">
-                    <h2 className="text-2xl font-bold text-muted-foreground px-20">
+                    <h2 className="text-5xl font-black text-slate-400 dark:text-slate-600 px-32">
                         {schoolName}
                     </h2>
                 </div>
@@ -188,7 +192,7 @@ export default function Header() {
 
       {loginState === 'school' && schoolId && (
         <div className="absolute inset-x-0 text-center pointer-events-none z-0">
-             <h2 className="text-3xl font-bold text-muted-foreground px-32">
+             <h2 className="text-5xl font-black text-slate-400 dark:text-slate-600 px-32">
                 {schoolName}
             </h2>
         </div>
