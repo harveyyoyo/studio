@@ -9,7 +9,9 @@ service cloud.firestore {
     
     function isAdmin(schoolId) {
       let rolesPath = /databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid);
-      return isAuth() && exists(rolesPath) && get(rolesPath).data.role == 'admin';
+      // Use get() and a safe check to avoid eventual consistency issues with exists().
+      // (get(path).data || {}) ensures we don't get a null pointer error if the doc doesn't exist.
+      return isAuth() && (get(rolesPath).data || {}).role == 'admin';
     }
     
     match /schools/{schoolId} {
