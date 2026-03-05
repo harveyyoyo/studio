@@ -9,9 +9,9 @@ service cloud.firestore {
     
     function isAdmin(schoolId) {
       let rolesPath = /databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid);
-      // Use get() and a safe check to avoid eventual consistency issues with exists().
-      // (get(path).data || {}) ensures we don't get a null pointer error if the doc doesn't exist.
-      return isAuth() && (get(rolesPath).data || {}).role == 'admin';
+      let roleDocData = get(rolesPath).data;
+      // This is a safer check. It ensures roleDocData is not null before trying to access .role
+      return isAuth() && roleDocData != null && roleDocData.role == 'admin';
     }
     
     match /schools/{schoolId} {
@@ -65,9 +65,10 @@ service cloud.firestore {
       }
       
       match /roles_admin/{uid} {
-        allow read: if isAuth();
         // Any authenticated user can create/write their own role document.
+        // This is necessary for the login flow to provision admin status.
         allow write: if isAuth() && request.auth.uid == uid;
+        allow read: if isAuth();
       }
 
       // Passcode stored here; never readable by clients.
