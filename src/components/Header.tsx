@@ -59,6 +59,11 @@ export default function Header() {
     logout();
   };
 
+  const getTitle = () => {
+    if (loginState === 'developer') return 'Developer Mode';
+    return 'levelUp EDU';
+  }
+
   if (isLoginPage) {
     return (
       <header className={cn(
@@ -75,16 +80,11 @@ export default function Header() {
             "text-2xl md:text-3xl font-bold leading-none font-headline",
             isGraphic ? 'text-foreground' : 'text-foreground'
           )}>
-            School Reward System
+            levelUp EDU
           </h1>
         </div>
       </header>
     );
-  }
-
-  const getTitle = () => {
-    if (loginState === 'developer') return 'Developer Mode';
-    return 'School Reward System';
   }
 
   if (settings.displayMode === 'app') {
@@ -111,14 +111,17 @@ export default function Header() {
                 )}>
                     <Logo className="w-8 h-8" />
                 </div>
-                <h1 className="text-lg font-bold leading-none font-headline">
-                    {getTitle()}
-                </h1>
+                <div>
+                  <h1 className="text-lg font-bold leading-none font-headline">
+                      {getTitle()}
+                  </h1>
+                  {loginState !== 'developer' && <p className="text-[10px] text-muted-foreground -mt-0.5">School Reward System</p>}
+                </div>
             </Link>
 
             {loginState === 'school' && schoolId && (
                 <div className="absolute inset-x-0 text-center pointer-events-none">
-                    <h2 className="text-4xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-20">
+                    <h2 className="text-2xl font-bold text-muted-foreground px-20">
                         {schoolName}
                     </h2>
                 </div>
@@ -172,17 +175,20 @@ export default function Header() {
         )}>
           <Logo className="w-10 h-10" />
         </div>
-        <h1 className={cn(
-            "text-xl md:text-2xl font-bold leading-none font-headline",
-            isGraphic ? 'text-foreground' : 'text-foreground'
-        )}>
-            {getTitle()}
-        </h1>
+        <div>
+          <h1 className={cn(
+              "text-xl md:text-2xl font-bold leading-none font-headline",
+              isGraphic ? 'text-foreground' : 'text-foreground'
+          )}>
+              {getTitle()}
+          </h1>
+          {loginState !== 'developer' && <p className="text-xs text-muted-foreground">School Reward System</p>}
+        </div>
       </Link>
 
       {loginState === 'school' && schoolId && (
         <div className="absolute inset-x-0 text-center pointer-events-none z-0">
-             <h2 className="text-6xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-32">
+             <h2 className="text-3xl font-bold text-muted-foreground px-32">
                 {schoolName}
             </h2>
         </div>

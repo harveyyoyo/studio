@@ -127,7 +127,7 @@ export default function LoginPage() {
                 "text-4xl font-black tracking-widest uppercase mb-1",
                 isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
               )}>
-                {isDeveloper ? 'Developer Mode' : 'School Reward System'}
+                {isDeveloper ? 'Developer Mode' : 'School Login'}
               </h2>
             </Helper>
             <p className={cn("text-xs font-medium", isGraphic ? 'text-foreground/80' : 'text-muted-foreground')}>
