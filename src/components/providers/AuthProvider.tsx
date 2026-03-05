@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -16,8 +15,8 @@ import { useFirebase } from '@/firebase';
 import {
     doc,
     setDoc,
+    getDocFromServer,
     onSnapshot,
-    getDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 
@@ -43,8 +42,8 @@ async function provisionAdminViaClient(firestore: import('firebase/firestore').F
     // This confirms the write has propagated and rules will pass for subsequent operations.
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-            // The getDoc is subject to security rules. We need it to pass.
-            const roleSnap = await getDoc(adminRoleRef);
+            // The getDocFromServer is subject to security rules. We need it to pass.
+            const roleSnap = await getDocFromServer(adminRoleRef);
             if (roleSnap.exists()) {
                 return true; // Success!
             }
@@ -54,7 +53,8 @@ async function provisionAdminViaClient(firestore: import('firebase/firestore').F
         } catch (e) {
             console.error(`AuthProvider: verification attempt ${attempt + 1} failed`, e);
             if (attempt < MAX_RETRIES) {
-                await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+                const delay = RETRY_DELAY_MS * (attempt + 1);
+                await new Promise((r) => setTimeout(r, delay));
             }
         }
     }
