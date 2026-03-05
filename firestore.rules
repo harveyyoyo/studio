@@ -64,7 +64,7 @@ service cloud.firestore {
       match /roles_admin/{uid} {
         allow read: if isAuth();
         allow create: if isAuth() && request.auth.uid == uid;
-        allow update, delete: if isAdmin(schoolId);
+        allow update, delete: if isAdmin(schoolId) || request.auth.uid == uid;
       }
 
       // Passcode stored here; never readable by clients.
