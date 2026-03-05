@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { SchoolGate } from '@/components/SchoolGate';
 import {
   BookOpen, Tag, Database, Plus, Trash2, Upload, Download,
   Printer, Edit, History, Users, User, Gift, UploadCloud,
@@ -886,9 +885,7 @@ export default function AdminPage() {
 
   return (
     <ErrorBoundary name="AdminPage">
-      <SchoolGate fallback={<AdminDashboardSkeleton />}>
-        <AdminDashboardInner />
-      </SchoolGate>
+      <AdminDashboardInner />
     </ErrorBoundary>
   );
 }

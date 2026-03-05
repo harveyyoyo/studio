@@ -17,6 +17,7 @@ import {
     doc,
     setDoc,
     onSnapshot,
+    getDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 
@@ -24,14 +25,42 @@ async function provisionAdminViaClient(firestore: import('firebase/firestore').F
     const user = auth.currentUser;
     if (!user) return false;
 
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 500;
+
+    const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', user.uid);
+
+    // Attempt to provision the role first.
     try {
-        const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', user.uid);
         await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
-        return true;
     } catch (e) {
-        console.error("Client-side admin provisioning failed:", e);
-        return false;
+        // This may fail if rules are already strict, but we'll try to verify anyway,
+        // as the role may already exist from a previous session.
+        console.warn("AuthProvider: Role provision write failed, will proceed to verify.", e);
     }
+    
+    // Now, poll with backoff until the role document is readable.
+    // This confirms the write has propagated and rules will pass for subsequent operations.
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            // The getDoc is subject to security rules. We need it to pass.
+            const roleSnap = await getDoc(adminRoleRef);
+            if (roleSnap.exists()) {
+                return true; // Success!
+            }
+            // If it doesn't exist yet, wait and retry.
+            const delay = RETRY_DELAY_MS * (attempt + 1);
+            await new Promise((r) => setTimeout(r, delay));
+        } catch (e) {
+            console.error(`AuthProvider: verification attempt ${attempt + 1} failed`, e);
+            if (attempt < MAX_RETRIES) {
+                await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+            }
+        }
+    }
+    
+    console.error("AuthProvider: Could not verify admin role after multiple attempts.");
+    return false;
 }
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
@@ -84,19 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (savedState === 'school' && savedSchoolId) {
                 if (auth && firestore && auth.currentUser) {
-                    try {
-                        const provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
-                        if (provisioned) {
-                            await new Promise((r) => setTimeout(r, 200)); // Short delay for propagation
-                            setLoginState('school');
-                            setSchoolId(savedSchoolId);
-                            setIsAdmin(true);
-                        } else {
-                            localStorage.removeItem('loginState');
-                            localStorage.removeItem('schoolId');
-                        }
-                    } catch (e) {
-                         console.error('[AuthProvider] Failed to provision admin role during restore:', e);
+                    const provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
+                    if (provisioned) {
+                        setLoginState('school');
+                        setSchoolId(savedSchoolId);
+                        setIsAdmin(true);
+                    } else {
+                         console.error('[AuthProvider] Failed to provision admin role during restore.');
                          localStorage.removeItem('loginState');
                          localStorage.removeItem('schoolId');
                     }
@@ -196,7 +219,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
 
                     if (auth && firestore) {
-                        await provisionAdminViaClient(firestore, auth, lowerSchoolId);
+                        const provisioned = await provisionAdminViaClient(firestore, auth, lowerSchoolId);
+                        if (!provisioned) {
+                            throw new Error("Failed to provision admin role.");
+                        }
                     }
 
                     setSchoolId(lowerSchoolId);

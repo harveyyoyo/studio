@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -29,7 +30,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { SchoolGate } from '@/components/SchoolGate';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -509,11 +509,13 @@ function TeacherPrinterSkeleton() {
 }
 
 function TeacherPrinter(props: { teacherName: string, onLogout: () => void }) {
+    const { isAdmin } = useAppContext();
+    if (!isAdmin) {
+      return <TeacherPrinterSkeleton />;
+    }
     return (
         <ErrorBoundary name="TeacherPrinter">
-            <SchoolGate fallback={<TeacherPrinterSkeleton />}>
-                <TeacherPrinterInner {...props} />
-            </SchoolGate>
+            <TeacherPrinterInner {...props} />
         </ErrorBoundary>
     );
 }
