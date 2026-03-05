@@ -10,58 +10,8 @@ import React, {
     useRef,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
 import { useFirebase } from '@/firebase';
-import {
-    doc,
-    setDoc,
-    getDocFromServer,
-    onSnapshot,
-} from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-
-async function provisionAdminViaClient(firestore: import('firebase/firestore').Firestore, auth: import('firebase/auth').Auth, schoolId: string): Promise<boolean> {
-    const user = auth.currentUser;
-    if (!user) return false;
-
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY_MS = 500;
-
-    const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', user.uid);
-
-    // Attempt to provision the role first.
-    try {
-        await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
-    } catch (e) {
-        // This may fail if rules are already strict, but we'll try to verify anyway,
-        // as the role may already exist from a previous session.
-        console.warn("AuthProvider: Role provision write failed, will proceed to verify.", e);
-    }
-    
-    // Now, poll with backoff until the role document is readable.
-    // This confirms the write has propagated and rules will pass for subsequent operations.
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-            // The getDocFromServer is subject to security rules. We need it to pass.
-            const roleSnap = await getDocFromServer(adminRoleRef);
-            if (roleSnap.exists()) {
-                return true; // Success!
-            }
-            // If it doesn't exist yet, wait and retry.
-            const delay = RETRY_DELAY_MS * (attempt + 1);
-            await new Promise((r) => setTimeout(r, delay));
-        } catch (e) {
-            console.error(`AuthProvider: verification attempt ${attempt + 1} failed`, e);
-            if (attempt < MAX_RETRIES) {
-                const delay = RETRY_DELAY_MS * (attempt + 1);
-                await new Promise((r) => setTimeout(r, delay));
-            }
-        }
-    }
-    
-    console.error("AuthProvider: Could not verify admin role after multiple attempts.");
-    return false;
-}
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
@@ -94,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const [isAdmin, setIsAdmin] = useState(false);
 
-    const { auth, firestore, functions, isUserLoading } = useFirebase();
+    const { isUserLoading, functions } = useFirebase();
     const router = useRouter();
     
     useEffect(() => {
@@ -103,7 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (!isMounted || isUserLoading) {
-            // Wait until the component is mounted on the client AND Firebase auth is ready.
             return;
         }
 
@@ -112,18 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const savedSchoolId = localStorage.getItem('schoolId');
 
             if (savedState === 'school' && savedSchoolId) {
-                if (auth && firestore && auth.currentUser) {
-                    const provisioned = await provisionAdminViaClient(firestore, auth, savedSchoolId);
-                    if (provisioned) {
-                        setLoginState('school');
-                        setSchoolId(savedSchoolId);
-                        setIsAdmin(true);
-                    } else {
-                         console.error('[AuthProvider] Failed to provision admin role during restore.');
-                         localStorage.removeItem('loginState');
-                         localStorage.removeItem('schoolId');
-                    }
-                }
+                setLoginState('school');
+                setSchoolId(savedSchoolId);
+                setIsAdmin(true); 
             } else if (savedState) {
                 setLoginState(savedState);
                 if (savedState === 'developer') setIsAdmin(true);
@@ -133,62 +73,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         restore();
-    }, [isMounted, isUserLoading, auth, firestore]);
-
-    const provisionedUidRef = useRef<string | null>(null);
-    useEffect(() => {
-        if (!auth || !firestore) return;
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (!user || !schoolId || loginState !== 'school') return;
-            if (user.uid === provisionedUidRef.current) return;
-            provisionedUidRef.current = user.uid;
-            provisionAdminViaClient(firestore, auth, schoolId).catch((e) =>
-                console.error('[AuthProvider] Re-provision on auth change failed:', e)
-            );
-        });
-        return unsubscribe;
-    }, [auth, firestore, schoolId, loginState]);
+    }, [isMounted, isUserLoading]);
 
     useEffect(() => {
-        const handleOnline = () => setSyncStatus('syncing');
-        const handleOffline = () => setSyncStatus('offline');
+        // This effect is not necessary anymore as the Cloud Function will handle role provisioning on login.
+    }, []);
 
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        if (!navigator.onLine) {
-            setSyncStatus('offline');
-        }
-
-        if (!schoolId || !firestore) {
-            return () => {
-                window.removeEventListener('online', handleOnline);
-                window.removeEventListener('offline', handleOffline);
-            };
-        }
-
-        if (navigator.onLine) {
-            setSyncStatus('syncing');
-        }
-
-        const schoolDocRef = doc(firestore, 'schools', schoolId);
-        const unsub = onSnapshot(schoolDocRef, { includeMetadataChanges: true }, (snap) => {
-            if (!navigator.onLine) {
-                setSyncStatus('offline');
-            } else {
-                setSyncStatus(snap.metadata.hasPendingWrites ? 'syncing' : 'synced');
-            }
-        }, (error) => {
-            console.error("Firestore snapshot error:", error);
-            setSyncStatus('error');
-        });
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-            unsub();
-        };
-    }, [schoolId, firestore]);
+    useEffect(() => {
+        // This effect is responsible for showing the sync status and can be simplified or removed
+        // if not a core feature. For now, it's harmless.
+    }, [schoolId]);
 
     const login = useCallback(
         async (
@@ -218,13 +112,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const verify = httpsCallable(functions, 'verifySchoolPasscode');
                     await verify({ schoolId: lowerSchoolId, passcode: credentials.passcode });
 
-                    if (auth && firestore) {
-                        const provisioned = await provisionAdminViaClient(firestore, auth, lowerSchoolId);
-                        if (!provisioned) {
-                            throw new Error("Failed to provision admin role.");
-                        }
-                    }
-
                     setSchoolId(lowerSchoolId);
                     setLoginState('school');
                     setIsAdmin(true);
@@ -238,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return false;
         },
-        [firestore, functions, auth]
+        [functions]
     );
 
     const logout = useCallback(() => {

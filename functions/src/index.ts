@@ -473,6 +473,10 @@ exports.verifySchoolPasscode = functions.https.onCall(
       throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
+    // Provision admin role using the Admin SDK
+    const adminRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_admin").doc(context.auth!.uid);
+    await adminRoleRef.set({ role: 'admin' });
+
     return { success: true };
   }
 );
