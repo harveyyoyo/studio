@@ -25,42 +25,42 @@ service cloud.firestore {
       // Write: only provisioned admins.
 
       match /students/{studentId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
 
         match /activities/{activityId} {
-          allow read: if isAuth();
+          allow read: if isAdmin(schoolId);
           allow write: if isAdmin(schoolId);
         }
       }
       
       match /teachers/{teacherId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
       match /classes/{classId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
       match /categories/{categoryId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
 
       match /achievements/{achievementId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
 
       match /prizes/{prizeId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
       match /coupons/{couponId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
       
@@ -68,7 +68,7 @@ service cloud.firestore {
         // Any authenticated user can create/write their own role document.
         // This is necessary for the login flow to provision admin status.
         allow write: if isAuth() && request.auth.uid == uid;
-        allow read: if isAuth();
+        allow read: if isAuth() && request.auth.uid == uid;
       }
 
       // Passcode stored here; never readable by clients.
@@ -79,7 +79,7 @@ service cloud.firestore {
       }
 
       match /backups/{backupId} {
-        allow read: if isAuth();
+        allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
     }
