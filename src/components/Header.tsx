@@ -118,7 +118,7 @@ export default function Header() {
 
             {loginState === 'school' && schoolId && (
                 <div className="absolute inset-x-0 text-center pointer-events-none">
-                    <h2 className="text-sm font-bold text-muted-foreground truncate px-20">
+                    <h2 className="text-2xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-20">
                         {schoolName}
                     </h2>
                 </div>
@@ -182,7 +182,7 @@ export default function Header() {
 
       {loginState === 'school' && schoolId && (
         <div className="absolute inset-x-0 text-center pointer-events-none z-0">
-             <h2 className="text-lg font-bold text-foreground/60 truncate px-32">
+             <h2 className="text-4xl font-bold font-headline text-foreground/10 dark:text-foreground/5 truncate px-32">
                 {schoolName}
             </h2>
         </div>
