@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
+import { useSettings } from './providers/SettingsProvider';
 
 interface StudentIdPrintSheetProps {
   students: Student[];
@@ -12,6 +13,7 @@ interface StudentIdPrintSheetProps {
 }
 
 export function StudentIdPrintSheet({ students, classes, schoolId }: StudentIdPrintSheetProps) {
+  const { settings } = useSettings();
 
   const classMap = useMemo(() => {
     if (!classes) return new Map<string, string>();
@@ -34,6 +36,7 @@ export function StudentIdPrintSheet({ students, classes, schoolId }: StudentIdPr
           student={s} 
           schoolId={schoolId} 
           className={getClassName(s.classId || '')} 
+          isColorEnabled={settings.enableColorPrinting}
         />
       ))}
     </div>

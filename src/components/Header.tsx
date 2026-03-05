@@ -76,17 +76,6 @@ export default function Header() {
     return 'levelUp EDU';
   }
 
-  const getSubTitle = () => {
-    switch (loginState) {
-      case 'developer':
-        return <span className="font-code text-destructive">Developer Mode</span>;
-      case 'school':
-        return <span className="font-code text-primary/80">{schoolId}</span>;
-      default:
-        return 'LevelUp rewards hub';
-    }
-  }
-
   if (settings.displayMode === 'app') {
     const isGraphicApp = settings.graphicMode === 'graphics';
     const navItems = [
@@ -98,8 +87,6 @@ export default function Header() {
       { href: '/halloffame', icon: Trophy, label: 'Fame' },
     ];
     
-    const appTitle = getTitle();
-
     return (
       <>
         <header className={cn(
@@ -117,16 +104,16 @@ export default function Header() {
                   {loginState === 'school' && schoolId ? (
                     <>
                       <h1 className="text-lg font-bold leading-none font-headline">
-                        {schoolId.replace(/_/g, ' ')}
+                        School Reward System
                       </h1>
                       <p className={cn(
                         "text-xs font-bold leading-tight",
                         isGraphicApp ? 'text-muted-foreground' : 'text-muted-foreground'
-                      )}>{appTitle}</p>
+                      )}>{schoolId.replace(/_/g, ' ')}</p>
                     </>
                   ) : (
                     <h1 className="text-lg font-bold leading-none font-headline">
-                        {appTitle}
+                        {getTitle()}
                     </h1>
                   )}
                 </div>
@@ -190,10 +177,10 @@ export default function Header() {
                         "text-xl md:text-2xl font-bold leading-none font-headline",
                         isGraphic ? 'text-foreground' : 'text-foreground'
                     )}>
-                        {schoolId.replace(/_/g, ' ')}
+                        School Reward System
                     </h1>
                     <p className={cn("text-sm font-bold", isGraphic ? 'text-primary/80' : 'text-muted-foreground')}>
-                        {getTitle()}
+                        {schoolId.replace(/_/g, ' ')}
                     </p>
                 </>
             ) : (
@@ -231,7 +218,7 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="font-bold gap-2">
                   <User />
-                  {getSubTitle()}
+                  <span className="font-code text-destructive">Developer Mode</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

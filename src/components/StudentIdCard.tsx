@@ -1,10 +1,13 @@
-import type { Student } from '@/lib/types';
+'use client';
 
-export function StudentIdCard({ student, schoolId, className }: { student: Student, schoolId: string | null, className: string }) {
+import type { Student } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+export function StudentIdCard({ student, schoolId, className, isColorEnabled }: { student: Student, schoolId: string | null, className: string, isColorEnabled: boolean }) {
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : 'School Reward System';
 
   return (
-    <div className="print-id-card">
+    <div className={cn("print-id-card", isColorEnabled && "is-colored")}>
       <div className="print-id-header">{schoolName}</div>
       <div className="print-id-name">{student.firstName} {student.lastName}</div>
       <div className="print-id-class">{className}</div>

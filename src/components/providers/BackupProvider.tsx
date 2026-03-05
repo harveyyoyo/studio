@@ -26,7 +26,7 @@ import { YESHIVA_DATA } from '@/lib/yeshiva-data';
 import { SCHOOL_DATA } from '@/lib/school-data';
 
 interface BackupContextType {
-    createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
+    createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
     deleteSchool: (schoolId: string) => Promise<void>;
     updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
     devCreateBackup: (schoolId: string) => Promise<void>;
@@ -44,7 +44,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     const { auth, firestore, functions } = useFirebase();
     const playSound = useArcadeSound();
 
-    const createSchool = useCallback(async (schoolId: string): Promise<{ passcode: string; cleanId: string } | null> => {
+    const createSchool = useCallback(async (schoolId: string, name?: string, passcode?: string): Promise<{ passcode: string; cleanId: string } | null> => {
         if (!firestore || !auth.currentUser) return null;
         const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!cleanId) {
@@ -102,15 +102,17 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         let schoolData: Record<string, any>, newPasscode;
         if (cleanId === 'yeshiva') {
-            newPasscode = '1234';
+            newPasscode = passcode || '1234';
             schoolData = YESHIVA_DATA;
+            if(name) schoolData.name = name;
         } else if (cleanId === 'schoolabc') {
-            newPasscode = '1234';
+            newPasscode = passcode || '1234';
             schoolData = SCHOOL_DATA;
+            if(name) schoolData.name = name;
         } else {
-            newPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+            newPasscode = passcode || Math.floor(1000 + Math.random() * 9000).toString();
             schoolData = {
-                name: cleanId,
+                name: name || cleanId,
                 updatedAt: Date.now(),
                 students: [{
                     id: '100',

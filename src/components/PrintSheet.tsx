@@ -5,16 +5,6 @@ import type { Coupon } from '@/lib/types';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 
-const getContrastingTextColor = (hexcolor?: string): string => {
-  if (!hexcolor) return '#000000';
-  hexcolor = hexcolor.replace("#", "");
-  const r = parseInt(hexcolor.substring(0, 2), 16);
-  const g = parseInt(hexcolor.substring(2, 4), 16);
-  const b = parseInt(hexcolor.substring(4, 6), 16);
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  return (yiq >= 128) ? '#000000' : '#FFFFFF';
-};
-
 interface PrintSheetProps {
   coupons: Coupon[];
   schoolId: string | null;
@@ -30,16 +20,15 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
   const title = schoolName ? `levelUp EDU - ${schoolName}` : 'levelUp EDU';
 
-  const isColorEnabled = settings.enableCouponColor;
+  const isColorEnabled = settings.enableColorPrinting;
 
   return (
     <div id="print-container">
       {coupons.map((c, index) => {
         const isColored = isColorEnabled && c.color;
         const style = isColored ? {
-          '--coupon-bg-color': c.color,
           '--coupon-border-color': c.color,
-          '--coupon-text-color': getContrastingTextColor(c.color),
+          '--coupon-text-color': c.color,
         } as React.CSSProperties : {};
 
         return (

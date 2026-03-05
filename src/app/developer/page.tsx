@@ -152,15 +152,19 @@ export default function DeveloperPage() {
   const firestore = useFirestore();
   const { auth } = useFirebase();
   const router = useRouter();
-  const [newSchoolId, setNewSchoolId] = useState('');
   const { toast } = useToast();
   const playSound = useArcadeSound();
+
+  const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
+  const [newSchoolId, setNewSchoolId] = useState('');
+  const [newSchoolName, setNewSchoolName] = useState('');
+  const [newSchoolPasscode, setNewSchoolPasscode] = useState('');
 
   const [createdSchoolInfo, setCreatedSchoolInfo] = useState<{ id: string; passcode: string } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingSchool, setEditingSchool] = useState<SchoolInfo | null>(null);
-  const [newSchoolName, setNewSchoolName] = useState('');
-  const [newPasscode, setNewPasscode] = useState('');
+  const [editingSchoolName, setEditingSchoolName] = useState('');
+  const [editingPasscode, setEditingPasscode] = useState('');
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [statsSchool, setStatsSchool] = useState<SchoolInfo | null>(null);
@@ -243,34 +247,37 @@ export default function DeveloperPage() {
       toast({ variant: 'destructive', title: "School ID cannot be empty." });
       return;
     }
-    const result = await createSchool(newSchoolId);
+    const result = await createSchool(newSchoolId, newSchoolName, newSchoolPasscode);
     if (result) {
       setCreatedSchoolInfo({ id: result.cleanId, passcode: result.passcode });
     }
+    setIsCreateSchoolDialogOpen(false);
     setNewSchoolId('');
+    setNewSchoolName('');
+    setNewSchoolPasscode('');
   };
 
   const handleOpenEditModal = (school: SchoolInfo) => {
     setEditingSchool(school);
-    setNewSchoolName(school.name);
-    setNewPasscode(''); // Clear passcode for security
+    setEditingSchoolName(school.name);
+    setEditingPasscode(''); // Clear passcode for security
   }
 
   const handleCloseEditModal = () => {
     setEditingSchool(null);
-    setNewSchoolName('');
-    setNewPasscode('');
+    setEditingSchoolName('');
+    setEditingPasscode('');
   }
 
   const handleUpdateSchool = async () => {
     if (!editingSchool) return;
 
     const updates: { name?: string; passcode?: string } = {};
-    if (newSchoolName && newSchoolName !== editingSchool.name) {
-      updates.name = newSchoolName;
+    if (editingSchoolName && editingSchoolName !== editingSchool.name) {
+      updates.name = editingSchoolName;
     }
-    if (newPasscode) {
-      updates.passcode = newPasscode;
+    if (editingPasscode) {
+      updates.passcode = editingPasscode;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -483,17 +490,11 @@ export default function DeveloperPage() {
                 <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
               </CardTitle>
             </Helper>
+             <CardDescription>
+                <Button onClick={() => setIsCreateSchoolDialogOpen(true)} className="mt-4"><Plus className="mr-2 h-4 w-4" />Create New School</Button>
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                <Input
-                  placeholder="New School ID (e.g. 'washington_hs')"
-                  value={newSchoolId}
-                  onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                  onKeyDown={e => e.key === 'Enter' && handleCreateSchool()}
-                />
-                <Button onClick={handleCreateSchool}><Plus className="mr-2" />Create School</Button>
-            </div>
             {schoolsLoading ? <p>Loading schools...</p> : (
               <ul className="space-y-2">
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
@@ -593,6 +594,50 @@ export default function DeveloperPage() {
           </CardContent>
         </Card>
 
+        <Dialog open={isCreateSchoolDialogOpen} onOpenChange={setIsCreateSchoolDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                <DialogTitle>Create New School</DialogTitle>
+                <DialogDescription>
+                    Enter the new school's details below. The ID should be short and contain no spaces.
+                </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="new-school-id">School ID</Label>
+                        <Input
+                        id="new-school-id"
+                        placeholder="e.g., 'washington_hs'"
+                        value={newSchoolId}
+                        onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="new-school-name">School Name</Label>
+                        <Input
+                        id="new-school-name"
+                        placeholder="e.g., Washington High School"
+                        value={newSchoolName}
+                        onChange={(e) => setNewSchoolName(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="new-school-passcode">Passcode</Label>
+                        <Input
+                        id="new-school-passcode"
+                        placeholder="(Leave blank to auto-generate)"
+                        value={newSchoolPasscode}
+                        onChange={(e) => setNewSchoolPasscode(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                <Button variant="secondary" onClick={() => setIsCreateSchoolDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateSchool}>Create School</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <SchoolStatsModal
           school={statsSchool}
           isOpen={!!statsSchool}
@@ -641,8 +686,8 @@ export default function DeveloperPage() {
                 <Label htmlFor="edit-school-name" className="text-right">Name</Label>
                 <Input
                   id="edit-school-name"
-                  value={newSchoolName}
-                  onChange={(e) => setNewSchoolName(e.target.value)}
+                  value={editingSchoolName}
+                  onChange={(e) => setEditingSchoolName(e.target.value)}
                   className="col-span-3"
                 />
               </div>
@@ -650,9 +695,9 @@ export default function DeveloperPage() {
                 <Label htmlFor="new-passcode" className="text-right">New Passcode</Label>
                 <Input
                   id="new-passcode"
-                  value={newPasscode}
+                  value={editingPasscode}
                   placeholder="(Leave blank to keep unchanged)"
-                  onChange={(e) => setNewPasscode(e.target.value)}
+                  onChange={(e) => setEditingPasscode(e.target.value)}
                   className="col-span-3"
                 />
               </div>

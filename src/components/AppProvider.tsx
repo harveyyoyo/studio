@@ -71,7 +71,7 @@ interface AppContextType {
   updateAchievement: (achievement: Achievement) => Promise<void>;
   deleteAchievement: (achievementId: string) => Promise<void>;
   // Backup/School management
-  createSchool: (schoolId: string) => Promise<{ passcode: string; cleanId: string } | null>;
+  createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
   updateSchool: (schoolId: string, updates: { name?: string; passcode?: string }) => Promise<void>;
   devCreateBackup: (schoolId: string) => Promise<void>;

@@ -132,17 +132,14 @@
     }
 
     .print-coupon.is-colored {
-        background-color: var(--coupon-bg-color, white) !important;
         border-color: var(--coupon-border-color, #999) !important;
     }
-    .print-coupon.is-colored,
     .print-coupon.is-colored .print-coupon-header,
     .print-coupon.is-colored .print-coupon-value,
     .print-coupon.is-colored .print-coupon-value span,
     .print-coupon.is-colored .print-coupon-details,
     .print-coupon.is-colored .print-coupon-category,
-    .print-coupon.is-colored .print-coupon-teacher,
-    .print-coupon.is-colored .font-barcode {
+    .print-coupon.is-colored .print-coupon-teacher {
         color: var(--coupon-text-color, black) !important;
     }
     .print-coupon.is-colored .print-coupon-main {
@@ -254,7 +251,23 @@
         flex-direction: column;
         align-items: center;
         justify-content: space-around;
+        position: relative;
     }
+
+    .print-id-card.is-colored {
+        border-color: hsl(var(--primary)) !important;
+    }
+
+    .print-id-card.is-colored .print-id-header {
+        background-color: hsl(var(--primary)) !important;
+        color: hsl(var(--primary-foreground)) !important;
+        border-color: hsl(var(--primary)) !important;
+    }
+    
+    .print-id-card.is-colored .print-id-name {
+        color: hsl(var(--primary)) !important;
+    }
+
 
     .print-id-header {
         font-size: 8pt;
