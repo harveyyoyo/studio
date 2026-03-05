@@ -330,63 +330,21 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
       if (!studentDoc.exists()) throw new Error("Student not found.");
       const currentStudent = studentDoc.data() as Student;
 
-      // 1. Calculate new points and stats
       const addedValue = coupon.value;
       const newPoints = currentStudent.points + addedValue;
       const newLifetimePoints = (currentStudent.lifetimePoints || 0) + addedValue;
       const categoryPoints = currentStudent.categoryPoints || {};
       categoryPoints[coupon.category] = (categoryPoints[coupon.category] || 0) + addedValue;
 
-      // 2. Fetch all achievements to check for new ones
-      const achievementsRef = collection(firestore, 'schools', schoolId, 'achievements');
-      const achievementsSnap = await getDocs(achievementsRef);
-      const allAchievements = achievementsSnap.docs.map(d => ({ ...d.data(), id: d.id } as Achievement));
-
-      const earnedAchievementIds = new Set((currentStudent.earnedAchievements || []).map(a => a.achievementId));
-      const newlyEarned: Achievement[] = [];
-      let bonusTotal = 0;
-
-      for (const ach of allAchievements) {
-        if (earnedAchievementIds.has(ach.id)) continue;
-
-        let isQualified = false;
-        if (ach.criteria.type === 'points') {
-          if (ach.criteria.categoryId) {
-            if ((categoryPoints[ach.criteria.categoryId] || 0) >= ach.criteria.threshold) isQualified = true;
-          } else {
-            if (newPoints >= ach.criteria.threshold) isQualified = true;
-          }
-        } else if (ach.criteria.type === 'lifetimePoints') {
-          if (newLifetimePoints >= ach.criteria.threshold) isQualified = true;
-        } else if (ach.criteria.type === 'coupons') {
-          // Note: This requires counting coupons, which we don't have easily in Student object 
-          // unless we add a counter. For now, let's skip 'coupons' type or rely on activities count.
-          // Since we are adding activities in this transaction too.
-        }
-
-        if (isQualified) {
-          newlyEarned.push(ach);
-          bonusTotal += ach.bonusPoints || 0;
-          earnedAchievementIds.add(ach.id);
-        }
-      }
-
-      // 3. Update Student
-      const updatedEarnedAchievements = [...(currentStudent.earnedAchievements || [])];
-      newlyEarned.forEach(ach => {
-        updatedEarnedAchievements.push({ achievementId: ach.id, earnedAt: Date.now() });
-      });
-
+      // Simplified update. No achievement logic.
       transaction.update(studentRef, {
-        points: newPoints + bonusTotal,
-        lifetimePoints: newLifetimePoints + bonusTotal,
+        points: newPoints,
+        lifetimePoints: newLifetimePoints,
         categoryPoints: categoryPoints,
-        earnedAchievements: updatedEarnedAchievements,
       });
 
-      // 4. Create Activities (Main redemption + Achievement rewards)
+      // Simplified activity log.
       const activityCollectionRef = collection(firestore, 'schools', schoolId, 'students', studentId, 'activities');
-
       const mainActivityRef = doc(activityCollectionRef);
       transaction.set(mainActivityRef, {
         desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
@@ -394,28 +352,14 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
         date: Date.now(),
       });
 
-      newlyEarned.forEach(ach => {
-        const achActivityRef = doc(activityCollectionRef);
-        transaction.set(achActivityRef, {
-          desc: `Achievement Earned: ${ach.name}`,
-          amount: ach.bonusPoints || 0,
-          date: Date.now(),
-          metadata: { type: 'achievement', achievementId: ach.id }
-        });
-
-        // Update achievement unlocked count
-        const achRef = doc(firestore, 'schools', schoolId, 'achievements', ach.id);
-        transaction.update(achRef, { unlockedCount: (ach.unlockedCount || 0) + 1 });
-      });
-
-      // 5. Mark coupon as used
+      // Mark coupon as used
       transaction.update(couponRef, {
         used: true,
         usedAt: Date.now(),
         usedBy: studentId,
       });
 
-      return { baseValue: coupon.value, bonusTotal, newlyEarned };
+      return { baseValue: coupon.value };
     });
     return { success: true, message: "Redeemed successfully", value: result.baseValue };
   } catch (e: any) {
