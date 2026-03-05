@@ -1,5 +1,6 @@
 'use client';
 import { usePathname } from 'next/navigation';
+import { doc } from 'firebase/firestore';
 import {
   Trophy,
   Zap,
@@ -32,12 +33,23 @@ import { useSettings } from './providers/SettingsProvider';
 import { Logo } from './Logo';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+
 
 export default function Header() {
   const pathname = usePathname();
   const { loginState, schoolId, isInitialized, syncStatus, logout } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
+  const firestore = useFirestore();
+
+  const schoolDocRef = useMemoFirebase(() => {
+      if (!firestore || !schoolId) return null;
+      return doc(firestore, 'schools', schoolId);
+  }, [firestore, schoolId]);
+
+  const { data: schoolData } = useDoc<{ name: string }>(schoolDocRef);
+  const schoolName = schoolData?.name || schoolId?.replace(/_/g, ' ');
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isGraphic = settings.graphicMode === 'graphics';
@@ -99,24 +111,19 @@ export default function Header() {
                 )}>
                     <Logo className="w-8 h-8" />
                 </div>
-                <div>
-                  {loginState === 'school' && schoolId ? (
-                    <>
-                      <h1 className="text-lg font-bold leading-none font-headline text-foreground">
-                        {schoolId.replace(/_/g, ' ')}
-                      </h1>
-                      <p className={cn(
-                        "text-xs font-medium leading-tight",
-                        isGraphicApp ? 'text-muted-foreground' : 'text-muted-foreground'
-                      )}>School Reward System</p>
-                    </>
-                  ) : (
-                    <h1 className="text-lg font-bold leading-none font-headline">
-                        {getTitle()}
-                    </h1>
-                  )}
-                </div>
+                <h1 className="text-lg font-bold leading-none font-headline">
+                    {getTitle()}
+                </h1>
             </Link>
+
+            {loginState === 'school' && schoolId && (
+                <div className="absolute inset-x-0 text-center pointer-events-none">
+                    <h2 className="text-sm font-bold text-muted-foreground truncate px-20">
+                        {schoolName}
+                    </h2>
+                </div>
+            )}
+
             <div className="z-[101]">
                 <div className={cn(
                   "backdrop-blur-md rounded-xl shadow-lg border p-1",
@@ -165,29 +172,21 @@ export default function Header() {
         )}>
           <Logo className="w-10 h-10" />
         </div>
-        <div>
-            {loginState === 'school' && schoolId ? (
-                <>
-                    <h1 className={cn(
-                        "text-xl md:text-2xl font-bold leading-none font-headline",
-                        isGraphic ? 'text-foreground' : 'text-foreground'
-                    )}>
-                        {schoolId.replace(/_/g, ' ')}
-                    </h1>
-                    <p className={cn("text-sm font-medium", isGraphic ? 'text-primary/80' : 'text-muted-foreground')}>
-                        School Reward System
-                    </p>
-                </>
-            ) : (
-                <h1 className={cn(
-                    "text-xl md:text-2xl font-bold leading-none font-headline",
-                    isGraphic ? 'text-foreground' : 'text-foreground'
-                )}>
-                    {getTitle()}
-                </h1>
-            )}
-        </div>
+        <h1 className={cn(
+            "text-xl md:text-2xl font-bold leading-none font-headline",
+            isGraphic ? 'text-foreground' : 'text-foreground'
+        )}>
+            {getTitle()}
+        </h1>
       </Link>
+
+      {loginState === 'school' && schoolId && (
+        <div className="absolute inset-x-0 text-center pointer-events-none z-0">
+             <h2 className="text-lg font-bold text-foreground/60 truncate px-32">
+                {schoolName}
+            </h2>
+        </div>
+      )}
 
       {isInitialized && (
         <div className="flex gap-2 items-center relative z-20">
