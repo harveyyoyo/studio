@@ -1,4 +1,3 @@
-
 'use client';
 import { usePathname } from 'next/navigation';
 import {
@@ -51,7 +50,7 @@ export default function Header() {
   if (isLoginPage) {
     return (
       <header className={cn(
-        "no-print w-full max-w-6xl p-4 md:p-6 mb-6 flex justify-center items-center relative"
+        "no-print w-full max-w-6xl p-4 md:p-6 flex justify-center items-center relative"
       )}>
         <div className="flex items-center gap-3">
           <div className={cn(
@@ -158,10 +157,6 @@ export default function Header() {
       "no-print w-full max-w-6xl rounded-2xl p-4 md:p-6 mb-6 flex justify-between items-center relative overflow-hidden",
       isGraphic ? 'bg-card/70 backdrop-blur-lg border border-border shadow-2xl shadow-primary/10' : 'bg-card border-b-4 border-primary shadow-lg'
     )}>
-
-      <div className="font-headline absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-0 whitespace-nowrap text-3xl sm:text-5xl md:text-8xl font-black text-muted-foreground/20 dark:text-muted-foreground/10 uppercase tracking-widest italic select-none hidden sm:block opacity-40">
-        {schoolId?.replace(/_/g, '') || 'SCHOOLABC'}
-      </div>
 
       <Link href="/" data-home-button="true" className="flex items-center gap-3 relative z-10 group">
         <div className={cn(

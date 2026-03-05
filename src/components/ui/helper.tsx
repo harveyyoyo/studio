@@ -34,10 +34,6 @@ export function Helper({ children, content, side = 'right', className, iconClass
         <PopoverTrigger asChild>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
             className={cn("text-muted-foreground/50 hover:text-muted-foreground transition-colors focus:outline-none", iconClassName)}
           >
             <HelpCircle style={{ width: iconSize, height: iconSize }} />
