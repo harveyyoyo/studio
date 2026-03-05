@@ -8,7 +8,8 @@ service cloud.firestore {
     }
     
     function isAdmin(schoolId) {
-      return isAuth() && get(/databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid)).data.role == 'admin';
+      let rolesPath = /databases/$(database)/documents/schools/$(schoolId)/roles_admin/$(request.auth.uid);
+      return isAuth() && exists(rolesPath) && get(rolesPath).data.role == 'admin';
     }
     
     match /schools/{schoolId} {
