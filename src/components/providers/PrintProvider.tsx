@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -67,7 +66,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         <PrintContext.Provider value={value}>
             {children}
             {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
-            {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} />}
+            {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} />}
         </PrintContext.Provider>
     );
 }

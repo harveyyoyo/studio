@@ -2,16 +2,15 @@
 
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
-import { useAppContext } from './AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 interface StudentIdPrintSheetProps {
   students: Student[];
+  schoolId: string | null;
 }
 
-export function StudentIdPrintSheet({ students }: StudentIdPrintSheetProps) {
-  const { schoolId } = useAppContext();
+export function StudentIdPrintSheet({ students, schoolId }: StudentIdPrintSheetProps) {
   const firestore = useFirestore();
   
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
