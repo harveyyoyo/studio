@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -10,7 +11,7 @@ import type { Student, Class, Coupon, Teacher, Prize, Category, Achievement } fr
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
-  addCategory as dbAddCategory, deleteCategory as dbDeleteCategory,
+  addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
   addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon,
   redeemPrize as dbRedeemPrize, addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
@@ -54,7 +55,8 @@ interface AppContextType {
   deleteClass: (classId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: { name: string; points: number }) => Promise<Category | undefined>;
+  addCategory: (category: { name: string; points: number; color?: string; }) => Promise<Category | undefined>;
+  updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
@@ -129,9 +131,14 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbDeleteTeacher(firestore, schoolId, id);
   }, [firestore, schoolId]);
 
-  const addCategory_ = useCallback(async (data: { name: string; points: number }) => {
+  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string }) => {
     if (!firestore || !schoolId) return undefined;
     return dbAddCategory(firestore, schoolId, data);
+  }, [firestore, schoolId]);
+
+  const updateCategory_ = useCallback(async (category: Category) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbUpdateCategory(firestore, schoolId, category);
   }, [firestore, schoolId]);
 
   const deleteCategory_ = useCallback((id: string) => {
@@ -209,7 +216,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addStudent: addStudent_, updateStudent: updateStudent_, deleteStudent: deleteStudent_,
     addClass: addClass_, deleteClass: deleteClass_,
     addTeacher: addTeacher_, deleteTeacher: deleteTeacher_,
-    addCategory: addCategory_, deleteCategory: deleteCategory_,
+    addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
     addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, awardPoints: awardPoints_,
     awardPointsToMultipleStudents: awardPointsToMultipleStudents_,
     redeemPrize: redeemPrize_,
@@ -222,7 +229,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
     addClass_, deleteClass_, addTeacher_, deleteTeacher_,
-    addCategory_, deleteCategory_, addCoupons_,
+    addCategory_, updateCategory_, deleteCategory_, addCoupons_,
     redeemCoupon_, awardPoints_, awardPointsToMultipleStudents_, redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     addAchievement_, updateAchievement_, deleteAchievement_,

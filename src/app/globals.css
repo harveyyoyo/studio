@@ -130,6 +130,25 @@
         align-items: center;
         justify-content: space-around;
     }
+
+    .print-coupon.is-colored {
+        background-color: var(--coupon-bg-color, white) !important;
+        border-color: var(--coupon-border-color, #999) !important;
+    }
+    .print-coupon.is-colored,
+    .print-coupon.is-colored .print-coupon-header,
+    .print-coupon.is-colored .print-coupon-value,
+    .print-coupon.is-colored .print-coupon-value span,
+    .print-coupon.is-colored .print-coupon-details,
+    .print-coupon.is-colored .print-coupon-category,
+    .print-coupon.is-colored .print-coupon-teacher,
+    .print-coupon.is-colored .font-barcode {
+        color: var(--coupon-text-color, black) !important;
+    }
+    .print-coupon.is-colored .print-coupon-main {
+        border-color: var(--coupon-text-color, #eee) !important;
+        opacity: 0.5;
+    }
     
     .print-coupon-header {
         font-size: 6pt;

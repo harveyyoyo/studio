@@ -281,6 +281,7 @@ export function SettingsModal() {
 
                             <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Experience</p>
+                            <FeatureRow id="enableCouponColor" label="Color-Coded Coupons" desc="Assign colors to categories for visual flair" icon={<Palette className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
                             <FeatureRow id="enablePrizeImages" label="Prize Images" desc="Upload photos for shop items" icon={<ShoppingBag className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
                             <FeatureRow id="enableWishlist" label="Wishlists" desc="Students save for prizes" icon={<Star className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
                             <FeatureRow id="enableQrLogin" label="QR Card Login" desc="Login via QR code scanning" icon={<LayoutDashboard className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />

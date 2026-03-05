@@ -31,6 +31,7 @@ interface Settings {
     enablePrizeCategories: boolean;
     enableWishlist: boolean;
     enableSeasonalPrizes: boolean;
+    enableCouponColor: boolean;
     // Admin Tools
     enableBulkPoints: boolean;
     enablePointApproval: boolean;
@@ -80,6 +81,7 @@ const defaultSettings: Settings = {
     enablePrizeCategories: false,
     enableWishlist: false,
     enableSeasonalPrizes: false,
+    enableCouponColor: true,
     enableBulkPoints: false,
     enablePointApproval: false,
     enableAuditLog: false,

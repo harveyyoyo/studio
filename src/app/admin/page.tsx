@@ -60,6 +60,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Helper } from '@/components/ui/helper';
+import { CategoryModal } from '@/components/CategoryModal';
 
 function AdminDashboardSkeleton() {
   return (
@@ -220,10 +221,11 @@ function AdminDashboardInner() {
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryPoints, setNewCategoryPoints] = useState('10');
+  
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
@@ -303,21 +305,9 @@ function AdminDashboardInner() {
     setNewTeacherName('');
   };
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName || !newCategoryPoints) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide a name and point value for the category.' });
-      return;
-    }
-    const points = parseInt(newCategoryPoints);
-    if (isNaN(points) || points <= 0) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Invalid Points', description: 'Points must be a positive number.' });
-      return;
-    }
-    await addCategory({ name: newCategoryName, points });
-    setNewCategoryName('');
-    setNewCategoryPoints('10');
+  const handleOpenCategoryModal = (category: Category | null) => {
+    setEditingCategory(category);
+    setIsCategoryModalOpen(true);
   };
 
   const handleOpenStudentModal = (student: Student | null) => {
@@ -501,23 +491,25 @@ function AdminDashboardInner() {
                 <CardDescription>Define categories and point values for coupons.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 mb-6">
-                  <Input placeholder="Category Name" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="rounded-xl" />
-                  <div className="flex gap-2">
-                    <Input type="number" placeholder="Points" value={newCategoryPoints} onChange={(e) => setNewCategoryPoints(e.target.value)} className="rounded-xl" />
-                    <Button onClick={handleAddCategory} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
-                  </div>
+                <div className="mb-6">
+                   <Button onClick={() => handleOpenCategoryModal(null)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Category</Button>
                 </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {categories?.map((c) => (
                     <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-chart-2/20 transition-colors">
-                      <div>
-                        <p className="font-bold">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.points} pts</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.color || '#cccccc' }} />
+                        <div>
+                          <p className="font-bold">{c.name}</p>
+                          <p className="text-xs text-muted-foreground">{c.points} pts</p>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteCategory(c.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenCategoryModal(c)}><Edit className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteCategory(c.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                      </div>
                     </li>
                   ))}
                   {(!categories || categories.length === 0) && (
@@ -821,6 +813,11 @@ function AdminDashboardInner() {
           isOpen={isPrizeModalOpen}
           setIsOpen={setIsPrizeModalOpen}
           prize={editingPrize}
+        />
+        <CategoryModal
+          isOpen={isCategoryModalOpen}
+          setIsOpen={setIsCategoryModalOpen}
+          category={editingCategory}
         />
         <StudentActivityModal
           isOpen={!!activityStudent}

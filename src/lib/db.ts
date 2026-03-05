@@ -204,9 +204,9 @@ export const deleteTeacher = async (firestore: Firestore, schoolId: string, teac
 };
 
 // --- Category Mutations ---
-export const addCategory = async (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number }): Promise<Category> => {
+export const addCategory = async (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number; color?: string }): Promise<Category> => {
   const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newCategory: Category = { ...categoryData, id: newId };
+  const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || '#cccccc' };
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);
   try {
     await setDoc(categoryDocRef, newCategory);
@@ -222,6 +222,23 @@ export const addCategory = async (firestore: Firestore, schoolId: string, catego
     throw error;
   }
   return newCategory;
+};
+
+export const updateCategory = async (firestore: Firestore, schoolId: string, updatedCategory: Category) => {
+  const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', updatedCategory.id);
+  try {
+    await updateDoc(categoryDocRef, { ...updatedCategory });
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: categoryDocRef.path,
+        operation: 'update',
+        requestResourceData: updatedCategory
+      })
+    );
+    throw error;
+  }
 };
 
 export const deleteCategory = async (firestore: Firestore, schoolId: string, categoryId: string) => {

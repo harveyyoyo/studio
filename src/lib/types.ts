@@ -18,6 +18,7 @@ export interface Category {
   id: string;
   name: string;
   points: number;
+  color?: string;
 }
 
 export interface Student {
@@ -43,6 +44,7 @@ export interface Coupon {
   description?: string;
   usedAt?: number;
   usedBy?: string;
+  color?: string;
 }
 
 export interface Prize {

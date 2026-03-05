@@ -152,6 +152,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 teacher: teacherName,
                 used: false,
                 createdAt: Date.now(),
+                color: selectedCategory.color,
             };
         });
         await addCoupons(couponsToCreate);
@@ -201,6 +202,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         teacher: teacherName,
         used: false,
         createdAt: Date.now(),
+        color: selectedCategoryForPreview?.color,
     };
 
     const filteredStudents = (students || []).filter(s => {
