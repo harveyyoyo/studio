@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -8,7 +9,7 @@ import React, {
     useMemo,
     useRef,
 } from 'react';
-import type { Coupon, Student } from '@/lib/types';
+import type { Coupon, Student, Class } from '@/lib/types';
 import { PrintSheet } from '@/components/PrintSheet';
 import { StudentIdPrintSheet } from '@/components/StudentIdPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -16,14 +17,14 @@ import { useAuth } from './AuthProvider';
 
 interface PrintContextType {
     setCouponsToPrint: (coupons: Coupon[]) => void;
-    setStudentsToPrint: (students: Student[]) => void;
+    setStudentsToPrint: (data: { students: Student[]; classes: Class[] }) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
 
 export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [couponsToPrint, setCouponsToPrint] = useState<Coupon[]>([]);
-    const [studentsToPrint, setStudentsToPrint] = useState<Student[]>([]);
+    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[] } | null>(null);
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
 
@@ -44,10 +45,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const studentPrintTriggered = useRef(false);
     useEffect(() => {
-        if (studentsToPrint.length > 0 && !studentPrintTriggered.current) {
+        if (printData && printData.students.length > 0 && !studentPrintTriggered.current) {
             studentPrintTriggered.current = true;
             const afterPrint = () => {
-                setStudentsToPrint([]);
+                setPrintData(null);
                 studentPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
             };
@@ -55,10 +56,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             playSound('swoosh');
             document.fonts.load('48pt "Libre Barcode 39"').finally(window.print);
         }
-    }, [studentsToPrint, playSound]);
+    }, [printData, playSound]);
 
     const value = useMemo(
-        () => ({ setCouponsToPrint, setStudentsToPrint }),
+        () => ({ setCouponsToPrint, setStudentsToPrint: setPrintData }),
         []
     );
 
@@ -66,7 +67,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         <PrintContext.Provider value={value}>
             {children}
             {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
-            {studentsToPrint.length > 0 && <StudentIdPrintSheet students={studentsToPrint} schoolId={schoolId} />}
+            {printData && printData.students.length > 0 && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} />}
         </PrintContext.Provider>
     );
 }

@@ -46,7 +46,7 @@ interface AppContextType {
   setIsKioskLocked: (locked: boolean) => void;
   // Print
   setCouponsToPrint: (coupons: Coupon[]) => void;
-  setStudentsToPrint: (students: Student[]) => void;
+  setStudentsToPrint: (data: { students: Student[], classes: Class[] }) => void;
   // CRUD
   addStudent: (student: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => Promise<void>;
   updateStudent: (student: Student) => Promise<void>;

@@ -531,7 +531,7 @@ function AdminDashboardInner() {
                 <CardDescription>Manage your enrollments and view student activity.</CardDescription>
                 <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-full px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
-                  <Button onClick={() => setStudentsToPrint(students || [])} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
+                  <Button onClick={() => setStudentsToPrint({ students: students || [], classes: classes || [] })} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
                   <Button onClick={() => handleOpenStudentModal(null)} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
                   <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
                 </div>
