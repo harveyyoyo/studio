@@ -1,3 +1,4 @@
+
 'use client';
 import { useState } from 'react';
 import { Label } from '@/components/ui/label';
@@ -123,16 +124,13 @@ export default function LoginPage() {
               side="bottom"
               className="justify-center"
             >
-              <h2 className={cn(
-                "text-4xl font-black tracking-widest uppercase mb-1",
-                isGraphic ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] graphic-text-glow' : 'text-foreground'
-              )}>
-                {isDeveloper ? 'Developer Mode' : 'School Login'}
-              </h2>
+               <h1 className="text-3xl font-bold font-headline text-foreground">
+                levelUp EDU
+              </h1>
+              <p className="text-base text-muted-foreground">
+                School Reward System
+              </p>
             </Helper>
-            <p className={cn("text-xs font-medium", isGraphic ? 'text-foreground/80' : 'text-muted-foreground')}>
-              {isDeveloper ? 'Enter system dev passcode.' : 'Enter your school ID and passcode to continue.'}
-            </p>
           </div>
 
           {!isDeveloper && (
@@ -209,7 +207,7 @@ export default function LoginPage() {
                   isGraphic ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20' : 'bg-slate-800 hover:bg-slate-700 text-white'
                 )}
               >
-                {isDeveloper ? 'Dev Login' : 'Login'}
+                {isDeveloper ? 'Dev Login' : 'School Login'}
               </button>
               <button
                 type="button"

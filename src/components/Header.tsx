@@ -84,7 +84,7 @@ export default function Header() {
             )}>
               levelUp EDU
             </h1>
-            <p className="text-sm text-muted-foreground">School Reward System</p>
+            <p className="text-base text-muted-foreground">School Reward System</p>
           </div>
         </div>
       </header>
@@ -119,7 +119,7 @@ export default function Header() {
                   <h1 className="text-lg font-bold leading-none font-headline">
                       {getTitle()}
                   </h1>
-                  {loginState !== 'developer' && <p className="text-[10px] text-muted-foreground -mt-0.5">School Reward System</p>}
+                  {loginState !== 'developer' && <p className="text-sm text-muted-foreground -mt-0.5">School Reward System</p>}
                 </div>
             </Link>
 
@@ -186,13 +186,13 @@ export default function Header() {
           )}>
               {getTitle()}
           </h1>
-          {loginState !== 'developer' && <p className="text-xs text-muted-foreground">School Reward System</p>}
+          {loginState !== 'developer' && <p className="text-sm text-muted-foreground">School Reward System</p>}
         </div>
       </Link>
 
       {loginState === 'school' && schoolId && (
         <div className="absolute inset-x-0 text-center pointer-events-none z-0">
-             <h2 className="text-5xl font-black text-slate-400 dark:text-slate-600 px-32">
+             <h2 className="text-6xl font-black text-foreground/5 dark:text-white/5 px-32">
                 {schoolName}
             </h2>
         </div>
