@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -13,7 +12,7 @@ import React, {
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { doc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState = 'loggedOut' | 'school' | 'developer';
@@ -82,9 +81,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        // This effect is responsible for showing the sync status and can be simplified or removed
-        // if not a core feature. For now, it's harmless.
-    }, [schoolId]);
+        if (!firestore || !schoolId) {
+            if (loginState === 'school') {
+                setSyncStatus('offline');
+            } else {
+                setSyncStatus('synced'); // Not in a school context, so consider it synced.
+            }
+            return;
+        }
+    
+        const metadataRef = doc(firestore, 'schools', schoolId);
+        const unsubscribe = onSnapshot(
+            metadataRef,
+            { includeMetadataChanges: true },
+            (snapshot) => {
+                const isFromCache = snapshot.metadata.fromCache;
+                if (isFromCache) {
+                    setSyncStatus('syncing');
+                } else {
+                    setSyncStatus('synced');
+                }
+            },
+            (err) => {
+                console.error("Sync status listener failed:", err);
+                setSyncStatus('error');
+            }
+        );
+    
+        return () => unsubscribe();
+    }, [firestore, schoolId, loginState]);
 
     const login = useCallback(
         async (
