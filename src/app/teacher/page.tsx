@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -31,10 +31,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { SchoolGate } from '@/components/SchoolGate';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
-    const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents } = useAppContext();
+    const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents } = useAppContext();
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings } = useSettings();
@@ -58,11 +59,13 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
 
     // State for direct/bulk awarding
+    const [awardMode, setAwardMode] = useState<'award' | 'deduct'>('award');
     const [studentSearch, setStudentSearch] = useState('');
     const [filterClassId, setFilterClassId] = useState('all');
     const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
     const [awardCategoryId, setAwardCategoryId] = useState('');
     const [awardValue, setAwardValue] = useState('10');
+    const [awardReason, setAwardReason] = useState('');
 
     useEffect(() => {
         if (categories && categories.length > 0) {
@@ -190,6 +193,37 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
         } else {
             playSound('error');
             toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
+        }
+    };
+    
+    const handleDeductPoints = async () => {
+        const points = parseInt(awardValue);
+        if (selectedStudentIds.length === 0) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'No students selected.' });
+            return;
+        }
+        if (!awardReason.trim()) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'A reason is required for deductions.' });
+            return;
+        }
+        if (isNaN(points) || points <= 0) {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Points to deduct must be a positive number.' });
+            return;
+        }
+    
+        const result = await deductPointsFromMultipleStudents(selectedStudentIds, points, awardReason);
+    
+        if (result.success) {
+            playSound('swoosh');
+            toast({ title: 'Points Deducted!', description: `Deducted ${points} points from ${result.count} student(s).` });
+            setSelectedStudentIds([]);
+            setAwardReason('');
+        } else {
+            playSound('error');
+            toast({ variant: 'destructive', title: 'Failed to deduct points', description: result.message });
         }
     };
 
@@ -333,10 +367,10 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Award className={isGraphic ? 'text-chart-2' : 'text-chart-2'} />
-                                    Award Points
+                                    Direct Point Adjustment
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
-                                    Select students and award points directly.
+                                    Select students to award or deduct points directly.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -385,28 +419,53 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="space-y-1.5">
-                                                <Label>Category</Label>
-                                                <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
-                                                    <SelectTrigger className="h-11 rounded-xl">
-                                                        <SelectValue placeholder="Select..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label>Points</Label>
-                                                <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className="h-11 rounded-xl text-base font-bold" />
-                                            </div>
-                                        </div>
-                                        <Button 
-                                            onClick={handleAwardPoints} 
+                                        <Tabs value={awardMode} onValueChange={(v) => setAwardMode(v as 'award' | 'deduct')} className="w-full">
+                                            <TabsList className="grid w-full grid-cols-2">
+                                                <TabsTrigger value="award"><Award className="w-4 h-4 mr-2" />Award</TabsTrigger>
+                                                <TabsTrigger value="deduct"><Minus className="w-4 h-4 mr-2" />Deduct</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="award" className="pt-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label>Category</Label>
+                                                        <Select value={awardCategoryId} onValueChange={setAwardCategoryId}>
+                                                            <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                                            <SelectContent>{categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label>Points</Label>
+                                                        <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className="h-11 rounded-xl text-base font-bold" />
+                                                    </div>
+                                                </div>
+                                            </TabsContent>
+                                            <TabsContent value="deduct" className="pt-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <Label>Points to Deduct</Label>
+                                                        <Input type="number" value={awardValue} onChange={(e) => setAwardValue(e.target.value)} className="h-11 rounded-xl text-base font-bold" />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label>Reason for Deduction</Label>
+                                                        <Input value={awardReason} onChange={(e) => setAwardReason(e.target.value)} className="h-11 rounded-xl" placeholder="e.g. Misbehavior" />
+                                                    </div>
+                                                </div>
+                                            </TabsContent>
+                                        </Tabs>
+
+                                        <Button
+                                            onClick={awardMode === 'award' ? handleAwardPoints : handleDeductPoints}
                                             disabled={selectedStudentIds.length === 0}
-                                            className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-white ${isGraphic ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20' : 'bg-slate-800 hover:bg-slate-700'}`}>
-                                            <Award className="w-5 h-5 mr-3" /> Award to {selectedStudentIds.length} Student(s)
+                                            variant={awardMode === 'deduct' ? 'destructive' : 'default'}
+                                            className={cn(`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95`,
+                                                isGraphic && awardMode === 'award' && 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20 text-white',
+                                                isGraphic && awardMode === 'deduct' && 'bg-red-600 hover:bg-red-500 shadow-red-500/20 text-white',
+                                                !isGraphic && awardMode === 'award' && 'bg-slate-800 hover:bg-slate-700 text-white',
+                                                !isGraphic && awardMode === 'deduct' && 'bg-red-700 hover:bg-red-600 text-white'
+                                            )}
+                                        >
+                                            {awardMode === 'award' ? <Award className="w-5 h-5 mr-3" /> : <Minus className="w-5 h-5 mr-3" />}
+                                            {awardMode === 'award' ? `Award to ${selectedStudentIds.length}` : `Deduct from ${selectedStudentIds.length}`}
                                         </Button>
                                     </div>
                                 </div>
