@@ -7,7 +7,9 @@
       "description": "Represents a student in the school's reward system.",
       "properties": {
         "firstName": { "type": "string", "description": "The first name of the student." },
+        "middleName": { "type": "string", "description": "The middle name of the student." },
         "lastName": { "type": "string", "description": "The last name of the student." },
+        "nickname": { "type": "string", "description": "The student's preferred nickname." },
         "nfcId": { "type": "string", "description": "The student's unique ID for NFC/barcode scanning." },
         "points": { "type": "number", "description": "The current points balance." },
         "lifetimePoints": { "type": "number", "description": "The total points ever earned by the student." },
@@ -81,7 +83,8 @@
         "name": { "type": "string", "description": "The name of the item." },
         "points": { "type": "number", "description": "The point cost of the item." },
         "icon": { "type": "string", "description": "The name of a Lucide icon for display." },
-        "inStock": { "type": "boolean", "description": "If the item is available." }
+        "inStock": { "type": "boolean", "description": "If the item is available." },
+        "addedBy": { "type": "string", "description": "Name of the admin who added the prize." }
       },
       "required": ["id", "name", "points", "icon", "inStock"]
     },

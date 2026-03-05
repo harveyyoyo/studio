@@ -35,7 +35,9 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const { addStudent, updateStudent, schoolId } = useAppContext();
   const firestore = useFirestore();
   const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [nickname, setNickname] = useState('');
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
@@ -48,13 +50,17 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     if (isOpen) {
       if (student) { // Edit mode
         setFirstName(student.firstName);
+        setMiddleName(student.middleName || '');
         setLastName(student.lastName);
+        setNickname(student.nickname || '');
         setPoints(student.points.toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
       } else { // Create mode
         setFirstName('');
+        setMiddleName('');
         setLastName('');
+        setNickname('');
         setPoints('0');
         setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
@@ -82,7 +88,16 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     const finalClassId = classId === 'none' ? '' : classId;
 
     if (isEditing && student) {
-      const updatedStudent: Student = { ...student, firstName, lastName, points: parseInt(points) || 0, classId: finalClassId, nfcId };
+      const updatedStudent: Student = { 
+        ...student, 
+        firstName, 
+        middleName: middleName || undefined,
+        lastName, 
+        nickname: nickname || undefined,
+        points: parseInt(points) || 0, 
+        classId: finalClassId, 
+        nfcId 
+      };
       await updateStudent(updatedStudent);
       playSound('success');
       toast({ title: 'Student updated!' });
@@ -90,7 +105,9 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       const newStudent = {
         nfcId,
         firstName, 
+        middleName: middleName || undefined,
         lastName,
+        nickname: nickname || undefined,
         points: parseInt(points) || 0,
         classId: finalClassId,
       };
@@ -103,7 +120,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Student' : 'New Student'}</DialogTitle>
         </DialogHeader>
@@ -116,6 +133,16 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
              <div className="space-y-1">
               <Label htmlFor="lastName">Last Name</Label>
               <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+                <Label htmlFor="middleName">Middle Name (Optional)</Label>
+                <Input id="middleName" value={middleName} onChange={e => setMiddleName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+                <Label htmlFor="nickname">Nickname (Optional)</Label>
+                <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1">

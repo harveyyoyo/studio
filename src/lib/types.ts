@@ -24,7 +24,9 @@ export interface Category {
 export interface Student {
   id: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
+  nickname?: string;
   points: number;
   lifetimePoints?: number;
   classId?: string;
@@ -53,6 +55,7 @@ export interface Prize {
   points: number;
   icon: string;
   inStock: boolean;
+  addedBy?: string;
 }
 
 export interface Achievement {

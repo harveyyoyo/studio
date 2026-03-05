@@ -493,6 +493,53 @@ export const awardPointsToMultipleStudents = async (firestore: Firestore, school
     }
 };
 
+export const deductPointsFromMultipleStudents = async (firestore: Firestore, schoolId: string, studentIds: string[], points: number, reason: string): Promise<{ success: boolean; message: string; count: number; }> => {
+    if (points <= 0) {
+        return { success: false, message: "Points to deduct must be a positive number.", count: 0 };
+    }
+    if (!studentIds || studentIds.length === 0) {
+        return { success: false, message: "No students selected.", count: 0 };
+    }
+
+    try {
+        const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
+        const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
+
+        const batch = writeBatch(firestore);
+        let processedCount = 0;
+
+        for (const studentDoc of studentDocs) {
+            if (!studentDoc.exists()) continue;
+
+            const studentData = studentDoc.data() as Student;
+            
+            const newPoints = Math.max(0, studentData.points - points);
+            
+            batch.update(studentDoc.ref, { points: newPoints });
+
+            const activityRef = doc(collection(studentDoc.ref, 'activities'));
+            batch.set(activityRef, { desc: reason, amount: -points, date: Date.now() });
+            
+            processedCount++;
+        }
+
+        await batch.commit();
+        
+        return { success: true, message: `Successfully deducted points.`, count: processedCount };
+
+    } catch (e: any) {
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+                path: `schools/${schoolId}/students`,
+                operation: 'write',
+                requestResourceData: { studentIds, points, reason },
+            })
+        );
+        return { success: false, message: e.message || 'An unknown error occurred.', count: 0 };
+    }
+}
+
 export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize) => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   try {

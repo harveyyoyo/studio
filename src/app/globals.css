@@ -123,7 +123,7 @@
         page-break-inside: avoid;
         box-sizing: border-box;
         font-family: 'PT Sans', sans-serif;
-        background: #fff;
+        background: #fff !important;
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -216,7 +216,7 @@
     .print-coupon-barcode .font-barcode {
         font-size: 38pt;
         line-height: 1;
-        color: #000;
+        color: #000 !important;
         margin: 0;
         padding: 0;
         padding-bottom: 3px;

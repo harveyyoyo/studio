@@ -66,12 +66,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock };
+      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, addedBy: 'Admin' };
       await updatePrize(updatedPrize);
       playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon, inStock };
+      const newPrize = { name, points: pointsValue, icon, inStock, addedBy: 'Admin' };
       await addPrize(newPrize);
       playSound('success');
       toast({ title: 'Prize added!' });

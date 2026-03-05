@@ -103,13 +103,13 @@ export default function Header() {
                 <div>
                   {loginState === 'school' && schoolId ? (
                     <>
-                      <h1 className="text-lg font-bold leading-none font-headline">
-                        School Reward System
+                      <h1 className="text-lg font-bold leading-none font-headline text-foreground">
+                        {schoolId.replace(/_/g, ' ')}
                       </h1>
                       <p className={cn(
-                        "text-xs font-bold leading-tight",
+                        "text-xs font-medium leading-tight",
                         isGraphicApp ? 'text-muted-foreground' : 'text-muted-foreground'
-                      )}>{schoolId.replace(/_/g, ' ')}</p>
+                      )}>School Reward System</p>
                     </>
                   ) : (
                     <h1 className="text-lg font-bold leading-none font-headline">
@@ -177,10 +177,10 @@ export default function Header() {
                         "text-xl md:text-2xl font-bold leading-none font-headline",
                         isGraphic ? 'text-foreground' : 'text-foreground'
                     )}>
-                        School Reward System
-                    </h1>
-                    <p className={cn("text-sm font-bold", isGraphic ? 'text-primary/80' : 'text-muted-foreground')}>
                         {schoolId.replace(/_/g, ' ')}
+                    </h1>
+                    <p className={cn("text-sm font-medium", isGraphic ? 'text-primary/80' : 'text-muted-foreground')}>
+                        School Reward System
                     </p>
                 </>
             ) : (
