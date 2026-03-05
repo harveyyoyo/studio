@@ -78,7 +78,7 @@ export default function HallOfFamePage() {
         schoolId
             ? query(
                 collection(firestore, 'schools', schoolId, 'students'),
-                orderBy('lifetimePoints', 'desc'),
+                orderBy('points', 'desc'),
                 limit(50)
             )
             : null,
@@ -120,12 +120,12 @@ export default function HallOfFamePage() {
                                 <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
                                     <Trophy className="text-amber-500" /> Hall of Fame
                                 </h2>
-                                <CardDescription>Top all-time point earners</CardDescription>
+                                <CardDescription>Top students by current point balance</CardDescription>
                             </div>
                         </div>
                         <div className="mt-4 pt-4 border-t">
                             <CardDescription>
-                                This leaderboard shows the top 50 students based on the total points they have ever earned.
+                                This leaderboard shows the top 50 students based on their current point balance.
                             </CardDescription>
                         </div>
                     </Card>
@@ -141,7 +141,7 @@ export default function HallOfFamePage() {
                                     </Avatar>
                                     <p className="font-bold text-xl md:text-2xl truncate">{podium[0].firstName} {podium[0].lastName}</p>
                                     <p className="text-muted-foreground">{getClassName(podium[0].classId)}</p>
-                                    <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{(podium[0].lifetimePoints || 0).toLocaleString()} pts</p>
+                                    <p className="text-3xl md:text-4xl font-bold text-primary mt-2">{(podium[0].points || 0).toLocaleString()} pts</p>
                                     <div className="mt-4 border-t pt-4">
                                         <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
                                         <div className="flex flex-wrap gap-1 justify-center">
@@ -169,7 +169,7 @@ export default function HallOfFamePage() {
                                         </Avatar>
                                         <p className="font-bold text-xl truncate">{podium[1].firstName} {podium[1].lastName}</p>
                                         <p className="text-muted-foreground text-sm">{getClassName(podium[1].classId)}</p>
-                                        <p className="text-2xl font-bold text-primary mt-2">{(podium[1].lifetimePoints || 0).toLocaleString()} pts</p>
+                                        <p className="text-2xl font-bold text-primary mt-2">{(podium[1].points || 0).toLocaleString()} pts</p>
                                         <div className="mt-3 border-t pt-3">
                                             <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
                                             <div className="flex flex-wrap gap-1 justify-center">
@@ -198,7 +198,7 @@ export default function HallOfFamePage() {
                                         </Avatar>
                                         <p className="font-bold text-lg truncate">{podium[2].firstName} {podium[2].lastName}</p>
                                         <p className="text-muted-foreground text-sm">{getClassName(podium[2].classId)}</p>
-                                        <p className="text-xl font-bold text-primary mt-2">{(podium[2].lifetimePoints || 0).toLocaleString()} pts</p>
+                                        <p className="text-xl font-bold text-primary mt-2">{(podium[2].points || 0).toLocaleString()} pts</p>
                                         <div className="mt-3 border-t pt-3">
                                             <p className="text-xs font-bold text-muted-foreground mb-2">Top Categories</p>
                                             <div className="flex flex-wrap gap-1 justify-center">
@@ -240,7 +240,7 @@ export default function HallOfFamePage() {
                                                             <p className="text-xs text-muted-foreground text-left">{getClassName(student.classId)}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-lg font-bold text-primary">{(student.lifetimePoints || 0).toLocaleString()} pts</div>
+                                                    <div className="text-lg font-bold text-primary">{(student.points || 0).toLocaleString()} pts</div>
                                                 </div>
                                             </AccordionTrigger>
                                             <AccordionContent className="pb-3">
@@ -302,7 +302,7 @@ export default function HallOfFamePage() {
                                             <AvatarFallback className="bg-secondary text-foreground text-lg">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
                                         </Avatar>
                                         <p className="font-bold text-foreground text-lg truncate">{podium[1].firstName}</p>
-                                        <p className="text-chart-3 font-bold text-xl mt-1">{(podium[1].lifetimePoints || 0).toLocaleString()}</p>
+                                        <p className="text-chart-3 font-bold text-xl mt-1">{(podium[1].points || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
@@ -316,7 +316,7 @@ export default function HallOfFamePage() {
                                         <AvatarFallback className="bg-accent/50 text-chart-3 text-2xl">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
                                     </Avatar>
                                     <p className="font-bold text-foreground text-2xl truncate">{podium[0].firstName}</p>
-                                    <p className="text-chart-3 font-black text-3xl mt-1 graphic-text-glow">{(podium[0].lifetimePoints || 0).toLocaleString()}</p>
+                                    <p className="text-chart-3 font-black text-3xl mt-1 graphic-text-glow">{(podium[0].points || 0).toLocaleString()}</p>
                                 </div>
                             </div>
                             {/* 3rd Place */}
@@ -328,7 +328,7 @@ export default function HallOfFamePage() {
                                             <AvatarFallback className="bg-orange-900/50 text-orange-300 text-md">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
                                         </Avatar>
                                         <p className="font-bold text-foreground text-md truncate">{podium[2].firstName}</p>
-                                        <p className="text-chart-3 font-bold text-lg mt-1">{(podium[2].lifetimePoints || 0).toLocaleString()}</p>
+                                        <p className="text-chart-3 font-bold text-lg mt-1">{(podium[2].points || 0).toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
@@ -354,7 +354,7 @@ export default function HallOfFamePage() {
                                                 <p className="text-xs text-muted-foreground">{getClassName(student.classId)}</p>
                                             </div>
                                         </div>
-                                        <span className="text-sm font-bold text-chart-3">{(student.lifetimePoints || 0).toLocaleString()}</span>
+                                        <span className="text-sm font-bold text-chart-3">{(student.points || 0).toLocaleString()}</span>
                                     </div>
                                 ))}
                             </div>
