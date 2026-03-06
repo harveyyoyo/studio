@@ -93,8 +93,8 @@ export default function PortalPage() {
                         return (
                             <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
                                 <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
+                                    initial={{ opacity: 0, x: -50 }}
+                                    animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
