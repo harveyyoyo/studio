@@ -13,6 +13,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { SettingsModal } from '@/components/ui/SettingsModal';
 import { cn } from '@/lib/utils';
 import { Helper } from '@/components/ui/helper';
+import Logo from '@/components/Logo';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -130,6 +131,10 @@ export default function LoginPage() {
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
           isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
         )}>
+
+          <div className="flex justify-center mb-8">
+              <Logo className="h-16 w-auto" />
+          </div>
 
           <div className="text-center mb-8">
             <Helper
