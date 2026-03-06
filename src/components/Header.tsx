@@ -62,31 +62,28 @@ export default function Header() {
   if (settings.displayMode === 'app') {
     return (
       <>
-        <header className="no-print w-full flex justify-between items-center relative z-20 px-8 pt-4 pb-0 mb-0">
-            <Link href="/" className="flex items-center gap-4 relative z-10 group">
-                <div className="overflow-hidden rounded-xl shadow-lg bg-primary h-14 w-14 flex items-center justify-center transition-transform group-hover:scale-110">
-                    <Zap className="w-7 h-7 fill-primary-foreground text-primary-foreground" />
+        <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
+            <Link href="/" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
+                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-10 w-10 flex items-center justify-center">
+                    <Zap className="w-5 h-5 fill-primary-foreground text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-black leading-none uppercase text-primary tracking-wider">
+                  <h1 className="text-base font-black leading-none uppercase text-primary tracking-wider">
                       levelUp EDU
                   </h1>
-                  <p className="text-base font-bold text-muted-foreground uppercase tracking-widest mt-1">School Reward System</p>
+                  {loginState === 'school' && schoolId && (
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-0.5">
+                      {schoolName}
+                    </p>
+                  )}
                 </div>
             </Link>
 
-            <div className="z-20 scale-125">
+            <div className="z-20">
                 <SettingsModal />
             </div>
         </header>
-        {loginState === 'school' && schoolId && (
-          <div className="text-center px-8 pb-4">
-             <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md">
-                {schoolName}
-            </h2>
-          </div>
-        )}
-
+        
         {loginState === 'school' && (
           <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-slate-200 bg-white/90 backdrop-blur-md">
             <div className="max-w-lg mx-auto flex justify-around items-center">
@@ -123,7 +120,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
-            <Link href="/" className="flex items-center gap-4 group">
+            <Link href="/" className="flex items-center gap-4 group" data-home-button="true">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
                     <Zap className="h-6 w-6 fill-current" />
                 </div>
@@ -137,7 +134,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
           <div className="flex-1 text-center px-8 hidden lg:block">
-               <h2 className="text-4xl font-black tracking-tight text-primary font-headline truncate">
+               <h2 className="text-2xl font-black tracking-tight text-primary font-headline">
                   {schoolName}
               </h2>
           </div>
