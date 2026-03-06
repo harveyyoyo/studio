@@ -60,12 +60,15 @@ export default function Header() {
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
-      ...(isAdmin ? [{ href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      { href: '/teacher', icon: Printer, label: 'Print', color: 'chart-2' },
-      { href: '/student', icon: GraduationCap, label: 'Redeem', color: 'chart-1' },
-      { href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
-      { href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
-    ];
+      ...(isAdmin ? [{ id: 'admin', href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
+      { id: 'print', href: '/teacher', icon: Printer, label: 'Print', color: 'chart-2' },
+      { id: 'redeem', href: '/student', icon: GraduationCap, label: 'Redeem', color: 'chart-1' },
+      { id: 'prize', href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
+      { id: 'fame', href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
+    ].sort((a, b) => {
+        const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
+        return order.indexOf(a.id) - order.indexOf(b.id);
+    });
 
     const colorClasses: Record<string, string> = {
         destructive: 'text-destructive',
@@ -78,18 +81,18 @@ export default function Header() {
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <Link href="/portal" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
-                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-10 w-10 flex items-center justify-center">
-                    <Zap className="w-5 h-5 fill-primary-foreground text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-black leading-none uppercase text-primary tracking-wider">
-                      {schoolName || 'levelUp EDU'}
-                  </h1>
-                </div>
-            </Link>
+            <div className="w-10">
+                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                    <Home className="h-5 w-5" />
+                </Link>
+            </div>
+            <div className="flex-1">
+                <h1 className="text-3xl font-headline font-black tracking-tight text-primary text-center">
+                    {schoolName || 'levelUp EDU'}
+                </h1>
+            </div>
 
-            <div className="z-20">
+            <div className="w-10 flex justify-end">
                 <SettingsModal />
             </div>
         </header>
@@ -139,7 +142,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-3xl font-black text-primary tracking-widest uppercase">{schoolName}</span>
+                <span className="text-3xl font-black font-headline text-primary tracking-tight">{schoolName}</span>
             </div>
         )}
 
