@@ -95,7 +95,7 @@ export default function Header() {
                 </Link>
             </div>
             <div className="flex-1">
-                <h1 className="text-4xl font-headline font-black tracking-tight text-primary text-center">
+                <h1 className="text-5xl font-headline font-black tracking-tight text-primary text-center">
                     {schoolName || 'levelUp EDU'}
                 </h1>
             </div>
@@ -142,7 +142,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{schoolName}</span>
+                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
                 </div>
             </Link>
         </div>
@@ -150,7 +150,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-4xl font-black font-headline text-primary tracking-tight">{schoolName}</span>
+                <span className="text-5xl font-black font-headline text-primary tracking-tight">{schoolName}</span>
             </div>
         )}
 
