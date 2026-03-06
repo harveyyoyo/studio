@@ -29,6 +29,7 @@ import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import Logo from './Logo';
 
 
 export default function Header() {
@@ -56,6 +57,8 @@ export default function Header() {
   if (isLoginPage || !isInitialized) {
     return null;
   }
+
+  const logoLink = loginState === 'developer' ? '/developer' : '/portal';
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
@@ -90,12 +93,12 @@ export default function Header() {
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="w-10">
-                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                <Link href={logoLink} data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
             </div>
             <div className="flex-1">
-                <h1 className="text-5xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md">
+                <h1 className="text-xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md">
                     {schoolName || 'levelUp EDU'}
                 </h1>
             </div>
@@ -106,7 +109,9 @@ export default function Header() {
         </header>
         
         {loginState === 'school' && (
-          <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t bg-background/90 backdrop-blur-md">
+          <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
+            "bg-background/90 backdrop-blur-md"
+          )}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
@@ -136,9 +141,9 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
-            <Link href="/portal" className="flex items-center gap-4 group" data-home-button="true">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
-                    <Zap className="h-6 w-6 fill-current" />
+            <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl text-primary transition-transform group-hover:scale-105">
+                    <Logo className="h-8 w-auto" />
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
@@ -150,7 +155,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-5xl font-black uppercase tracking-wider text-primary drop-shadow-md">{schoolName}</span>
+                <span className="text-2xl font-black uppercase tracking-wider text-primary drop-shadow-md">{schoolName}</span>
             </div>
         )}
 
