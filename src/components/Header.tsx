@@ -53,25 +53,24 @@ export default function Header() {
     logout();
   };
 
-  if (isLoginPage) {
+  if (isLoginPage || !isInitialized) {
     return null;
   }
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
-      { href: '/portal', icon: Home, label: 'Home' },
-      { href: '/student', icon: GraduationCap, label: 'Redeem' },
-      { href: '/teacher', icon: Printer, label: 'Print' },
-      { href: '/prize', icon: ShoppingBag, label: 'Shop' },
       ...(isAdmin ? [{ href: '/admin', icon: UserCog, label: 'Admin' }] : []),
+      { href: '/teacher', icon: Printer, label: 'Print' },
+      { href: '/student', icon: GraduationCap, label: 'Redeem' },
+      { href: '/prize', icon: ShoppingBag, label: 'Shop' },
       { href: '/halloffame', icon: Trophy, label: 'Fame' },
     ];
 
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <Link href="/" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
+            <Link href="/portal" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
                 <div className="overflow-hidden rounded-lg shadow-md bg-primary h-10 w-10 flex items-center justify-center">
                     <Zap className="w-5 h-5 fill-primary-foreground text-primary-foreground" />
                 </div>
@@ -79,15 +78,9 @@ export default function Header() {
                   <h1 className="text-xl font-black leading-none uppercase text-primary tracking-wider">
                       {schoolName || 'levelUp EDU'}
                   </h1>
-                  {loginState === 'school' && schoolId ? (
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                      levelUp EDU
-                    </p>
-                  ) : (
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                      School Reward System
-                    </p>
-                  )}
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                    School Reward System
+                  </p>
                 </div>
             </Link>
 
@@ -125,13 +118,13 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
-            <Link href="/" className="flex items-center gap-4 group" data-home-button="true">
+            <Link href="/portal" className="flex items-center gap-4 group" data-home-button="true">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
                     <Zap className="h-6 w-6 fill-current" />
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                    <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
+                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
                 </div>
             </Link>
         </div>
