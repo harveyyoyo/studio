@@ -60,12 +60,20 @@ export default function Header() {
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
     const navItems = [
-      ...(isAdmin ? [{ href: '/admin', icon: UserCog, label: 'Admin' }] : []),
-      { href: '/teacher', icon: Printer, label: 'Print' },
-      { href: '/student', icon: GraduationCap, label: 'Redeem' },
-      { href: '/prize', icon: ShoppingBag, label: 'Shop' },
-      { href: '/halloffame', icon: Trophy, label: 'Fame' },
+      ...(isAdmin ? [{ href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
+      { href: '/teacher', icon: Printer, label: 'Print', color: 'chart-2' },
+      { href: '/student', icon: GraduationCap, label: 'Redeem', color: 'chart-1' },
+      { href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
+      { href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
     ];
+
+    const colorClasses: Record<string, string> = {
+        destructive: 'text-destructive',
+        'chart-1': 'text-chart-1',
+        'chart-2': 'text-chart-2',
+        'chart-3': 'text-chart-3',
+        'chart-5': 'text-chart-5',
+    };
 
     return (
       <>
@@ -78,9 +86,6 @@ export default function Header() {
                   <h1 className="text-xl font-black leading-none uppercase text-primary tracking-wider">
                       {schoolName || 'levelUp EDU'}
                   </h1>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
-                    School Reward System
-                  </p>
                 </div>
             </Link>
 
@@ -92,11 +97,13 @@ export default function Header() {
         {loginState === 'school' && (
           <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-slate-200 bg-white/90 backdrop-blur-md">
             <div className="max-w-lg mx-auto flex justify-around items-center">
-              {navItems.map(({ href, icon: Icon, label }) => {
+              {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
-                const activeClass = isActive ? 'text-primary scale-110' : 'text-slate-400 hover:text-primary/70';
+                const activeClass = isActive 
+                    ? `scale-110 ${colorClasses[color] || 'text-primary'}` 
+                    : 'text-slate-400 hover:text-slate-500';
                 return (
-                  <Link key={href} href={href} className={`flex flex-col items-center transition-all px-3 py-1 ${activeClass}`}>
+                  <Link key={href} href={href} className={cn('flex flex-col items-center transition-all px-3 py-1', activeClass)}>
                     <Icon className="w-6 h-6" />
                     <span className="text-[10px] font-bold mt-1 tracking-wider uppercase">{label}</span>
                   </Link>
