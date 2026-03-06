@@ -1,4 +1,3 @@
-
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -34,7 +33,7 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 
 export default function Header() {
   const pathname = usePathname();
-  const { loginState, schoolId, isInitialized, syncStatus, logout } = useAppContext();
+  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const firestore = useFirestore();
@@ -60,23 +59,32 @@ export default function Header() {
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
+    const navItems = [
+      { href: '/portal', icon: Home, label: 'Home' },
+      { href: '/student', icon: GraduationCap, label: 'Redeem' },
+      { href: '/teacher', icon: Printer, label: 'Print' },
+      { href: '/prize', icon: ShoppingBag, label: 'Shop' },
+      ...(isAdmin ? [{ href: '/admin', icon: UserCog, label: 'Admin' }] : []),
+      { href: '/halloffame', icon: Trophy, label: 'Fame' },
+    ];
+
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <Link href="/" className="flex items-center gap-2 relative z-10 group" data-home-button="true">
-                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-8 w-8 flex items-center justify-center">
-                    <Zap className="w-4 h-4 fill-primary-foreground text-primary-foreground" />
+            <Link href="/" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
+                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-10 w-10 flex items-center justify-center">
+                    <Zap className="w-5 h-5 fill-primary-foreground text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-black leading-none uppercase text-primary tracking-wider">
-                      levelUp EDU
+                  <h1 className="text-xl font-black leading-none uppercase text-primary tracking-wider">
+                      {schoolName || 'levelUp EDU'}
                   </h1>
                   {loginState === 'school' && schoolId ? (
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider mt-0.5">
-                      {schoolName}
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
+                      levelUp EDU
                     </p>
                   ) : (
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">
                       School Reward System
                     </p>
                   )}
@@ -91,14 +99,7 @@ export default function Header() {
         {loginState === 'school' && (
           <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-slate-200 bg-white/90 backdrop-blur-md">
             <div className="max-w-lg mx-auto flex justify-around items-center">
-              {[
-                { href: '/portal', icon: Home, label: 'Home' },
-                { href: '/student', icon: GraduationCap, label: 'Student' },
-                { href: '/teacher', icon: Printer, label: 'Teacher' },
-                { href: '/prize', icon: Gift, label: 'Prizes' },
-                { href: '/admin', icon: UserCog, label: 'Admin' },
-                { href: '/halloffame', icon: Trophy, label: 'Fame' },
-              ].map(({ href, icon: Icon, label }) => {
+              {navItems.map(({ href, icon: Icon, label }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
                 const activeClass = isActive ? 'text-primary scale-110' : 'text-slate-400 hover:text-primary/70';
                 return (
