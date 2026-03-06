@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { FirebaseClientProvider } from '@/firebase';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
 export const viewport: Viewport = {
@@ -42,20 +43,22 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
-        <FirebaseClientProvider>
-          <AppProvider>
-            <div
-              id="screen-view"
-              className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
-            >
-              <Header />
-              <main id="app" className="w-full max-w-6xl relative z-10">
-                {children}
-              </main>
-            </div>
-            <Toaster />
-          </AppProvider>
-        </FirebaseClientProvider>
+        <ErrorBoundary name="RootFirebaseProvider">
+          <FirebaseClientProvider>
+            <AppProvider>
+              <div
+                id="screen-view"
+                className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
+              >
+                <Header />
+                <main id="app" className="w-full max-w-6xl relative z-10">
+                  {children}
+                </main>
+              </div>
+              <Toaster />
+            </AppProvider>
+          </FirebaseClientProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

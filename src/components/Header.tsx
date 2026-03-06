@@ -1,4 +1,3 @@
-
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -66,29 +65,7 @@ export default function Header() {
   }
 
   if (isLoginPage) {
-    return (
-      <header className={cn(
-        "no-print w-full max-w-6xl p-4 md:p-6 flex justify-center items-center relative"
-      )}>
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "overflow-hidden rounded-lg shadow-md",
-            isGraphic && 'animate-pulse-glow'
-          )}>
-            <Logo className="w-10 h-10" />
-          </div>
-          <div>
-            <h1 className={cn(
-              "text-2xl md:text-3xl font-bold leading-none font-headline",
-              isGraphic ? 'text-foreground' : 'text-foreground'
-            )}>
-              levelUp EDU
-            </h1>
-            <p className="text-base text-muted-foreground">School Reward System</p>
-          </div>
-        </div>
-      </header>
-    );
+    return null;
   }
 
   if (settings.displayMode === 'app') {
@@ -119,7 +96,7 @@ export default function Header() {
                   <h1 className="text-lg font-bold leading-none font-headline">
                       {getTitle()}
                   </h1>
-                  {loginState !== 'developer' && <p className="text-sm text-muted-foreground -mt-0.5">School Reward System</p>}
+                  {loginState !== 'developer' && <p className="text-base text-muted-foreground -mt-0.5">School Reward System</p>}
                 </div>
             </Link>
 
@@ -186,7 +163,7 @@ export default function Header() {
           )}>
               {getTitle()}
           </h1>
-          {loginState !== 'developer' && <p className="text-sm text-muted-foreground">School Reward System</p>}
+          {loginState !== 'developer' && <p className="text-base text-muted-foreground">School Reward System</p>}
         </div>
       </Link>
 
