@@ -95,7 +95,7 @@ export default function Header() {
                 </Link>
             </div>
             <div className="flex-1">
-                <h1 className="text-3xl font-headline font-black tracking-tight text-primary text-center">
+                <h1 className="text-4xl font-headline font-black tracking-tight text-primary text-center">
                     {schoolName || 'levelUp EDU'}
                 </h1>
             </div>
@@ -106,7 +106,7 @@ export default function Header() {
         </header>
         
         {loginState === 'school' && (
-          <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-border bg-background/90 backdrop-blur-md">
+          <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t bg-background/90 backdrop-blur-md">
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
@@ -150,7 +150,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-3xl font-black font-headline text-primary tracking-tight">{schoolName}</span>
+                <span className="text-4xl font-black font-headline text-primary tracking-tight">{schoolName}</span>
             </div>
         )}
 
