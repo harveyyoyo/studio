@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -52,6 +53,26 @@ export default function PortalPage() {
         <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-12", settings.displayMode === 'app' && 'pb-24')}>
             {/* Noise overlay */}
             <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+
+            {settings.graphicMode === 'graphics' && (
+              <>
+                <motion.div
+                    animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="pointer-events-none fixed -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] z-0"
+                />
+                <motion.div
+                    animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
+                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                    className="pointer-events-none fixed bottom-20 left-20 h-[400px] w-[400px] rounded-full bg-chart-5/10 blur-[120px] z-0"
+                />
+                <motion.div
+                    animate={{ x: [0, 20, 0], y: [0, -30, 0] }}
+                    transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                    className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-chart-2/5 blur-[150px] z-0"
+                />
+              </>
+            )}
 
             <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 text-center">

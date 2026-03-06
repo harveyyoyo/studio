@@ -131,11 +131,6 @@ export default function LoginPage() {
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
           isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
         )}>
-
-          <div className="flex justify-center mb-8">
-              <Logo className="h-16 w-auto" />
-          </div>
-
           <div className="text-center mb-8">
             <Helper
               content="Log in to your school's reward system here. If you are a system administrator, use the 'Developer' login."
@@ -149,6 +144,7 @@ export default function LoginPage() {
                 <p className="text-base text-muted-foreground">
                   School Reward System
                 </p>
+                <Logo className="h-16 w-auto mt-4" />
               </div>
             </Helper>
           </div>
