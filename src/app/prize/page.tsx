@@ -123,126 +123,130 @@ function PrizeDashboard({
                  {/* Noise overlay */}
                 <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
-                <main className="relative z-10 w-full max-w-6xl px-8 pt-12 pb-24">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
-                        <div className="text-center md:text-left">
-                            <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
-                                <ShoppingBag className="w-12 h-12 text-chart-3" /> Prize Shop
-                            </h2>
-                            <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                                Redeem your points for rewards
-                            </p>
-                        </div>
-                        <div className="bg-card/40 backdrop-blur-md border-2 border-primary/20 rounded-3xl p-6 px-10 text-center shadow-xl">
-                            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{student.firstName} {student.lastName}</p>
-                            <p className="text-4xl font-black text-primary tracking-tighter">{(student.points || 0).toLocaleString()} <span className="text-sm text-primary/60 font-bold uppercase tracking-widest ml-1">pts</span></p>
-                        </div>
-                    </div>
+                <main className="relative z-10 w-full max-w-6xl px-8">
+                  <Card className="border-t-8 border-chart-3 shadow-2xl mt-12 mb-24 bg-card/80 backdrop-blur-md">
+                    <CardContent className="p-6 md:p-8">
+                      {/* Header */}
+                      <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
+                          <div className="text-center md:text-left">
+                              <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
+                                  <ShoppingBag className="w-12 h-12 text-chart-3" /> Prize Shop
+                              </h2>
+                              <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                                  Redeem your points for rewards
+                              </p>
+                          </div>
+                          <div className="bg-card/40 backdrop-blur-md border-2 border-primary/20 rounded-3xl p-6 px-10 text-center shadow-xl">
+                              <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{student.firstName} {student.lastName}</p>
+                              <p className="text-4xl font-black text-primary tracking-tighter">{(student.points || 0).toLocaleString()} <span className="text-sm text-primary/60 font-bold uppercase tracking-widest ml-1">pts</span></p>
+                          </div>
+                      </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
-                        {/* Prizes Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-fit">
-                            {(!prizes || prizes.filter(p => p.inStock).length === 0) ? (
-                                <div className="col-span-full py-20 text-center bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border">
-                                    <ShoppingBasket className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
-                                    <p className="font-black text-2xl text-muted-foreground">The shop is empty</p>
-                                    <p className="text-sm text-muted-foreground/60 font-medium mt-2 uppercase tracking-widest">Check back soon for new rewards!</p>
-                                </div>
-                            ) : (
-                                prizes.filter(p => p.inStock).sort((a, b) => a.points - b.points).map((prize: Prize, index) => {
-                                    const canAfford = student.points >= prize.points;
-                                    const isHovered = hoveredPrize === prize.id;
+                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
+                          {/* Prizes Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-fit">
+                              {(!prizes || prizes.filter(p => p.inStock).length === 0) ? (
+                                  <div className="col-span-full py-20 text-center bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border">
+                                      <ShoppingBasket className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
+                                      <p className="font-black text-2xl text-muted-foreground">The shop is empty</p>
+                                      <p className="text-sm text-muted-foreground/60 font-medium mt-2 uppercase tracking-widest">Check back soon for new rewards!</p>
+                                  </div>
+                              ) : (
+                                  prizes.filter(p => p.inStock).sort((a, b) => a.points - b.points).map((prize: Prize, index) => {
+                                      const canAfford = student.points >= prize.points;
+                                      const isHovered = hoveredPrize === prize.id;
 
-                                    return (
-                                        <motion.div
-                                            key={prize.id}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            onMouseEnter={() => setHoveredPrize(prize.id)}
-                                            onMouseLeave={() => setHoveredPrize(null)}
-                                            className={cn(
-                                                "group relative flex flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300",
-                                                canAfford ? "bg-card/40 backdrop-blur-sm hover:bg-card hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "bg-card/10 opacity-60 grayscale cursor-not-allowed"
-                                            )}
-                                        >
-                                             {/* SVG Border Draw Animation */}
-                                            {isHovered && canAfford && (
-                                                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible rounded-3xl z-20">
-                                                    <motion.rect
-                                                        initial={{ pathLength: 0 }}
-                                                        animate={{ pathLength: 1 }}
-                                                        transition={{ duration: 0.6 }}
-                                                        width="100%"
-                                                        height="100%"
-                                                        rx="24"
-                                                        className="stroke-primary stroke-[3px] fill-none"
-                                                    />
-                                                </svg>
-                                            )}
+                                      return (
+                                          <motion.div
+                                              key={prize.id}
+                                              initial={{ opacity: 0, y: 20 }}
+                                              animate={{ opacity: 1, y: 0 }}
+                                              transition={{ delay: index * 0.05 }}
+                                              onMouseEnter={() => setHoveredPrize(prize.id)}
+                                              onMouseLeave={() => setHoveredPrize(null)}
+                                              className={cn(
+                                                  "group relative flex flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300",
+                                                  canAfford ? "bg-card/40 backdrop-blur-sm hover:bg-card hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "bg-card/10 opacity-60 grayscale cursor-not-allowed"
+                                              )}
+                                          >
+                                               {/* SVG Border Draw Animation */}
+                                              {isHovered && canAfford && (
+                                                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible rounded-3xl z-20">
+                                                      <motion.rect
+                                                          initial={{ pathLength: 0 }}
+                                                          animate={{ pathLength: 1 }}
+                                                          transition={{ duration: 0.6 }}
+                                                          width="100%"
+                                                          height="100%"
+                                                          rx="24"
+                                                          className="stroke-primary stroke-[3px] fill-none"
+                                                      />
+                                                  </svg>
+                                              )}
 
-                                            <div className={cn(
-                                                "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500",
-                                                canAfford ? "bg-primary/10 text-primary group-hover:scale-110 group-hover:rotate-6" : "bg-muted text-muted-foreground",
-                                                isHovered && canAfford ? "grayscale-0" : "grayscale"
-                                            )}>
-                                                <DynamicIcon name={prize.icon} className="w-10 h-10" />
-                                            </div>
+                                              <div className={cn(
+                                                  "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500",
+                                                  canAfford ? "bg-primary/10 text-primary group-hover:scale-110 group-hover:rotate-6" : "bg-muted text-muted-foreground",
+                                                  isHovered && canAfford ? "grayscale-0" : "grayscale"
+                                              )}>
+                                                  <DynamicIcon name={prize.icon} className="w-10 h-10" />
+                                              </div>
 
-                                            <div className="mb-6">
-                                                <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1">{prize.name}</h3>
-                                                <div className="mt-3 flex items-center justify-center gap-2">
-                                                    <Badge className="bg-primary text-primary-foreground font-black text-base px-4 py-1 rounded-xl">
-                                                        {prize.points.toLocaleString()} pts
-                                                    </Badge>
-                                                </div>
-                                            </div>
+                                              <div className="mb-6">
+                                                  <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1">{prize.name}</h3>
+                                                  <div className="mt-3 flex items-center justify-center gap-2">
+                                                      <Badge className="bg-primary text-primary-foreground font-black text-base px-4 py-1 rounded-xl">
+                                                          {prize.points.toLocaleString()} pts
+                                                      </Badge>
+                                                  </div>
+                                              </div>
 
-                                            <Button 
-                                                onClick={() => handleRedeemReward(prize)} 
-                                                disabled={!canAfford}
-                                                className={cn(
-                                                    "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
-                                                    canAfford ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground"
-                                                )}
-                                            >
-                                                <Gift className="mr-2 w-4 h-4" /> Redeem Now
-                                            </Button>
+                                              <Button 
+                                                  onClick={() => handleRedeemReward(prize)} 
+                                                  disabled={!canAfford}
+                                                  className={cn(
+                                                      "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
+                                                      canAfford ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground"
+                                                  )}
+                                              >
+                                                  <Gift className="mr-2 w-4 h-4" /> Redeem Now
+                                              </Button>
 
-                                            <AnimatePresence>
-                                                {isHovered && canAfford && (
-                                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.05 }} exit={{ opacity: 0 }} className="absolute inset-0 rounded-3xl pointer-events-none bg-primary" />
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.div>
-                                    );
-                                })
-                            )}
-                        </div>
+                                              <AnimatePresence>
+                                                  {isHovered && canAfford && (
+                                                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.05 }} exit={{ opacity: 0 }} className="absolute inset-0 rounded-3xl pointer-events-none bg-primary" />
+                                                  )}
+                                              </AnimatePresence>
+                                          </motion.div>
+                                      );
+                                  })
+                              )}
+                          </div>
 
-                        {/* Sidebar */}
-                        <div className="space-y-6">
-                            <Card className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl overflow-hidden shadow-xl">
-                                <CardHeader className="bg-primary/5 border-b border-border/50 py-6 px-8">
-                                    <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary">
-                                        <Clock className="w-5 h-5" /> Recent Activity
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-6">
-                                    <PrizeActivityList schoolId={schoolId!} studentId={student.id} />
-                                </CardContent>
-                            </Card>
+                          {/* Sidebar */}
+                          <div className="space-y-6">
+                              <Card className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl overflow-hidden shadow-xl">
+                                  <CardHeader className="bg-primary/5 border-b border-border/50 py-6 px-8">
+                                      <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary">
+                                          <Clock className="w-5 h-5" /> Recent Activity
+                                      </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-6">
+                                      <PrizeActivityList schoolId={schoolId!} studentId={student.id} />
+                                  </CardContent>
+                              </Card>
 
-                            <Button 
-                                variant="outline" 
-                                className="w-full h-16 rounded-3xl border-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 font-black uppercase tracking-widest text-xs transition-all group" 
-                                onClick={onDone}
-                            >
-                                <LogOut className="mr-2 w-5 h-5 transition-transform group-hover:-translate-x-1" /> Log Out & Finish
-                            </Button>
-                        </div>
-                    </div>
+                              <Button 
+                                  variant="outline" 
+                                  className="w-full h-16 rounded-3xl border-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 font-black uppercase tracking-widest text-xs transition-all group" 
+                                  onClick={onDone}
+                              >
+                                  <LogOut className="mr-2 w-5 h-5 transition-transform group-hover:-translate-x-1" /> Log Out & Finish
+                              </Button>
+                          </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </main>
             </div>
         </TooltipProvider>

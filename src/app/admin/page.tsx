@@ -422,10 +422,10 @@ function AdminDashboardInner() {
           </div>
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-chart-1 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader>
                 <Helper content="Manage class groups for your school.">
-                    <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-chart-1" /> Classes</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-destructive" /> Classes</CardTitle>
                 </Helper>
                 <CardDescription>Manage class groups for your school.</CardDescription>
               </CardHeader>
@@ -452,10 +452,10 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-purple-500 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader>
                 <Helper content="Add and manage teachers who can issue coupons.">
-                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-purple-500" /> Teachers</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-destructive" /> Teachers</CardTitle>
                 </Helper>
                 <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
               </CardHeader>
@@ -482,10 +482,10 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-chart-2 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader>
                 <Helper content="Define categories and default point values for coupons.">
-                    <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-chart-2" /> Reward Categories</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-destructive" /> Reward Categories</CardTitle>
                 </Helper>
                 <CardDescription>Define categories and point values for coupons.</CardDescription>
               </CardHeader>
@@ -520,11 +520,11 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-primary shadow-md overflow-hidden">
+            <Card className="border-t-4 border-destructive shadow-md overflow-hidden">
               <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
                 <Helper content="Manage your enrollments, view student activity, award points, and print ID cards.">
                     <CardTitle className="text-2xl flex items-center gap-2">
-                        <Users className="text-primary w-6 h-6" /> Students
+                        <Users className="text-destructive w-6 h-6" /> Students
                     </CardTitle>
                 </Helper>
                 <CardDescription>Manage your enrollments and view student activity.</CardDescription>
@@ -572,11 +572,11 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-chart-3 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <Helper content="Manage items available for student redemption in the Prize Shop.">
                     <CardTitle className="flex items-center gap-2">
-                        <Gift className="text-chart-3 w-5 h-5" /> Prize Shop
+                        <Gift className="text-destructive w-5 h-5" /> Prize Shop
                     </CardTitle>
                 </Helper>
                 <CardDescription>Items available for student redemption.</CardDescription>
@@ -614,11 +614,11 @@ function AdminDashboardInner() {
 
           {settings.enableAchievements && (
             <TabsContent value="achievements" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Card className="border-t-4 border-amber-500 shadow-md">
+              <Card className="border-t-4 border-destructive shadow-md">
                 <CardHeader className="flex flex-row justify-between items-center py-6">
                   <Helper content="Create and manage badges that students can earn by reaching specific milestones, like earning a certain number of points.">
                     <CardTitle className="flex items-center gap-2">
-                        <Trophy className="text-amber-500 w-5 h-5" /> Achievements
+                        <Trophy className="text-destructive w-5 h-5" /> Achievements
                     </CardTitle>
                   </Helper>
                   <CardDescription>Badges for student milestones.</CardDescription>
@@ -661,10 +661,10 @@ function AdminDashboardInner() {
           )}
 
           <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-blue-500 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
                 <CardHeader>
                     <Helper content="This section shows all coupons that have been generated in the system, separated into those that are still available and those that have already been redeemed by a student.">
-                        <CardTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-blue-500" /> Coupon Management</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-destructive" /> Coupon Management</CardTitle>
                     </Helper>
                     <CardDescription>View all available and redeemed coupons in the system.</CardDescription>
                 </CardHeader>
@@ -720,10 +720,10 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-slate-800 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader>
                 <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
-                    <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5" /> System Stats</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5 text-destructive" /> System Stats</CardTitle>
                 </Helper>
                 <CardDescription>Overview of your school data at a glance.</CardDescription>
               </CardHeader>
@@ -746,11 +746,11 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-chart-4 shadow-md">
+            <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
                     <CardTitle className="flex items-center gap-2">
-                        <Database className="text-chart-4 w-5 h-5" /> System Backups
+                        <Database className="text-destructive w-5 h-5" /> System Backups
                     </CardTitle>
                 </Helper>
                 <CardDescription>Create and restore data snapshots.</CardDescription>

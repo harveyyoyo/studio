@@ -212,7 +212,7 @@ function StudentDashboardInner({
       )}
 
       {/* Hero Welcome Section */}
-      <Card className={`overflow-hidden border-none shadow-xl ${isGraphic ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : 'bg-[#a3a8d4] dark:bg-slate-800'}`}>
+      <Card className={cn("overflow-hidden shadow-xl border-t-8 border-chart-1", isGraphic ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : 'bg-card dark:bg-slate-800')}>
         <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="space-y-1 text-center md:text-left">
             <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
@@ -276,7 +276,7 @@ function StudentDashboardInner({
                         className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
                         autoFocus
                       />
-                      <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-[#8b91c8] hover:bg-[#7a80b7] text-white transition-all active:scale-95 uppercase tracking-widest">
+                      <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-chart-1 hover:bg-chart-1/90 text-white transition-all active:scale-95 uppercase tracking-widest">
                         Redeem
                       </Button>
                     </div>

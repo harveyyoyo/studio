@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent } from '@/components/ui/card';
 
 function HallOfFameSkeleton() {
     return (
@@ -100,133 +101,137 @@ export default function HallOfFamePage() {
                 "relative z-10 w-full max-w-4xl px-8 pt-12",
                 settings.displayMode === 'app' ? 'pb-24' : 'pb-12'
             )}>
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    className="mb-16 text-center"
-                >
-                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
-                        <Trophy className="w-12 h-12 text-chart-3" /> Hall of Fame
-                    </h2>
-                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                        Top Achievement Leaderboard
-                    </p>
-                </motion.div>
+              <Card className="border-t-8 border-chart-5 shadow-2xl bg-card/80 backdrop-blur-md">
+                <CardContent className="p-6 md:p-8">
+                  {/* Header */}
+                  <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6 }}
+                      className="mb-16 text-center"
+                  >
+                      <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
+                          <Trophy className="w-12 h-12 text-chart-5" /> Hall of Fame
+                      </h2>
+                      <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                          Top Achievement Leaderboard
+                      </p>
+                  </motion.div>
 
-                {/* Podium */}
-                {podium.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-20">
-                        {/* 2nd Place */}
-                        {podium.length > 1 && (
-                            <motion.div 
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 }}
-                                className="text-center md:order-1"
-                            >
-                                <div className="bg-card/40 backdrop-blur-sm border-2 border-slate-200 rounded-3xl p-8 relative h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black text-xl border-4 border-background">2</div>
-                                    <Avatar className="w-20 h-20 mx-auto mb-4 border-4 border-slate-100 shadow-md">
-                                        <AvatarFallback className="bg-secondary text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
-                                    </Avatar>
-                                    <p className="font-black text-foreground text-xl truncate tracking-tight">{podium[1].firstName}</p>
-                                    <p className="text-primary font-bold text-lg mt-1">{(podium[1].points || 0).toLocaleString()} pts</p>
-                                </div>
-                            </motion.div>
-                        )}
+                  {/* Podium */}
+                  {podium.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-20">
+                          {/* 2nd Place */}
+                          {podium.length > 1 && (
+                              <motion.div 
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.4 }}
+                                  className="text-center md:order-1"
+                              >
+                                  <div className="bg-card/40 backdrop-blur-sm border-2 border-slate-200 rounded-3xl p-8 relative h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black text-xl border-4 border-background">2</div>
+                                      <Avatar className="w-20 h-20 mx-auto mb-4 border-4 border-slate-100 shadow-md">
+                                          <AvatarFallback className="bg-secondary text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
+                                      </Avatar>
+                                      <p className="font-black text-foreground text-xl truncate tracking-tight">{podium[1].firstName}</p>
+                                      <p className="text-primary font-bold text-lg mt-1">{(podium[1].points || 0).toLocaleString()} pts</p>
+                                  </div>
+                              </motion.div>
+                          )}
 
-                        {/* 1st Place */}
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className="text-center md:order-2"
-                        >
-                            <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-8 relative shadow-2xl h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-                                    <Crown className="w-16 h-16 text-chart-3 animate-float drop-shadow-lg" />
-                                </div>
-                                <Avatar className="w-28 h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl">
-                                    <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
-                                </Avatar>
-                                <p className="font-black text-foreground text-2xl truncate tracking-tighter">{podium[0].firstName}</p>
-                                <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{(podium[0].points || 0).toLocaleString()} pts</p>
-                            </div>
-                        </motion.div>
+                          {/* 1st Place */}
+                          <motion.div 
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.5, delay: 0.2 }}
+                              className="text-center md:order-2"
+                          >
+                              <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-8 relative shadow-2xl h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
+                                  <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                                      <Crown className="w-16 h-16 text-chart-5 animate-float drop-shadow-lg" />
+                                  </div>
+                                  <Avatar className="w-28 h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl">
+                                      <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
+                                  </Avatar>
+                                  <p className="font-black text-foreground text-2xl truncate tracking-tighter">{podium[0].firstName}</p>
+                                  <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{(podium[0].points || 0).toLocaleString()} pts</p>
+                              </div>
+                          </motion.div>
 
-                        {/* 3rd Place */}
-                        {podium.length > 2 && (
-                            <motion.div 
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.6 }}
-                                className="text-center md:order-3"
-                            >
-                                <div className="bg-card/40 backdrop-blur-sm border-2 border-orange-200/50 rounded-3xl p-8 relative h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xl border-4 border-background">3</div>
-                                    <Avatar className="w-16 h-16 mx-auto mb-4 border-4 border-orange-50 shadow-md">
-                                        <AvatarFallback className="bg-orange-50 text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
-                                    </Avatar>
-                                    <p className="font-black text-foreground text-lg truncate tracking-tight">{podium[2].firstName}</p>
-                                    <p className="text-primary font-bold text-lg mt-1">{(podium[2].points || 0).toLocaleString()} pts</p>
-                                </div>
-                            </motion.div>
-                        )}
-                    </div>
-                )}
+                          {/* 3rd Place */}
+                          {podium.length > 2 && (
+                              <motion.div 
+                                  initial={{ opacity: 0, x: 20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.6 }}
+                                  className="text-center md:order-3"
+                              >
+                                  <div className="bg-card/40 backdrop-blur-sm border-2 border-orange-200/50 rounded-3xl p-8 relative h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xl border-4 border-background">3</div>
+                                      <Avatar className="w-16 h-16 mx-auto mb-4 border-4 border-orange-50 shadow-md">
+                                          <AvatarFallback className="bg-orange-50 text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
+                                      </Avatar>
+                                      <p className="font-black text-foreground text-lg truncate tracking-tight">{podium[2].firstName}</p>
+                                      <p className="text-primary font-bold text-lg mt-1">{(podium[2].points || 0).toLocaleString()} pts</p>
+                                  </div>
+                              </motion.div>
+                          )}
+                      </div>
+                  )}
 
-                {/* Leaderboard List */}
-                {others.length > 0 && (
-                    <div className="w-full max-w-2xl mx-auto space-y-3">
-                        <div className="px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between">
-                            <span>Top 50 Students</span>
-                            <span>Points</span>
-                        </div>
-                        {others.map((student, index) => (
-                            <motion.div
-                                key={student.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.8 + index * 0.05 }}
-                                onMouseEnter={() => setHoveredIndex(student.id)}
-                                onMouseLeave={() => setHoveredIndex(null)}
-                                className="group relative flex items-center justify-between bg-card/40 backdrop-blur-sm border-2 border-transparent rounded-2xl px-6 py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5"
-                            >
-                                <div className="flex items-center gap-5">
-                                    <span className="text-sm font-black text-muted-foreground/30 w-6">{index + 4}</span>
-                                    <Avatar className="w-10 h-10 border-2 border-background">
-                                        <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-black text-foreground tracking-tight">{student.firstName} {student.lastName}</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
-                                    </div>
-                                </div>
-                                <div className="text-lg font-black text-primary tracking-tighter">
-                                    {(student.points || 0).toLocaleString()}
-                                </div>
+                  {/* Leaderboard List */}
+                  {others.length > 0 && (
+                      <div className="w-full max-w-2xl mx-auto space-y-3">
+                          <div className="px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between">
+                              <span>Top 50 Students</span>
+                              <span>Points</span>
+                          </div>
+                          {others.map((student, index) => (
+                              <motion.div
+                                  key={student.id}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.8 + index * 0.05 }}
+                                  onMouseEnter={() => setHoveredIndex(student.id)}
+                                  onMouseLeave={() => setHoveredIndex(null)}
+                                  className="group relative flex items-center justify-between bg-card/40 backdrop-blur-sm border-2 border-transparent rounded-2xl px-6 py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5"
+                              >
+                                  <div className="flex items-center gap-5">
+                                      <span className="text-sm font-black text-muted-foreground/30 w-6">{index + 4}</span>
+                                      <Avatar className="w-10 h-10 border-2 border-background">
+                                          <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                          <p className="font-black text-foreground tracking-tight">{student.firstName} {student.lastName}</p>
+                                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
+                                      </div>
+                                  </div>
+                                  <div className="text-lg font-black text-primary tracking-tighter">
+                                      {(student.points || 0).toLocaleString()}
+                                  </div>
 
-                                {/* Hover Bar Accent */}
-                                <motion.div 
-                                    initial={false}
-                                    animate={{ 
-                                        opacity: hoveredIndex === student.id ? 1 : 0,
-                                        scaleY: hoveredIndex === student.id ? 1 : 0.6
-                                    }}
-                                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-primary transition-opacity"
-                                />
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
+                                  {/* Hover Bar Accent */}
+                                  <motion.div 
+                                      initial={false}
+                                      animate={{ 
+                                          opacity: hoveredIndex === student.id ? 1 : 0,
+                                          scaleY: hoveredIndex === student.id ? 1 : 0.6
+                                      }}
+                                      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl bg-primary transition-opacity"
+                                  />
+                              </motion.div>
+                          ))}
+                      </div>
+                  )}
 
-                {(!topStudents || topStudents.length === 0) && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground font-medium">
-                        No students have earned points yet.
-                    </motion.div>
-                )}
+                  {(!topStudents || topStudents.length === 0) && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground font-medium">
+                          No students have earned points yet.
+                      </motion.div>
+                  )}
+                </CardContent>
+              </Card>
             </main>
         </div>
     );

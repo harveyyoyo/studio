@@ -284,12 +284,12 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                         <Card className={`border-t-4 transition-all ${isGraphic
-                            ? 'bg-card/50 backdrop-blur-md border-primary shadow-2xl'
-                            : 'bg-white border-primary shadow-lg'
+                            ? 'bg-card/50 backdrop-blur-md border-chart-2 shadow-2xl'
+                            : 'bg-white border-chart-2 shadow-lg'
                             }`}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Printer className={isGraphic ? 'text-primary' : 'text-primary'} />
+                                    <Printer className="w-5 h-5 text-chart-2" />
                                     Coupon Printer
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
