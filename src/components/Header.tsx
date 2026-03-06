@@ -1,3 +1,4 @@
+
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -71,7 +72,7 @@ export default function Header() {
                       levelUp EDU
                   </h1>
                   {loginState === 'school' && schoolId ? (
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mt-0.5">
                       {schoolName}
                     </p>
                   ) : (
@@ -137,7 +138,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-3xl font-black text-foreground/80 tracking-widest uppercase">{schoolName}</span>
+                <span className="text-3xl font-black text-primary tracking-widest uppercase">{schoolName}</span>
             </div>
         )}
 
