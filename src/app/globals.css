@@ -8,25 +8,25 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 236 34% 65%;
+    --primary: 222 47% 11%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 90%;
+    --secondary: 210 20% 96%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 220 9% 85%;
+    --muted: 210 20% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 233 41% 79%;
+    --accent: 210 20% 96%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 236 34% 65%;
+    --ring: 222 47% 11%;
     --chart-1: 220 70% 50%;
     --chart-2: 340 80% 60%;
     --chart-3: 40 90% 60%;
@@ -41,8 +41,8 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 236 34% 65%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 33% 17%;
@@ -53,26 +53,45 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 236 34% 65%;
+    --ring: 210 40% 98%;
   }
 
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-  }
-  button:focus-visible,
-  a:focus-visible,
-  [role="button"]:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
-  }
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
   }
 }
+
+/* Color Schemes for both Light & Dark Mode */
+[data-color-scheme="sky"] {
+  --primary: 199 89% 48%;
+  --background: 199 80% 98%;
+}
+[data-color-scheme="rose"] {
+  --primary: 347 77% 50%;
+  --background: 347 70% 98%;
+}
+[data-color-scheme="mint"] {
+  --primary: 160 84% 39%;
+  --background: 160 60% 98%;
+}
+[data-color-scheme="lavender"] {
+  --primary: 263 70% 58%;
+  --background: 263 60% 98%;
+}
+[data-color-scheme="peach"] {
+  --primary: 25 95% 53%;
+  --background: 25 80% 98%;
+}
+
+/* Dark mode variations for themes */
+.dark[data-color-scheme="sky"] { --background: 199 80% 5%; }
+.dark[data-color-scheme="rose"] { --background: 347 70% 5%; }
+.dark[data-color-scheme="mint"] { --background: 160 60% 5%; }
+.dark[data-color-scheme="lavender"] { --background: 263 60% 5%; }
+.dark[data-color-scheme="peach"] { --background: 25 80% 5%; }
 
 /* Print Styles */
 #print-container, #student-id-print-container { 
@@ -131,293 +150,29 @@
         justify-content: space-around;
     }
 
-    .print-coupon.is-colored {
-        border-color: var(--coupon-border-color, #999) !important;
-    }
-    .print-coupon.is-colored .print-coupon-header,
-    .print-coupon.is-colored .print-coupon-value,
-    .print-coupon.is-colored .print-coupon-value span,
-    .print-coupon.is-colored .print-coupon-details,
-    .print-coupon.is-colored .print-coupon-category,
-    .print-coupon.is-colored .print-coupon-teacher {
-        color: var(--coupon-text-color, black) !important;
-    }
-    .print-coupon.is-colored .print-coupon-main {
-        border-color: var(--coupon-text-color, #eee) !important;
-        opacity: 0.5;
-    }
-    
-    .print-coupon-header {
-        font-size: 6pt;
-        font-weight: bold;
-        color: #333;
-        width: 100%;
-        text-transform: uppercase;
-    }
-
-    .print-coupon-main {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.1in;
-        border-top: 1px solid #eee;
-        border-bottom: 1px solid #eee;
-        padding: 0.02in 0;
-        margin: 0;
-    }
-
-    .print-coupon-value {
-        font-size: 22pt;
-        font-weight: 900;
-        line-height: 1;
-        font-family: 'Playfair Display', serif;
-        color: #000;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .print-coupon-value span {
-        font-size: 6pt;
-        font-weight: bold;
-        font-family: 'PT Sans', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        line-height: 1;
-        color: #333;
-    }
-
-    .print-coupon-details {
-        text-align: left;
-        flex-grow: 1;
-        font-size: 7pt;
-    }
-    
-    .print-coupon-category {
-        font-weight: bold;
-        font-style: italic;
-        color: #444;
-    }
-
-    .print-coupon-teacher {
-        font-size: 6pt;
-        color: #666;
-    }
-
-    .print-coupon-barcode {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .print-coupon-barcode .font-barcode {
-        font-size: 38pt;
-        line-height: 1;
-        color: #000 !important;
-        margin: 0;
-        padding: 0;
-        padding-bottom: 3px;
-    }
+    .print-coupon-header { font-size: 6pt; font-weight: bold; color: #333; text-transform: uppercase; }
+    .print-coupon-main { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.1in; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 0.02in 0; }
+    .print-coupon-value { font-size: 22pt; font-weight: 900; line-height: 1; font-family: 'Playfair Display', serif; color: #000; }
+    .print-coupon-details { text-align: left; flex-grow: 1; font-size: 7pt; }
+    .print-coupon-barcode .font-barcode { font-size: 38pt; line-height: 1; color: #000 !important; }
 
     #student-id-print-container {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr);
         grid-template-rows: repeat(5, 1fr);
-        gap: 0;
-        width: 7.5in; 
-        height: 10in; 
-        box-sizing: border-box;
-        page-break-after: always;
-        position: absolute;
-        top: 0;
-        left: 0;
+        width: 7.5in; height: 10in; position: absolute; top: 0; left: 0;
     }
-
     .print-id-card {
-        border: 1px dotted #999;
-        padding: 0.1in;
-        text-align: center;
-        height: 2in;
-        width: 3.75in;
-        page-break-inside: avoid;
-        box-sizing: border-box;
-        font-family: 'PT Sans', sans-serif;
-        background: #fff;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-around;
-        position: relative;
+        border: 1px dotted #999; padding: 0.1in; text-align: center; height: 2in; width: 3.75in;
+        page-break-inside: avoid; font-family: 'PT Sans', sans-serif; background: #fff;
+        display: flex; flex-direction: column; align-items: center; justify-content: space-around;
     }
-
-    .print-id-card.is-colored {
-        border-color: hsl(var(--primary)) !important;
-    }
-
-    .print-id-card.is-colored .print-id-header {
-        background-color: hsl(var(--primary)) !important;
-        color: hsl(var(--primary-foreground)) !important;
-        border-color: hsl(var(--primary)) !important;
-    }
-    
-    .print-id-card.is-colored .print-id-name {
-        color: hsl(var(--primary)) !important;
-    }
-
-
-    .print-id-header {
-        font-size: 8pt;
-        font-weight: bold;
-        color: #333;
-        width: 100%;
-        text-transform: uppercase;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 0.05in;
-    }
-
-    .print-id-name {
-        font-size: 14pt;
-        font-weight: bold;
-        font-family: 'Playfair Display', serif;
-        margin-top: 0.1in;
-    }
-
-    .print-id-class {
-        font-size: 10pt;
-        color: #555;
-        margin-bottom: 0.1in;
-    }
-
-    .print-id-barcode-container {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        flex-grow: 1;
-    }
-
-    .print-id-barcode-container .font-barcode {
-        font-size: 48pt;
-        line-height: 1;
-        color: #000;
-    }
+    .print-id-name { font-size: 14pt; font-weight: bold; font-family: 'Playfair Display', serif; }
 }
 
 @keyframes fly-up {
-  from {
-    transform: scale(0.5) translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: scale(2.5) translateY(-150px);
-    opacity: 0;
-  }
+  from { transform: scale(0.5) translateY(0); opacity: 1; }
+  to { transform: scale(2.5) translateY(-150px); opacity: 0; }
 }
-
-.animate-fly-up {
-  animation: fly-up 1.5s ease-out forwards;
-}
-
-.graphic-text-glow {
-  text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
-}
-
-/* Color Schemes for Classic Mode */
-[data-color-scheme="sky"]:not(.dark) {
-  --background: 204 100% 97%;
-  --card: 0 0% 100%;
-  --primary: 199 89% 48%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 199 80% 90%;
-  --accent-foreground: 199 80% 30%;
-  --ring: 199 89% 48%;
-  --border: 199 40% 88%;
-}
-
-[data-color-scheme="rose"]:not(.dark) {
-  --background: 355 100% 97%;
-  --card: 0 0% 100%;
-  --primary: 347 77% 50%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 347 70% 90%;
-  --accent-foreground: 347 70% 30%;
-  --ring: 347 77% 50%;
-  --border: 347 40% 88%;
-}
-
-[data-color-scheme="mint"]:not(.dark) {
-  --background: 152 81% 96%;
-  --card: 0 0% 100%;
-  --primary: 160 84% 39%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 160 60% 88%;
-  --accent-foreground: 160 60% 25%;
-  --ring: 160 84% 39%;
-  --border: 160 30% 85%;
-}
-
-[data-color-scheme="lavender"]:not(.dark) {
-  --background: 263 100% 97%;
-  --card: 0 0% 100%;
-  --primary: 263 70% 58%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 263 60% 90%;
-  --accent-foreground: 263 60% 30%;
-  --ring: 263 70% 58%;
-  --border: 263 30% 88%;
-}
-
-[data-color-scheme="peach"]:not(.dark) {
-  --background: 33 100% 96%;
-  --card: 0 0% 100%;
-  --primary: 25 95% 53%;
-  --primary-foreground: 0 0% 100%;
-  --accent: 25 80% 90%;
-  --accent-foreground: 25 70% 30%;
-  --ring: 25 95% 53%;
-  --border: 25 40% 88%;
-}
-
-/* High Contrast Mode */
-.high-contrast {
-  --foreground: 0 0% 0%;
-  --background: 0 0% 100%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 0%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 0%;
-  --primary: 220 90% 40%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 93%;
-  --secondary-foreground: 0 0% 0%;
-  --muted: 0 0% 90%;
-  --muted-foreground: 0 0% 30%;
-  --accent: 220 90% 90%;
-  --accent-foreground: 0 0% 0%;
-  --border: 0 0% 50%;
-  --input: 0 0% 50%;
-  --ring: 220 90% 40%;
-}
-
-.high-contrast * {
-  border-color: hsl(0 0% 50%) !important;
-}
-
-.high-contrast .text-muted-foreground {
-  color: hsl(0 0% 25%) !important;
-}
-
-.high-contrast button,
-.high-contrast a {
-  font-weight: 700 !important;
-}
-
-[data-home-button][aria-disabled="true"] {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+.animate-fly-up { animation: fly-up 1.5s ease-out forwards; }
+.graphic-text-glow { text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3); }

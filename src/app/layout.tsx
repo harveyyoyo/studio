@@ -18,12 +18,11 @@ export default function RootLayout({
   const pathname = usePathname();
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
 
-  // Unregister service workers to prevent stale cache issues causing blank screens
+  // Unregister service workers to prevent stale cache issues
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(registrations) {
         for(let registration of registrations) {
-          console.log("Unregistering Service Worker:", registration);
           registration.unregister();
         }
       });
@@ -52,23 +51,16 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
-      <body className="font-body antialiased" suppressHydrationWarning>
+      <body className="font-body antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>
         <ErrorBoundary name="RootFirebaseProvider">
           <FirebaseClientProvider>
             <AppProvider>
-              {isLoginPage ? (
-                children
-              ) : (
-                <div
-                  id="screen-view"
-                  className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
-                >
-                  <Header />
-                  <main id="app" className="w-full max-w-6xl relative z-10">
-                    {children}
-                  </main>
-                </div>
-              )}
+              <div className="min-h-screen flex flex-col">
+                {!isLoginPage && <Header />}
+                <main id="app" className={isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10"}>
+                  {children}
+                </main>
+              </div>
               <Toaster />
             </AppProvider>
           </FirebaseClientProvider>

@@ -379,7 +379,7 @@ function AdminDashboardInner() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-8">
+      <div className={cn("space-y-6 max-w-7xl mx-auto p-4 md:p-8", settings.displayMode === 'app' && 'pb-24')}>
         <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
             <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
             <p className="text-muted-foreground">

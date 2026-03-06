@@ -1,22 +1,21 @@
 
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, Star, Gift, ArrowRight } from 'lucide-react';
+import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, ChevronRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
-import { Helper } from '@/components/ui/helper';
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
-    const isGraphic = settings?.graphicMode === 'graphics';
     const playSound = useArcadeSound();
+    const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -26,131 +25,89 @@ export default function PortalPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className={`min-h-screen flex flex-col items-center justify-center gap-4 font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
-                <p className="font-medium">Just a moment…</p>
-                <p className="text-sm">Loading your school.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+                <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
+                    <motion.div initial={{ x: '-100%' }} animate={{ x: '100%' }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-full h-full bg-primary" />
+                </div>
             </div>
         );
     }
 
     const portals = [
-        ...(isAdmin ? [{ href: '/admin', label: 'Admin Portal', desc: 'Manage all school data and settings.', icon: UserCog, color: 'destructive', help: 'The Admin Portal is the control center for your school. Here you can add students and teachers, manage prizes and coupon categories, and handle system backups.' }] : []),
-        { href: '/student', label: 'Redeem Coupons / Kiosk', desc: 'Scan student ID to redeem coupons or check points.', icon: GraduationCap, color: 'chart-1', help: 'This is the main kiosk for students. They can scan their ID card or type their ID to access their account, check their point balance, and redeem coupon codes given by teachers.' },
-        { href: '/prize', label: 'Prize Shop', desc: 'Redeem your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3', help: 'Students can use their earned points to redeem prizes here. The shop only shows items that are currently in stock.' },
-        { href: '/teacher', label: 'Print Coupons', desc: 'Log in as a teacher to generate and print coupon sheets.', icon: Printer, color: 'chart-2', help: 'Teachers can log in here to generate and print sheets of physical coupons to hand out to students as rewards.' },
-        { href: '/halloffame', label: 'Hall of Fame', desc: 'View the top student point earners.', icon: Trophy, color: 'chart-5', help: 'This leaderboard displays the top students based on their lifetime point earnings, showcasing top achievers in the school.' },
+        ...(isAdmin ? [{ id: 'admin', href: '/admin', title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog, color: 'destructive', emoji: '🔐' }] : []),
+        { id: 'print', href: '/teacher', title: 'Print Coupons', description: 'Generate sheets for teachers.', icon: Printer, color: 'chart-2', emoji: '🖨️' },
+        { id: 'redeem', href: '/student', title: 'Redeem Coupons', description: 'Scan student ID or check points.', icon: GraduationCap, color: 'chart-1', emoji: '🎫' },
+        { id: 'prize', href: '/prize', title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3', emoji: '🎁' },
+        { id: 'fame', href: '/halloffame', title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy, color: 'chart-5', emoji: '🏆' },
     ];
 
-    const colorMap: Record<string, { bg: string; border: string; glow: string; text: string; iconBg: string }> = {
-        'chart-1': { bg: 'from-chart-1/20 to-chart-1/5', border: 'border-chart-1/40', glow: 'shadow-chart-1/20', text: 'text-chart-1', iconBg: 'bg-blue-100' },
-        'chart-2': { bg: 'from-chart-2/20 to-chart-2/5', border: 'border-chart-2/40', glow: 'shadow-chart-2/20', text: 'text-chart-2', iconBg: 'bg-purple-100' },
-        'chart-3': { bg: 'from-chart-3/20 to-chart-3/5', border: 'border-chart-3/40', glow: 'shadow-chart-3/20', text: 'text-chart-3', iconBg: 'bg-amber-100' },
-        'destructive': { bg: 'from-destructive/20 to-destructive/5', border: 'border-destructive/40', glow: 'shadow-destructive/20', text: 'text-destructive', iconBg: 'bg-red-100' },
-        'chart-5': { bg: 'from-chart-5/20 to-chart-5/5', border: 'border-chart-5/40', glow: 'shadow-chart-5/20', text: 'text-chart-5', iconBg: 'bg-orange-100' },
-    };
-    const borderTopClass: Record<string, string> = {
-        'chart-1': 'border-t-blue-500',
-        'chart-2': 'border-t-purple-500',
-        'chart-3': 'border-t-amber-500',
-        'destructive': 'border-t-red-500',
-        'chart-5': 'border-t-orange-500',
-    };
-    const iconTextClassic: Record<string, string> = {
-        'chart-1': 'text-blue-600',
-        'chart-2': 'text-purple-600',
-        'chart-3': 'text-amber-600',
-        'destructive': 'text-red-600',
-        'chart-5': 'text-orange-600',
+    const graphicColorMap: Record<string, string> = {
+        'chart-1': 'bg-blue-500',
+        'chart-2': 'bg-purple-500',
+        'chart-3': 'bg-amber-500',
+        'destructive': 'bg-red-500',
+        'chart-5': 'bg-orange-500',
     };
 
     return (
-        <div className={cn(
-            "min-h-screen transition-colors duration-500 relative overflow-hidden font-sans",
-            settings?.displayMode === 'app' ? 'pb-24' : 'pb-8'
-        )}>
+        <div className={cn("h-[calc(100vh-64px)] bg-background text-foreground relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24')}>
+            {/* Noise overlay */}
+            <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
-            {/* Graphic Decoration */}
-            {isGraphic && (
-                <>
-                    <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[30%] bg-chart-1/15 dark:bg-chart-1/15 blur-[100px] rounded-full pointer-events-none" />
-                    <div className="absolute bottom-[10%] right-[-10%] w-[40%] h-[30%] bg-chart-5/15 dark:bg-chart-5/15 blur-[100px] rounded-full pointer-events-none" />
-                    <div className="absolute top-[30%] right-[10%] w-[30%] h-[20%] bg-chart-3/10 dark:bg-chart-3/10 blur-[80px] rounded-full pointer-events-none" />
-                </>
-            )}
+            <main className="relative z-10 w-full max-w-2xl px-6 pt-12 flex flex-col justify-start">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 text-center">
+                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm">Where to?</h2>
+                </motion.div>
 
-            <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6">
-                
-                {isGraphic ? (
-                    <div className="text-center mb-8">
-                        <Helper content="This is the main hub for your school. Each card takes you to a different part of the app with specific functions.">
-                            <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase graphic-text-glow">Select Portal</h1>
-                        </Helper>
-                        <p className="text-4xl font-bold text-muted-foreground">{schoolId?.replace(/_/g, ' ')}</p>
-                    </div>
-                ) : (
-                    <div className="mb-6">
-                         <Helper content="This is the main hub for your school. Each card takes you to a different part of the app with specific functions.">
-                            <h1 className="text-3xl font-bold">Portal</h1>
-                         </Helper>
-                        <p className="text-muted-foreground">Select an area to continue.</p>
-                    </div>
-                )}
+                <div className="flex flex-col gap-4">
+                    {portals.map((area, index) => (
+                        <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
+                            <motion.div
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, delay: index * 0.05 }}
+                                onMouseEnter={() => setHoveredIndex(area.id)}
+                                onMouseLeave={() => setHoveredIndex(null)}
+                                className="relative flex w-full items-center justify-between rounded-2xl border-2 border-transparent bg-card/40 backdrop-blur-sm px-8 py-5 text-left transition-all duration-300 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
+                            >
+                                {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
+                                <div className={cn(
+                                    "absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl transition-all duration-500", 
+                                    graphicColorMap[area.color], 
+                                    hoveredIndex === area.id ? "opacity-100" : "opacity-30"
+                                )} />
 
-
-                {/* Portal Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {portals.map((p) => {
-                    const Icon = p.icon;
-                    const gc = colorMap[p.color];
-
-                    return (
-                        <Link key={p.href} href={p.href} className="block group" onClick={() => playSound('click')}>
-                        <Card className={cn(
-                            'h-full min-h-[200px] sm:min-h-[220px] transition-all transform group-hover:-translate-y-1 group-hover:shadow-2xl overflow-hidden relative',
-                            isGraphic
-                                ? `bg-gradient-to-br ${gc.bg} backdrop-blur-md ${gc.border} ${gc.glow} border-t-transparent`
-                                : `bg-white border-t-4 border-slate-200 shadow-sm ${borderTopClass[p.color] ?? ''}`
-                            )}>
-                                    {/* Decorative Elements for Graphic Mode */}
-                                    {isGraphic && (
-                                        <div className="absolute -top-4 -right-4 w-12 h-12 opacity-5">
-                                            <Star className="w-full h-full fill-current" />
-                                        </div>
-                                    )}
-
-                                    <CardHeader className="space-y-3 pt-5 pb-5">
-                                        <div className={cn(
-                                            "w-14 h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300 min-h-[44px] min-w-[44px]",
-                                            isGraphic ? 'bg-foreground/5 border border-border' : `${gc.iconBg} ${iconTextClassic[p.color] ?? ''}`
-                                        )}>
-                                            <Icon className={cn("w-8 h-8", isGraphic ? gc.text : (iconTextClassic[p.color] ?? ''))} />
-                                        </div>
-                                        <div>
-                                            <CardTitle className={cn(
-                                                "text-lg font-black tracking-tight",
-                                                isGraphic ? 'text-foreground' : 'text-slate-800'
-                                            )}>
-                                                {p.label}
-                                            </CardTitle>
-                                            <CardDescription className={cn(
-                                                "text-xs font-medium mt-1 leading-relaxed",
-                                                isGraphic ? 'text-muted-foreground' : 'text-slate-500'
-                                            )}>
-                                                {p.desc}
-                                            </CardDescription>
-                                        </div>
-                                    </CardHeader>
-
-                                    <div className={cn("absolute bottom-3 right-4 transition-all opacity-0 group-hover:opacity-100", isGraphic ? 'text-muted-foreground' : 'text-slate-300')}>
-                                        <ArrowRight className="w-5 h-5" />
+                                {/* Left content */}
+                                <div className="flex items-center gap-7">
+                                    <span className={cn("text-4xl transition-all duration-500", hoveredIndex === area.id ? "grayscale-0 scale-110" : "grayscale opacity-70")}>
+                                        {area.emoji}
+                                    </span>
+                                    <div>
+                                        <h3 className="text-xl font-black text-card-foreground tracking-tight leading-tight">{area.title}</h3>
+                                        <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
                                     </div>
-                                </Card>
-                            </Link>
-                        );
-                    })}
-                </div>
-            </div>
+                                </div>
 
+                                {/* Right arrow */}
+                                <motion.div animate={{ x: hoveredIndex === area.id ? 0 : -5, opacity: hoveredIndex === area.id ? 1 : 0 }} transition={{ duration: 0.2 }}>
+                                    <ChevronRight className="h-7 w-7 text-muted-foreground" />
+                                </motion.div>
+
+                                {/* Background Glow - Increased opacity on hover */}
+                                <AnimatePresence>
+                                    {hoveredIndex === area.id && (
+                                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.08 }} exit={{ opacity: 0 }} className={cn("absolute inset-0 rounded-2xl pointer-events-none", graphicColorMap[area.color])} />
+                                    )}
+                                </AnimatePresence>
+                            </motion.div>
+                        </Link>
+                    ))}
+                </div>
+
+                <div className="mt-16 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/20">beta · {process.env.NEXT_PUBLIC_VERSION || 'v1.1.0'}</p>
+                </div>
+            </main>
         </div>
     );
 }

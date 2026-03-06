@@ -200,7 +200,10 @@ function StudentDashboardInner({
 
   return (
     <TooltipProvider>
-    <div className={`space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`}>
+    <div className={cn(
+        `space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
+        settings.displayMode === 'app' && 'pb-24'
+    )}>
       {/* Graphic Elements */}
       {isGraphic && (
         <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
@@ -527,7 +530,11 @@ useEffect(() => {
   return (
     <ErrorBoundary name="StudentLoginPage">
       <TooltipProvider>
-        <div className={`flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans ${isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : ''}`}>
+        <div className={cn(
+            "flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans",
+            isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
+            settings.displayMode === 'app' && 'pb-24'
+        )}>
           <StudentScanner
             onStudentFound={setActiveStudentId}
             title="Student Kiosk"
