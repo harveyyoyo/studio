@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthProvider';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ColorScheme = 'default' | 'sky' | 'rose' | 'mint' | 'lavender' | 'peach';
 
@@ -102,6 +103,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const { schoolId, isInitialized } = useAuth();
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
+    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (!isInitialized) {
@@ -123,10 +125,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             }
         } else {
             // No settings for this school, use defaults.
-            setSettings(defaultSettings);
+            const initialSettings = { ...defaultSettings };
+            if (isMobile) {
+                initialSettings.displayMode = 'app';
+            }
+            setSettings(initialSettings);
         }
         setIsLoaded(true);
-    }, [schoolId, isInitialized]);
+    }, [schoolId, isInitialized, isMobile]);
 
     const updateSettings = (updates: Partial<Settings>) => {
         const settingsKey = schoolId ? `arcade_settings_${schoolId}` : 'arcade_settings_global';

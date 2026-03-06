@@ -75,14 +75,14 @@ export default function Header() {
                 </div>
                 <div className="shrink-0">
                   <h1 className="text-lg font-black leading-none uppercase text-primary tracking-wider">
-                      {getTitle()}
+                      levelUp EDU
                   </h1>
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mt-1">School Reward System</p>
+                  <p className="text-base font-bold text-muted-foreground uppercase tracking-widest mt-1">School Reward System</p>
                 </div>
             </Link>
 
             <div className="absolute inset-x-0 text-center pointer-events-none">
-                <h2 className="text-6xl font-black text-primary font-headline tracking-tighter px-32 truncate drop-shadow-md">
+                <h2 className="text-6xl font-black text-primary font-headline tracking-tighter px-32 drop-shadow-md">
                     {schoolName}
                 </h2>
             </div>
@@ -134,16 +134,16 @@ export default function Header() {
                     <Zap className="h-7 w-7 fill-current" />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-lg font-black tracking-widest uppercase text-primary">{getTitle()}</span>
-                    <span className="text-xs tracking-[0.2em] font-bold uppercase text-muted-foreground mt-0.5">School Reward System</span>
+                    <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
+                    <span className="text-base tracking-[0.2em] font-bold uppercase text-muted-foreground mt-0.5">School Reward System</span>
                 </div>
             </Link>
         </motion.div>
 
         {/* Center: School Name (Themed) */}
         {loginState === 'school' && schoolId && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center pointer-events-none hidden lg:flex px-64">
-               <h2 className="text-6xl font-black tracking-tighter text-primary font-headline drop-shadow-md truncate">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center pointer-events-none hidden lg:flex px-40">
+               <h2 className="text-6xl font-black tracking-tighter text-primary font-headline drop-shadow-md">
                   {schoolName}
               </h2>
           </motion.div>
@@ -159,7 +159,7 @@ export default function Header() {
                                 {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />}
                                 <span className={cn("relative inline-flex h-2 w-2 rounded-full", syncStatus === 'synced' ? "bg-emerald-400" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
                             </span>
-                            <span className="text-xs font-black uppercase tracking-widest text-primary/80">{syncStatus}</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-primary/80">{syncStatus === 'synced' ? 'Live Sync' : syncStatus}</span>
                         </div>
                     )}
                     <div className="h-8 w-px bg-primary/20" />
