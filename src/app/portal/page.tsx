@@ -62,9 +62,9 @@ export default function PortalPage() {
                     {portals.map((area, index) => (
                         <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
                             <motion.div
-                                initial={{ opacity: 0, y: 15 }}
+                                initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: index * 0.05 }}
+                                transition={{ duration: 0.5, delay: index * 0.1 }}
                                 onMouseEnter={() => setHoveredIndex(area.id)}
                                 onMouseLeave={() => setHoveredIndex(null)}
                                 className="relative flex w-full items-center justify-between rounded-2xl border-2 border-transparent bg-card/40 backdrop-blur-sm px-8 py-5 text-left transition-all duration-300 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"

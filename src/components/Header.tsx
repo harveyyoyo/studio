@@ -58,7 +58,7 @@ export default function Header() {
     return null;
   }
 
-  const logoLink = loginState === 'developer' ? '/developer' : '/portal';
+  const logoLink = '/';
 
   // --- APP MODE HEADER ---
   if (settings.displayMode === 'app') {
@@ -98,7 +98,7 @@ export default function Header() {
                 </Link>
             </div>
             <div className="flex-1">
-                <h1 className="text-xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md">
+                <h1 className="text-2xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md">
                     {schoolName || 'levelUp EDU'}
                 </h1>
             </div>
@@ -155,7 +155,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-2xl font-black uppercase tracking-wider text-primary drop-shadow-md">{schoolName}</span>
+                <span className="text-3xl font-black uppercase tracking-wider text-primary drop-shadow-md">{schoolName}</span>
             </div>
         )}
 
@@ -188,7 +188,7 @@ export default function Header() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                      <Link href="/portal" data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90"><Home className="h-6 w-6" /></Link>
+                      <Link href={logoLink} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90"><Home className="h-6 w-6" /></Link>
                     )}
 
                     <div className="h-8 w-px bg-primary/20" />
