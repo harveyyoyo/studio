@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { Loader2, AlertCircle, Star, Gamepad2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Logo from '@/components/Logo';
 
 export default function SchoolLoginPage() {
     const { schoolId } = useParams<{ schoolId: string }>();
@@ -117,7 +118,7 @@ export default function SchoolLoginPage() {
 
     return (
         <div className={cn(
-            "min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center transition-colors duration-500"
+            "min-h-screen relative overflow-hidden font-sans pb-8 flex flex-col items-center justify-center transition-colors duration-500"
         )}>
 
             {isGraphic && (
@@ -131,15 +132,18 @@ export default function SchoolLoginPage() {
                 </>
             )}
 
-            <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+            <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center animate-in fade-in zoom-in duration-500">
                 <div className={cn(
                     "w-full rounded-[2.5rem] p-8 relative transition-all border",
                     isGraphic ? 'bg-card/50 backdrop-blur-xl border-border shadow-2xl animate-pulse-glow' : 'bg-card border-border shadow-lg'
                 )}>
+                    <div className="flex justify-center mb-8">
+                        <Logo className="h-16 w-auto" />
+                    </div>
 
                     <div className="text-center mb-8">
-                        <h2 className={cn("text-2xl font-black tracking-tight mb-1", isGraphic ? 'graphic-text-glow' : 'text-slate-800')}>
-                            School Passcode
+                        <h2 className={cn("text-3xl font-black tracking-tight mb-1 font-headline", isGraphic ? 'graphic-text-glow' : 'text-slate-800')}>
+                            {schoolName || 'School Login'}
                         </h2>
                         <p className={cn("text-sm text-muted-foreground", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
                             Enter your passcode to continue.

@@ -99,7 +99,7 @@ export default function Header() {
                 </Link>
             </div>
             <div className="flex-1">
-                <h1 className="text-3xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md">
+                <h1 className="text-4xl font-black uppercase tracking-wider text-primary text-center drop-shadow-md font-body">
                     {schoolName || 'levelUp EDU'}
                 </h1>
             </div>
@@ -111,7 +111,7 @@ export default function Header() {
         
         {loginState === 'school' && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
-            "bg-background/90 backdrop-blur-md"
+            settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
           )}>
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
@@ -141,11 +141,9 @@ export default function Header() {
     )}>
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
             <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl text-primary transition-transform group-hover:scale-105">
-                    <Logo className="h-8 w-auto" />
-                </div>
+                <Logo className="h-10 w-auto" />
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
                      <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
@@ -156,7 +154,7 @@ export default function Header() {
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
             <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
-                <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md">{schoolName}</span>
+                <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md font-body">{schoolName}</span>
             </div>
         )}
 
