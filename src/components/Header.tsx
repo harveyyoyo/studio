@@ -44,7 +44,7 @@ export default function Header() {
   }, [firestore, schoolId]);
 
   const { data: schoolData } = useDoc<{ name: string }>(schoolDocRef);
-  const schoolName = schoolData?.name || schoolId?.replace(/_/g, ' ');
+  const schoolName = schoolData?.name || schoolId;
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
 
@@ -62,20 +62,20 @@ export default function Header() {
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <Link href="/" className="flex items-center gap-3 relative z-10 group" data-home-button="true">
-                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-10 w-10 flex items-center justify-center">
-                    <Zap className="w-5 h-5 fill-primary-foreground text-primary-foreground" />
+            <Link href="/" className="flex items-center gap-2 relative z-10 group" data-home-button="true">
+                <div className="overflow-hidden rounded-lg shadow-md bg-primary h-8 w-8 flex items-center justify-center">
+                    <Zap className="w-4 h-4 fill-primary-foreground text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-base font-black leading-none uppercase text-primary tracking-wider">
+                  <h1 className="text-sm font-black leading-none uppercase text-primary tracking-wider">
                       levelUp EDU
                   </h1>
                   {loginState === 'school' && schoolId ? (
-                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
                       {schoolName}
                     </p>
                   ) : (
-                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
                       School Reward System
                     </p>
                   )}
@@ -129,14 +129,17 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                    {loginState === 'school' && schoolId ? (
-                        <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">{schoolName}</span>
-                    ) : (
-                        <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
-                    )}
+                    <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
                 </div>
             </Link>
         </div>
+
+        {/* Center: School Name */}
+        {loginState === 'school' && schoolId && (
+            <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
+                <span className="text-3xl font-black text-foreground/80 tracking-widest uppercase">{schoolName}</span>
+            </div>
+        )}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 shrink-0">
