@@ -1,4 +1,3 @@
-
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -71,9 +70,13 @@ export default function Header() {
                   <h1 className="text-base font-black leading-none uppercase text-primary tracking-wider">
                       levelUp EDU
                   </h1>
-                  {loginState === 'school' && schoolId && (
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mt-0.5">
+                  {loginState === 'school' && schoolId ? (
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
                       {schoolName}
+                    </p>
+                  ) : (
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                      School Reward System
                     </p>
                   )}
                 </div>
@@ -126,19 +129,14 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                    <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
+                    {loginState === 'school' && schoolId ? (
+                        <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">{schoolName}</span>
+                    ) : (
+                        <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
+                    )}
                 </div>
             </Link>
         </div>
-
-        {/* Center: School Name */}
-        {loginState === 'school' && schoolId && (
-          <div className="flex-1 text-center px-8 hidden lg:block">
-               <h2 className="text-2xl font-black tracking-tight text-primary font-headline">
-                  {schoolName}
-              </h2>
-          </div>
-        )}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 shrink-0">
