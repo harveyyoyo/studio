@@ -43,10 +43,10 @@ export default function PortalPage() {
 
     const graphicColorMap: Record<string, string> = {
         'chart-1': 'bg-blue-500',
-        'chart-2': 'bg-purple-500',
+        'chart-2': 'bg-rose-500',
         'chart-3': 'bg-amber-500',
         'destructive': 'bg-red-500',
-        'chart-5': 'bg-orange-500',
+        'chart-5': 'bg-violet-500',
     };
 
     return (

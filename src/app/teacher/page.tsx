@@ -271,7 +271,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div>
                             <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</h1>
-                            <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-3' : 'text-primary'}`}>{teacherName}</p>
+                            <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-2' : 'text-primary'}`}>{teacherName}</p>
                             <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Generate coupon sheets or award points directly.</p>
                         </div>
                         <Button variant="outline" onClick={onLogout} className={`gap-2 ${isGraphic ? 'border-border text-muted-foreground hover:text-foreground hover:bg-accent' : ''}`}>
@@ -344,8 +344,9 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                             </div>
                                         </div>
 
-                                        <Button onClick={handlePrintSheet} className={`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95 text-primary-foreground ${isGraphic ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20' : 'bg-slate-800 hover:bg-slate-700'
-                                            }`}>
+                                        <Button onClick={handlePrintSheet} className={cn(`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95`,
+                                            isGraphic ? 'bg-chart-2 hover:bg-chart-2/90 shadow-chart-2/20 text-rose-950' : 'bg-slate-800 hover:bg-slate-700 text-white'
+                                        )}>
                                             <Printer className="w-5 h-5 mr-3" /> Generate Sheet
                                         </Button>
 
@@ -458,7 +459,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                             disabled={selectedStudentIds.length === 0}
                                             variant={awardMode === 'deduct' ? 'destructive' : 'default'}
                                             className={cn(`w-full font-black text-lg uppercase tracking-widest h-14 rounded-2xl shadow-xl transition-all active:scale-95`,
-                                                isGraphic && awardMode === 'award' && 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20 text-white',
+                                                isGraphic && awardMode === 'award' && 'bg-chart-2 hover:bg-chart-2/90 shadow-chart-2/20 text-rose-950',
                                                 isGraphic && awardMode === 'deduct' && 'bg-red-600 hover:bg-red-500 shadow-red-500/20 text-white',
                                                 !isGraphic && awardMode === 'award' && 'bg-slate-800 hover:bg-slate-700 text-white',
                                                 !isGraphic && awardMode === 'deduct' && 'bg-red-700 hover:bg-red-600 text-white'
