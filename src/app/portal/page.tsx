@@ -15,7 +15,7 @@ export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
     const router = useRouter();
     const { settings } = useSettings();
-    const isGraphic = settings.graphicMode === 'graphics';
+    const isGraphic = settings?.graphicMode === 'graphics';
     const playSound = useArcadeSound();
 
     useEffect(() => {
@@ -66,7 +66,7 @@ export default function PortalPage() {
     return (
         <div className={cn(
             "min-h-screen transition-colors duration-500 relative overflow-hidden font-sans",
-            settings.displayMode === 'app' ? 'pb-24' : 'pb-8'
+            settings?.displayMode === 'app' ? 'pb-24' : 'pb-8'
         )}>
 
             {/* Graphic Decoration */}
@@ -78,7 +78,7 @@ export default function PortalPage() {
                 </>
             )}
 
-            <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6 animate-in fade-in duration-500">
+            <div className="relative z-10 max-w-4xl mx-auto pt-8 pb-4 px-6 space-y-6">
                 
                 {isGraphic ? (
                     <div className="text-center mb-8">

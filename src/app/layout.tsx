@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { FirebaseClientProvider } from '@/firebase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useEffect } from 'react';
 
 
 export default function RootLayout({
@@ -16,6 +17,18 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
+
+  // Unregister service workers to prevent stale cache issues causing blank screens
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          console.log("Unregistering Service Worker:", registration);
+          registration.unregister();
+        }
+      });
+    }
+  }, []);
 
   return (
     <html lang="en" suppressHydrationWarning>

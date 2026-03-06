@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/AppProvider';
@@ -23,7 +23,15 @@ export default function LoginPage() {
   const router = useRouter();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
-  const isGraphic = settings.graphicMode === 'graphics';
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Safe access to settings
+  const isGraphic = settings?.graphicMode === 'graphics';
+  const displayMode = settings?.displayMode || 'web';
 
   const handleSchoolLogin = async () => {
     if (!schoolId || !schoolPasscode) {
@@ -88,10 +96,15 @@ export default function LoginPage() {
     }
   };
 
+  // Prevent hydration mismatch
+  if (!mounted) {
+     return <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">Loading...</div>;
+  }
+
   return (
     <div className={cn(
       "min-h-screen relative overflow-hidden font-sans flex flex-col items-center transition-colors duration-500",
-      settings.displayMode === 'app' ? 'pb-24' : 'pb-8'
+      displayMode === 'app' ? 'pb-24' : 'pb-8'
     )}>
 
       {/* Background Decor - Only for Graphic Mode */}
@@ -110,7 +123,7 @@ export default function LoginPage() {
         </>
       )}
 
-      <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+      <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center">
 
         {/* Login Card - Unified DOM */}
         <div className={cn(
@@ -124,12 +137,14 @@ export default function LoginPage() {
               side="bottom"
               className="justify-center"
             >
-               <h1 className="text-3xl font-bold font-headline text-foreground">
-                levelUp EDU
-              </h1>
-              <p className="text-base text-muted-foreground">
-                School Reward System
-              </p>
+              <div className="flex flex-col items-center">
+                 <h1 className="text-3xl font-bold font-headline text-foreground">
+                  levelUp EDU
+                </h1>
+                <p className="text-base text-muted-foreground">
+                  School Reward System
+                </p>
+              </div>
             </Helper>
           </div>
 
@@ -222,7 +237,7 @@ export default function LoginPage() {
       </div>
 
       {/* Home link bar (app mode only) */}
-      {settings.displayMode === 'app' && (
+      {displayMode === 'app' && (
       <div className={cn(
         "fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors",
         isGraphic ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-card border-border'
