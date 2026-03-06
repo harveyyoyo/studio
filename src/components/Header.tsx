@@ -78,6 +78,14 @@ export default function Header() {
         'chart-5': 'text-chart-5',
     };
 
+    const hoverColorClasses: Record<string, string> = {
+      destructive: 'hover:text-destructive',
+      'chart-1': 'hover:text-chart-1',
+      'chart-2': 'hover:text-chart-2',
+      'chart-3': 'hover:text-chart-3',
+      'chart-5': 'hover:text-chart-5',
+    };
+
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
@@ -104,7 +112,7 @@ export default function Header() {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
                 const activeClass = isActive 
                     ? `scale-110 ${colorClasses[color] || 'text-primary'}` 
-                    : 'text-slate-400 hover:text-slate-500';
+                    : `text-slate-400 ${hoverColorClasses[color] || 'hover:text-primary'}`;
                 return (
                   <Link key={href} href={href} className={cn('flex flex-col items-center transition-all px-3 py-1', activeClass)}>
                     <Icon className="w-6 h-6" />
