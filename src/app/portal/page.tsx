@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -42,11 +41,11 @@ export default function PortalPage() {
     ];
 
     const graphicColorMap: Record<string, string> = {
-        'chart-1': 'bg-blue-500',
-        'chart-2': 'bg-rose-500',
-        'chart-3': 'bg-amber-500',
-        'destructive': 'bg-red-500',
-        'chart-5': 'bg-violet-500',
+        'chart-1': 'bg-chart-1',
+        'chart-2': 'bg-chart-2',
+        'chart-3': 'bg-chart-3',
+        'destructive': 'bg-destructive',
+        'chart-5': 'bg-chart-5',
     };
 
     return (
