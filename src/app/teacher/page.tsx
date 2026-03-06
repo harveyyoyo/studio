@@ -366,7 +366,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                             }`}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Award className={isGraphic ? 'text-chart-2' : 'text-chart-2'} />
+                                    <Award className="text-chart-2" />
                                     Direct Point Adjustment
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>

@@ -135,7 +135,7 @@ export function StudentScanner({
                 </div>
                 <div className={cn(
                     "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0",
-                    isGraphic ? 'bg-primary text-primary-foreground animate-pulse-glow' : 'bg-slate-800 text-white'
+                    isGraphic ? 'bg-primary text-primary-foreground animate-pulse-glow' : 'bg-primary/10'
                 )}>
                     {icon}
                 </div>

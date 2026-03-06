@@ -228,7 +228,7 @@ function PrizeDashboard({
                               <Card className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl overflow-hidden shadow-xl">
                                   <CardHeader className="bg-primary/5 border-b border-border/50 py-6 px-8">
                                       <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary">
-                                          <Clock className="w-5 h-5" /> Recent Activity
+                                          <Clock className="w-5 h-5 text-chart-3" /> Recent Activity
                                       </CardTitle>
                                   </CardHeader>
                                   <CardContent className="p-6">
@@ -292,7 +292,7 @@ export default function PrizePage() {
                     onStudentFound={setActiveStudentId}
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
-                    icon={<Gift className="w-10 h-10 text-primary" />}
+                    icon={<Gift className="w-10 h-10 text-chart-3" />}
                     isLocked={isLocked}
                     setIsLocked={setIsLocked}
                     onUnlockRequest={handleUnlockRequest}

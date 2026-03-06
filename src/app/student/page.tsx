@@ -239,7 +239,7 @@ function StudentDashboardInner({
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
                     <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <Wallet className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                      <Wallet className="w-4 h-4 text-chart-1" />
                     </div>
                     Redeem Coupon Code
                   </CardTitle>
@@ -309,7 +309,7 @@ function StudentDashboardInner({
               <Helper content="These are prizes you currently have enough points to redeem. Go to the Prize Shop to make a purchase.">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                    <Award className="w-4 h-4 text-chart-1" />
                   </div>
                   <div>
                     <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
@@ -346,7 +346,7 @@ function StudentDashboardInner({
             <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
                 <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
                   <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                    <ChevronRight className="w-5 h-5 text-chart-1" />
                   </div>
                   Activity
                 </CardTitle>
@@ -541,6 +541,7 @@ useEffect(() => {
             isLocked={isKioskLocked}
             setIsLocked={setIsKioskLocked}
             onUnlockRequest={handleUnlockRequest}
+            icon={<GraduationCap className="w-8 h-8 text-chart-1" />}
           />
           <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
             <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
