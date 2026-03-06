@@ -50,11 +50,11 @@ export default function PortalPage() {
     };
 
     return (
-        <div className={cn("h-[calc(100vh-64px)] bg-background text-foreground relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24')}>
+        <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-12", settings.displayMode === 'app' && 'pb-24')}>
             {/* Noise overlay */}
             <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
-            <main className="relative z-10 w-full max-w-2xl px-6 pt-12 flex flex-col justify-start">
+            <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 text-center">
                     <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm">Where to?</h2>
                 </motion.div>

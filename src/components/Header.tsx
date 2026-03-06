@@ -1,3 +1,4 @@
+
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -26,11 +27,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SettingsModal } from './ui/SettingsModal';
 import { useSettings } from './providers/SettingsProvider';
-import Logo from './Logo';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { motion } from "framer-motion";
 
 
 export default function Header() {
@@ -55,11 +54,6 @@ export default function Header() {
     logout();
   };
 
-  const getTitle = () => {
-    if (loginState === 'developer') return 'Developer Mode';
-    return 'levelUp EDU';
-  }
-
   if (isLoginPage) {
     return null;
   }
@@ -73,7 +67,7 @@ export default function Header() {
                 <div className="overflow-hidden rounded-xl shadow-lg bg-primary h-14 w-14 flex items-center justify-center transition-transform group-hover:scale-110">
                     <Zap className="w-7 h-7 fill-primary-foreground text-primary-foreground" />
                 </div>
-                <div className="shrink-0">
+                <div>
                   <h1 className="text-lg font-black leading-none uppercase text-primary tracking-wider">
                       levelUp EDU
                   </h1>
@@ -81,16 +75,17 @@ export default function Header() {
                 </div>
             </Link>
 
-            <div className="absolute inset-x-0 text-center pointer-events-none">
-                <h2 className="text-6xl font-black text-primary font-headline tracking-tighter px-32 drop-shadow-md">
-                    {schoolName}
-                </h2>
-            </div>
-
             <div className="z-20 scale-125">
                 <SettingsModal />
             </div>
         </header>
+        {loginState === 'school' && schoolId && (
+          <div className="text-center px-8 pb-4">
+             <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md">
+                {schoolName}
+            </h2>
+          </div>
+        )}
 
         {loginState === 'school' && (
           <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-slate-200 bg-white/90 backdrop-blur-md">
@@ -123,34 +118,33 @@ export default function Header() {
   return (
     <header className={cn(
       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
-      "bg-background/80 backdrop-blur-xl pt-4 pb-2 mb-0" 
+      "bg-background/80 backdrop-blur-xl" 
     )}>
-      <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center relative">
-        
+      <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-5 shrink-0">
+        <div className="flex items-center gap-4 shrink-0">
             <Link href="/" className="flex items-center gap-4 group">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-110">
-                    <Zap className="h-7 w-7 fill-current" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
+                    <Zap className="h-6 w-6 fill-current" />
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                    <span className="text-base tracking-[0.2em] font-bold uppercase text-muted-foreground mt-0.5">School Reward System</span>
+                    <span className="text-sm font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
                 </div>
             </Link>
-        </motion.div>
+        </div>
 
-        {/* Center: School Name (Themed) */}
+        {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-x-0 top-0 bottom-0 flex items-center justify-center pointer-events-none hidden lg:flex px-40">
-               <h2 className="text-6xl font-black tracking-tighter text-primary font-headline drop-shadow-md">
+          <div className="flex-1 text-center px-8 hidden lg:block">
+               <h2 className="text-4xl font-black tracking-tight text-primary font-headline truncate">
                   {schoolName}
               </h2>
-          </motion.div>
+          </div>
         )}
 
         {/* Right: Actions */}
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
             {isInitialized && (
                 <>
                     {loginState === 'school' && (
@@ -162,29 +156,31 @@ export default function Header() {
                             <span className="text-xs font-black uppercase tracking-widest text-primary/80">{syncStatus === 'synced' ? 'Live Sync' : syncStatus}</span>
                         </div>
                     )}
-                    <div className="h-8 w-px bg-primary/20" />
-                    {loginState === 'developer' && (
+                    
+                    {loginState === 'developer' ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="font-bold gap-2 text-destructive h-12 px-4">
-                                  <User className="w-6 h-6" />
+                              <Button variant="ghost" className="font-bold gap-2 text-destructive h-12 px-4 rounded-xl">
+                                  <User className="w-5 h-5" />
                                   <span className="hidden sm:inline">Dev Mode</span>
                               </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Developer Mode</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={handleLogout} className="text-lg py-3 hover:bg-destructive/10 hover:text-destructive"><LogOut className="mr-2 h-6 w-6" /> Log Out</DropdownMenuItem>
+                              <DropdownMenuItem onClick={handleLogout} className="text-base py-2 hover:bg-destructive/10 hover:text-destructive"><LogOut className="mr-2 h-5 w-5" /> Log Out</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                    ) : (
+                      <Link href="/portal" data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90"><Home className="h-6 w-6" /></Link>
                     )}
-                    <Link href="/portal" className="rounded-xl p-3 text-slate-400 hover:text-primary hover:bg-primary/10 transition-all active:scale-90"><Home className="h-7 w-7" /></Link>
-                    <div className="scale-125">
-                        <SettingsModal />
-                    </div>
+
+                    <div className="h-8 w-px bg-primary/20" />
+                    
+                    <SettingsModal />
                 </>
             )}
-        </motion.div>
+        </div>
       </div>
     </header>
   );
