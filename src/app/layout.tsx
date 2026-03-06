@@ -1,5 +1,6 @@
+'use client';
 
-import type { Metadata, Viewport } from "next";
+import { usePathname } from 'next/navigation';
 import { AppProvider } from "@/components/AppProvider";
 import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,28 +9,24 @@ import { FirebaseClientProvider } from '@/firebase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
-export const viewport: Viewport = {
-  themeColor: "#13a58d",
-};
-
-export const metadata: Metadata = {
-  title: "levelUp EDU",
-  description: "LevelUp rewards hub",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "levelUp EDU",
-  },
-};
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>levelUp EDU</title>
+        <meta name="description" content="LevelUp rewards hub" />
+        <meta name="theme-color" content="#13a58d" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="levelUp EDU" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -46,15 +43,19 @@ export default function RootLayout({
         <ErrorBoundary name="RootFirebaseProvider">
           <FirebaseClientProvider>
             <AppProvider>
-              <div
-                id="screen-view"
-                className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
-              >
-                <Header />
-                <main id="app" className="w-full max-w-6xl relative z-10">
-                  {children}
-                </main>
-              </div>
+              {isLoginPage ? (
+                children
+              ) : (
+                <div
+                  id="screen-view"
+                  className="flex min-h-screen flex-col items-center p-2 pb-20 sm:p-4 sm:pb-20"
+                >
+                  <Header />
+                  <main id="app" className="w-full max-w-6xl relative z-10">
+                    {children}
+                  </main>
+                </div>
+              )}
               <Toaster />
             </AppProvider>
           </FirebaseClientProvider>
