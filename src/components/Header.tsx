@@ -98,7 +98,7 @@ export default function Header() {
         </header>
         
         {loginState === 'school' && (
-          <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-slate-200 bg-white/90 backdrop-blur-md">
+          <nav className="fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t border-border bg-background/90 backdrop-blur-md">
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
@@ -134,7 +134,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Reward System</span>
+                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{schoolName}</span>
                 </div>
             </Link>
         </div>
