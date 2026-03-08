@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Student, Class, Category } from '@/lib/types';
@@ -65,7 +65,7 @@ export default function HallOfFamePage() {
             ? query(
                 collection(firestore, 'schools', schoolId, 'students'),
                 orderBy(sortBy === 'points' ? 'points' : 'lifetimePoints', 'desc'),
-                limit(200) // Fetch more for client-side category sorting
+                firestoreLimit(200) // Fetch more for client-side category sorting
             )
             : null,
         [firestore, schoolId, sortBy]);
