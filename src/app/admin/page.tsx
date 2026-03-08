@@ -532,7 +532,7 @@ function AdminDashboardInner() {
                 <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
                   <Button onClick={() => setStudentsToPrint({ students: students || [], classes: classes || [] })} variant="outline" className="rounded-xl px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
-                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
                   <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
                 </div>
               </CardHeader>
@@ -583,7 +583,7 @@ function AdminDashboardInner() {
                   </Helper>
                   <CardDescription>Items available for student redemption.</CardDescription>
                 </div>
-                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-xl px-6 shadow-md shadow-chart-3/20">
+                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-xl">
                   <Plus className="mr-2 h-4 w-4" /> Add Prize
                 </Button>
               </CardHeader>
@@ -627,7 +627,7 @@ function AdminDashboardInner() {
                     </Helper>
                     <CardDescription>Badges for student milestones.</CardDescription>
                   </div>
-                  <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-xl px-4 border-amber-200 hover:bg-amber-50">
+                  <Button onClick={() => handleOpenAchievementModal(null)} className="rounded-xl">
                     <Plus className="mr-2 h-4 w-4" /> Add Achievement
                   </Button>
                 </CardHeader>
@@ -761,7 +761,7 @@ function AdminDashboardInner() {
                   </Helper>
                   <CardDescription>Create and restore data snapshots.</CardDescription>
                 </div>
-                <Button onClick={handleCreateBackup} className="rounded-xl px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
+                <Button onClick={handleCreateBackup} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
               </CardHeader>
               <CardContent className="p-6">
                 <ScrollArea className="h-[400px]">

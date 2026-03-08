@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 function HallOfFameSkeleton() {
     return (
@@ -206,26 +207,21 @@ export default function HallOfFamePage() {
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="limit">Show Top</Label>
-                                            <Select value={limit.toString()} onValueChange={(v) => setLimit(parseInt(v))}>
-                                                <SelectTrigger id="limit"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="10">10 Students</SelectItem>
-                                                    <SelectItem value="25">25 Students</SelectItem>
-                                                    <SelectItem value="50">50 Students</SelectItem>
-                                                    <SelectItem value="100">100 Students</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <Input
+                                                id="limit"
+                                                type="number"
+                                                value={limit}
+                                                onChange={(e) => setLimit(Math.max(1, parseInt(e.target.value) || 1))}
+                                            />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="podium-size">Highlight Top</Label>
-                                            <Select value={podiumSize.toString()} onValueChange={(v) => setPodiumSize(parseInt(v))}>
-                                                <SelectTrigger id="podium-size"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1">1 Winner</SelectItem>
-                                                    <SelectItem value="2">2 Winners</SelectItem>
-                                                    <SelectItem value="3">3 Winners</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <Input
+                                                id="podium-size"
+                                                type="number"
+                                                value={podiumSize}
+                                                onChange={(e) => setPodiumSize(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))}
+                                            />
                                         </div>
                                     </div>
                                 </div>
