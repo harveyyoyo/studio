@@ -426,16 +426,16 @@ function AdminDashboardInner() {
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader>
-                <Helper content="Manage class groups for your school.">
-                    <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-destructive" /> Classes</CardTitle>
-                </Helper>
-                <CardDescription>Manage class groups for your school.</CardDescription>
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <Helper content="Manage class groups for your school.">
+                      <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-destructive" /> Classes</CardTitle>
+                  </Helper>
+                  <CardDescription>Manage class groups for your school.</CardDescription>
+                </div>
+                <Button onClick={() => setIsClassModalOpen(true)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Class</Button>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <Button onClick={() => setIsClassModalOpen(true)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Class</Button>
-                </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {classes?.map((c) => (
                     <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
@@ -455,16 +455,16 @@ function AdminDashboardInner() {
 
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader>
-                <Helper content="Add and manage teachers who can issue coupons.">
-                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-destructive" /> Teachers</CardTitle>
-                </Helper>
-                <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <Helper content="Add and manage teachers who can issue coupons.">
+                      <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-destructive" /> Teachers</CardTitle>
+                  </Helper>
+                  <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
+                </div>
+                <Button onClick={() => setIsTeacherModalOpen(true)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Teacher</Button>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <Button onClick={() => setIsTeacherModalOpen(true)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Teacher</Button>
-                </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {teachers?.map((t) => (
                     <li key={t.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors">
@@ -484,16 +484,16 @@ function AdminDashboardInner() {
 
           <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader>
-                <Helper content="Define categories and default point values for coupons.">
-                    <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-destructive" /> Reward Categories</CardTitle>
-                </Helper>
-                <CardDescription>Define categories and point values for coupons.</CardDescription>
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <Helper content="Define categories and default point values for coupons.">
+                      <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-destructive" /> Reward Categories</CardTitle>
+                  </Helper>
+                  <CardDescription>Define categories and point values for coupons.</CardDescription>
+                </div>
+                 <Button onClick={() => handleOpenCategoryModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Category</Button>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                   <Button onClick={() => handleOpenCategoryModal(null)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Category</Button>
-                </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {categories?.map((c) => (
                     <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-chart-2/20 transition-colors">
@@ -575,12 +575,14 @@ function AdminDashboardInner() {
           <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
-                <Helper content="Manage items available for student redemption in the Prize Shop.">
-                    <CardTitle className="flex items-center gap-2">
-                        <Gift className="text-destructive w-5 h-5" /> Prize Shop
-                    </CardTitle>
-                </Helper>
-                <CardDescription>Items available for student redemption.</CardDescription>
+                <div>
+                  <Helper content="Manage items available for student redemption in the Prize Shop.">
+                      <CardTitle className="flex items-center gap-2">
+                          <Gift className="text-destructive w-5 h-5" /> Prize Shop
+                      </CardTitle>
+                  </Helper>
+                  <CardDescription>Items available for student redemption.</CardDescription>
+                </div>
                 <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-xl px-6 shadow-md shadow-chart-3/20">
                   <Plus className="mr-2 h-4 w-4" /> Add Prize
                 </Button>
@@ -617,12 +619,14 @@ function AdminDashboardInner() {
             <TabsContent value="achievements" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <Card className="border-t-4 border-destructive shadow-md">
                 <CardHeader className="flex flex-row justify-between items-center py-6">
-                  <Helper content="Create and manage badges that students can earn by reaching specific milestones, like earning a certain number of points.">
-                    <CardTitle className="flex items-center gap-2">
-                        <Trophy className="text-destructive w-5 h-5" /> Achievements
-                    </CardTitle>
-                  </Helper>
-                  <CardDescription>Badges for student milestones.</CardDescription>
+                  <div>
+                    <Helper content="Create and manage badges that students can earn by reaching specific milestones, like earning a certain number of points.">
+                      <CardTitle className="flex items-center gap-2">
+                          <Trophy className="text-destructive w-5 h-5" /> Achievements
+                      </CardTitle>
+                    </Helper>
+                    <CardDescription>Badges for student milestones.</CardDescription>
+                  </div>
                   <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-xl px-4 border-amber-200 hover:bg-amber-50">
                     <Plus className="mr-2 h-4 w-4" /> Add Achievement
                   </Button>
@@ -749,12 +753,14 @@ function AdminDashboardInner() {
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
-                <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
-                    <CardTitle className="flex items-center gap-2">
-                        <Database className="text-destructive w-5 h-5" /> System Backups
-                    </CardTitle>
-                </Helper>
-                <CardDescription>Create and restore data snapshots.</CardDescription>
+                <div>
+                  <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
+                      <CardTitle className="flex items-center gap-2">
+                          <Database className="text-destructive w-5 h-5" /> System Backups
+                      </CardTitle>
+                  </Helper>
+                  <CardDescription>Create and restore data snapshots.</CardDescription>
+                </div>
                 <Button onClick={handleCreateBackup} className="rounded-xl px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
               </CardHeader>
               <CardContent className="p-6">

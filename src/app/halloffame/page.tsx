@@ -53,6 +53,7 @@ export default function HallOfFamePage() {
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
     const [limit, setLimit] = useState<number>(50);
+    const [podiumSize, setPodiumSize] = useState<number>(3);
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -125,8 +126,8 @@ export default function HallOfFamePage() {
         return <HallOfFameSkeleton />;
     }
 
-    const podium = topStudents?.slice(0, 3) || [];
-    const others = topStudents?.slice(3) || [];
+    const podium = topStudents?.slice(0, podiumSize) || [];
+    const others = topStudents?.slice(podiumSize) || [];
 
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-hidden font-sans flex flex-col items-center">
@@ -192,7 +193,7 @@ export default function HallOfFamePage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="scope">Show</Label>
                                             <Select value={scope} onValueChange={setScope}>
@@ -212,6 +213,17 @@ export default function HallOfFamePage() {
                                                     <SelectItem value="25">25 Students</SelectItem>
                                                     <SelectItem value="50">50 Students</SelectItem>
                                                     <SelectItem value="100">100 Students</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="podium-size">Highlight Top</Label>
+                                            <Select value={podiumSize.toString()} onValueChange={(v) => setPodiumSize(parseInt(v))}>
+                                                <SelectTrigger id="podium-size"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="1">1 Winner</SelectItem>
+                                                    <SelectItem value="2">2 Winners</SelectItem>
+                                                    <SelectItem value="3">3 Winners</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -305,7 +317,7 @@ export default function HallOfFamePage() {
                                   className="group relative flex items-center justify-between bg-card/40 backdrop-blur-sm border-2 border-transparent rounded-2xl px-6 py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5"
                               >
                                   <div className="flex items-center gap-5">
-                                      <span className="text-sm font-black text-muted-foreground/30 w-6">{index + 4}</span>
+                                      <span className="text-sm font-black text-muted-foreground/30 w-6">{index + podiumSize + 1}</span>
                                       <Avatar className="w-10 h-10 border-2 border-background">
                                           <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
                                       </Avatar>
