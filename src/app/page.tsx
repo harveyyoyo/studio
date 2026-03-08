@@ -125,7 +125,7 @@ export default function LoginPage() {
       )}
 
       <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
-
+        
         <Logo className="h-20 w-auto mb-8" />
         
         {/* Login Card - Unified DOM */}

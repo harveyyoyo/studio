@@ -94,7 +94,7 @@ export default function Header() {
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="w-10">
-                <Link href={logoLink} data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
             </div>
@@ -141,7 +141,7 @@ export default function Header() {
     )}>
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-4 shrink-0">
             <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
                 <Logo className="h-10 w-auto" />
                 <div className="flex flex-col">
