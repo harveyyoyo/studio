@@ -52,6 +52,7 @@ export default function HallOfFamePage() {
     const [sortBy, setSortBy] = useState<string>('lifetimePoints');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+    const [limit, setLimit] = useState<number>(50);
 
     useEffect(() => {
         if (isInitialized && loginState !== 'school') {
@@ -86,9 +87,9 @@ export default function HallOfFamePage() {
             sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
         }
 
-        if (scope === 'all') return sorted.slice(0, 50);
-        return sorted.filter(s => s.classId === scope).slice(0, 50);
-    }, [allTopStudents, scope, sortBy]);
+        if (scope === 'all') return sorted.slice(0, limit);
+        return sorted.filter(s => s.classId === scope).slice(0, limit);
+    }, [allTopStudents, scope, sortBy, limit]);
 
     const classesMap = useMemo(() => {
         if (!classes) return new Map();
@@ -191,15 +192,29 @@ export default function HallOfFamePage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="scope">Show</Label>
-                                        <Select value={scope} onValueChange={setScope}>
-                                            <SelectTrigger id="scope"><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Entire School</SelectItem>
-                                                {classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="scope">Show</Label>
+                                            <Select value={scope} onValueChange={setScope}>
+                                                <SelectTrigger id="scope"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Entire School</SelectItem>
+                                                    {classes?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="limit">Show Top</Label>
+                                            <Select value={limit.toString()} onValueChange={(v) => setLimit(parseInt(v))}>
+                                                <SelectTrigger id="limit"><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="10">10 Students</SelectItem>
+                                                    <SelectItem value="25">25 Students</SelectItem>
+                                                    <SelectItem value="50">50 Students</SelectItem>
+                                                    <SelectItem value="100">100 Students</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
                                 <DialogFooter>
