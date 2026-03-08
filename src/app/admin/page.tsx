@@ -219,6 +219,8 @@ function AdminDashboardInner() {
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
+  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
+  const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
   
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
@@ -283,7 +285,7 @@ function AdminDashboardInner() {
     );
   }
 
-  const handleAddClass = () => {
+  const handleSaveClass = () => {
     if (!newClassName) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Class Name Required', description: 'Please enter a name for the new class.' });
@@ -291,9 +293,10 @@ function AdminDashboardInner() {
     }
     addClass({ name: newClassName });
     setNewClassName('');
+    setIsClassModalOpen(false);
   };
 
-  const handleAddTeacher = () => {
+  const handleSaveTeacher = () => {
     if (!newTeacherName) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Teacher Name Required', description: 'Please enter a name for the new teacher.' });
@@ -301,6 +304,7 @@ function AdminDashboardInner() {
     }
     addTeacher({ name: newTeacherName });
     setNewTeacherName('');
+    setIsTeacherModalOpen(false);
   };
 
   const handleOpenCategoryModal = (category: Category | null) => {
@@ -429,9 +433,8 @@ function AdminDashboardInner() {
                 <CardDescription>Manage class groups for your school.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2 mb-6">
-                  <Input placeholder="New class name..." value={newClassName} onChange={(e) => setNewClassName(e.target.value)} className="rounded-xl" />
-                  <Button onClick={handleAddClass} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                <div className="mb-6">
+                  <Button onClick={() => setIsClassModalOpen(true)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Class</Button>
                 </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {classes?.map((c) => (
@@ -459,9 +462,8 @@ function AdminDashboardInner() {
                 <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2 mb-6">
-                  <Input placeholder="New teacher name..." value={newTeacherName} onChange={(e) => setNewTeacherName(e.target.value)} className="rounded-xl" />
-                  <Button onClick={handleAddTeacher} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                <div className="mb-6">
+                  <Button onClick={() => setIsTeacherModalOpen(true)} className="w-full rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add New Teacher</Button>
                 </div>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {teachers?.map((t) => (
@@ -528,9 +530,9 @@ function AdminDashboardInner() {
                 </Helper>
                 <CardDescription>Manage your enrollments and view student activity.</CardDescription>
                 <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
-                  <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-full px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
-                  <Button onClick={() => setStudentsToPrint({ students: students || [], classes: classes || [] })} variant="outline" className="rounded-full px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
-                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+                  <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
+                  <Button onClick={() => setStudentsToPrint({ students: students || [], classes: classes || [] })} variant="outline" className="rounded-xl px-4"><Printer className="mr-2 h-4 w-4" /> Bulk ID Print</Button>
+                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
                   <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
                 </div>
               </CardHeader>
@@ -579,7 +581,7 @@ function AdminDashboardInner() {
                     </CardTitle>
                 </Helper>
                 <CardDescription>Items available for student redemption.</CardDescription>
-                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-full px-6 shadow-md shadow-chart-3/20">
+                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-xl px-6 shadow-md shadow-chart-3/20">
                   <Plus className="mr-2 h-4 w-4" /> Add Prize
                 </Button>
               </CardHeader>
@@ -621,7 +623,7 @@ function AdminDashboardInner() {
                     </CardTitle>
                   </Helper>
                   <CardDescription>Badges for student milestones.</CardDescription>
-                  <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-full px-4 border-amber-200 hover:bg-amber-50">
+                  <Button onClick={() => handleOpenAchievementModal(null)} variant="outline" className="rounded-xl px-4 border-amber-200 hover:bg-amber-50">
                     <Plus className="mr-2 h-4 w-4" /> Add Achievement
                   </Button>
                 </CardHeader>
@@ -753,7 +755,7 @@ function AdminDashboardInner() {
                     </CardTitle>
                 </Helper>
                 <CardDescription>Create and restore data snapshots.</CardDescription>
-                <Button onClick={handleCreateBackup} className="rounded-full px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
+                <Button onClick={handleCreateBackup} className="rounded-xl px-6 shadow-md"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
               </CardHeader>
               <CardContent className="p-6">
                 <ScrollArea className="h-[400px]">
@@ -800,6 +802,42 @@ function AdminDashboardInner() {
         </Tabs>
 
         {/* Modals outside Tabs */}
+        <Dialog open={isClassModalOpen} onOpenChange={setIsClassModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Class</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="new-class-name">Class Name</Label>
+                        <Input id="new-class-name" value={newClassName} onChange={e => setNewClassName(e.target.value)} autoFocus />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsClassModalOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveClass}>Add Class</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isTeacherModalOpen} onOpenChange={setIsTeacherModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Teacher</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="new-teacher-name">Teacher Name</Label>
+                        <Input id="new-teacher-name" value={newTeacherName} onChange={e => setNewTeacherName(e.target.value)} autoFocus />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsTeacherModalOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveTeacher}>Add Teacher</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
         <StudentModal
           isOpen={isStudentModalOpen}
           setIsOpen={setIsStudentModalOpen}
