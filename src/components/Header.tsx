@@ -92,13 +92,18 @@ export default function Header() {
 
     return (
       <>
-        <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <div>
+        <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
+            <div className="flex justify-start">
                  <Link href="/" data-main-home-button="true" className="inline-block">
-                    <Logo className="h-8 w-auto" />
+                    <Logo className="h-6 w-auto" />
                 </Link>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="text-center">
+              {loginState === 'school' && schoolId && (
+                <span className="font-bold text-sm text-muted-foreground truncate">{schoolName}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2">
                 <Link href="/portal" data-portal-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
