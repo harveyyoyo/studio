@@ -7,7 +7,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Student, Class } from '@/lib/types';
+import type { Student, Class, Category } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
@@ -49,7 +49,7 @@ export default function HallOfFamePage() {
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
-    const [sortBy, setSortBy] = useState<'points' | 'lifetimePoints'>('points');
+    const [sortBy, setSortBy] = useState<string>('points');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
@@ -63,8 +63,8 @@ export default function HallOfFamePage() {
         schoolId
             ? query(
                 collection(firestore, 'schools', schoolId, 'students'),
-                orderBy(sortBy, 'desc'),
-                limit(100) // Fetch more to allow for client-side class filtering
+                orderBy(sortBy === 'points' ? 'points' : 'lifetimePoints', 'desc'),
+                limit(200) // Fetch more for client-side category sorting
             )
             : null,
         [firestore, schoolId, sortBy]);
@@ -73,11 +73,22 @@ export default function HallOfFamePage() {
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
     
+    const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+    const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
     const topStudents = useMemo(() => {
         if (!allTopStudents) return [];
-        if (scope === 'all') return allTopStudents.slice(0, 50);
-        return allTopStudents.filter(s => s.classId === scope).slice(0, 50);
-    }, [allTopStudents, scope]);
+        let sorted = [...allTopStudents];
+
+        if (sortBy !== 'points' && sortBy !== 'lifetimePoints') {
+            // It's a category sort
+            const categoryName = sortBy;
+            sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
+        }
+
+        if (scope === 'all') return sorted.slice(0, 50);
+        return sorted.filter(s => s.classId === scope).slice(0, 50);
+    }, [allTopStudents, scope, sortBy]);
 
     const classesMap = useMemo(() => {
         if (!classes) return new Map();
@@ -93,11 +104,23 @@ export default function HallOfFamePage() {
       return getClassName(scope);
     }
 
+    const getSortByLabel = () => {
+        if (sortBy === 'points') return 'Top Current Earners';
+        if (sortBy === 'lifetimePoints') return 'Top Lifetime Earners';
+        return `Top Earners in ${sortBy}`;
+    }
+
+    const getPointsForStudent = (student: Student) => {
+        if (sortBy === 'points') return student.points || 0;
+        if (sortBy === 'lifetimePoints') return student.lifetimePoints || 0;
+        return student.categoryPoints?.[sortBy] || 0;
+    }
+
     const getInitials = (firstName: string, lastName: string) => {
         return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
     }
 
-    if (!isInitialized || loginState !== 'school' || studentsLoading || classesLoading) {
+    if (!isInitialized || loginState !== 'school' || studentsLoading || classesLoading || categoriesLoading) {
         return <HallOfFameSkeleton />;
     }
 
@@ -142,7 +165,7 @@ export default function HallOfFamePage() {
                                 <Trophy className="w-12 h-12 text-chart-5" /> Hall of Fame
                             </h2>
                             <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                                {getScopeName()} &bull; Top {sortBy === 'points' ? 'Current' : 'Lifetime'} Earners
+                                {getScopeName()} &bull; {getSortByLabel()}
                             </p>
                         </div>
                         <Dialog open={isOptionsOpen} onOpenChange={setIsOptionsOpen}>
@@ -159,11 +182,12 @@ export default function HallOfFamePage() {
                                 <div className="grid gap-4 py-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="sort-by">Sort By</Label>
-                                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                                        <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
                                             <SelectTrigger id="sort-by"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="points">Current Points</SelectItem>
                                                 <SelectItem value="lifetimePoints">Lifetime Points</SelectItem>
+                                                {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name} Points</SelectItem>)}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -203,7 +227,7 @@ export default function HallOfFamePage() {
                                           <AvatarFallback className="bg-secondary text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
                                       </Avatar>
                                       <p className="font-black text-foreground text-xl truncate tracking-tight">{podium[1].firstName}</p>
-                                      <p className="text-primary font-bold text-lg mt-1">{(podium[1][sortBy] || 0).toLocaleString()} pts</p>
+                                      <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[1]).toLocaleString()} pts</p>
                                   </div>
                               </motion.div>
                           )}
@@ -223,7 +247,7 @@ export default function HallOfFamePage() {
                                       <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
                                   </Avatar>
                                   <p className="font-black text-foreground text-2xl truncate tracking-tighter">{podium[0].firstName}</p>
-                                  <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{(podium[0][sortBy] || 0).toLocaleString()} pts</p>
+                                  <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{getPointsForStudent(podium[0]).toLocaleString()} pts</p>
                               </div>
                           </motion.div>
 
@@ -241,7 +265,7 @@ export default function HallOfFamePage() {
                                           <AvatarFallback className="bg-orange-50 text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
                                       </Avatar>
                                       <p className="font-black text-foreground text-lg truncate tracking-tight">{podium[2].firstName}</p>
-                                      <p className="text-primary font-bold text-lg mt-1">{(podium[2][sortBy] || 0).toLocaleString()} pts</p>
+                                      <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[2]).toLocaleString()} pts</p>
                                   </div>
                               </motion.div>
                           )}
@@ -276,7 +300,7 @@ export default function HallOfFamePage() {
                                       </div>
                                   </div>
                                   <div className="text-lg font-black text-primary tracking-tighter">
-                                      {(student[sortBy] || 0).toLocaleString()}
+                                      {getPointsForStudent(student).toLocaleString()}
                                   </div>
 
                                   {/* Hover Bar Accent */}

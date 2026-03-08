@@ -94,7 +94,7 @@ export default function Header() {
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="w-10">
-                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                <Link href="/" data-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
             </div>
