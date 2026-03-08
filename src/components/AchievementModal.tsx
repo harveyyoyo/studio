@@ -170,12 +170,12 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                         {type === 'points' && (
                             <div className="space-y-1">
                                 <Label>Specific Category (Optional)</Label>
-                                <Select value={categoryId} onValueChange={setCategoryId}>
+                                <Select value={categoryId || 'all'} onValueChange={v => setCategoryId(v === 'all' ? '' : v)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="All Categories" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="null">All Categories</SelectItem>
+                                        <SelectItem value="all">All Categories</SelectItem>
                                         {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>

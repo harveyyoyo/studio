@@ -118,12 +118,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="prize-teacher">Teacher Restriction</Label>
-              <Select value={teacherId} onValueChange={setTeacherId}>
+              <Select value={teacherId || 'all'} onValueChange={(v) => setTeacherId(v === 'all' ? '' : v)}>
                 <SelectTrigger id="prize-teacher">
                   <SelectValue placeholder="School-wide" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">School-wide</SelectItem>
+                  <SelectItem value="all">School-wide</SelectItem>
                   {teachers.map(t => (
                     <SelectItem key={t.id} value={t.id}>{t.name}'s Prizes</SelectItem>
                   ))}
@@ -132,12 +132,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: P
             </div>
             <div className="space-y-1">
               <Label htmlFor="prize-class">Class Restriction</Label>
-              <Select value={classId} onValueChange={setClassId}>
+              <Select value={classId || 'all'} onValueChange={(v) => setClassId(v === 'all' ? '' : v)}>
                 <SelectTrigger id="prize-class">
                   <SelectValue placeholder="School-wide" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">School-wide</SelectItem>
+                  <SelectItem value="all">School-wide</SelectItem>
                   {allClasses.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
