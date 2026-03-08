@@ -34,7 +34,7 @@ import Logo from './Logo';
 
 export default function Header() {
   const pathname = usePathname();
-  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin } = useAppContext();
+  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const firestore = useFirestore();
@@ -94,8 +94,8 @@ export default function Header() {
       <>
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="flex justify-start">
-                 <Link href="/" data-main-home-button="true" className="inline-block">
-                    <Logo className="h-4 w-auto" />
+                 <Link href="/" data-home-button="true" className="inline-block">
+                    <Logo className="h-3 w-auto" />
                 </Link>
             </div>
             <div className="text-center">
@@ -104,14 +104,14 @@ export default function Header() {
               )}
             </div>
             <div className="flex items-center justify-end gap-2">
-                <Link href="/portal" data-portal-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
                 <SettingsModal />
             </div>
         </header>
         
-        {loginState === 'school' && (
+        {loginState === 'school' && !isKioskLocked && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
             settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
           )}>
