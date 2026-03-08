@@ -93,17 +93,15 @@ export default function Header() {
     return (
       <>
         <header className="no-print w-full flex justify-between items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <div className="w-10">
-                <Link href="/portal" data-portal-home-button="true" className="rounded-xl p-2 -m-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+            <div>
+                 <Link href="/" data-main-home-button="true" className="inline-block">
+                    <Logo className="h-8 w-auto" />
+                </Link>
+            </div>
+            <div className="flex items-center gap-2">
+                <Link href="/portal" data-portal-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
                     <Home className="h-5 w-5" />
                 </Link>
-            </div>
-            <div className="flex-1 text-center">
-                 <Link href="/" data-main-home-button="true" className="inline-block">
-                    <Logo className="h-10 w-auto" />
-                </Link>
-            </div>
-            <div className="w-10 flex justify-end">
                 <SettingsModal />
             </div>
         </header>
