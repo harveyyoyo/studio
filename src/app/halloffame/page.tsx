@@ -49,7 +49,7 @@ export default function HallOfFamePage() {
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
-    const [sortBy, setSortBy] = useState<string>('points');
+    const [sortBy, setSortBy] = useState<string>('lifetimePoints');
     const [scope, setScope] = useState<'all' | string>('all');
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
 
@@ -185,8 +185,8 @@ export default function HallOfFamePage() {
                                         <Select value={sortBy} onValueChange={(v) => setSortBy(v)}>
                                             <SelectTrigger id="sort-by"><SelectValue /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="points">Current Points</SelectItem>
                                                 <SelectItem value="lifetimePoints">Lifetime Points</SelectItem>
+                                                <SelectItem value="points">Current Points</SelectItem>
                                                 {categories?.map(c => <SelectItem key={c.id} value={c.name}>{c.name} Points</SelectItem>)}
                                             </SelectContent>
                                         </Select>

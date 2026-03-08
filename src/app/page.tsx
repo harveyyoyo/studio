@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
@@ -105,7 +104,7 @@ export default function LoginPage() {
   return (
     <div className={cn(
       "min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center transition-colors duration-500",
-      displayMode === 'app' ? 'pb-24' : 'pb-8'
+      displayMode === 'app' ? 'pb-8' : 'pb-8'
     )}>
 
       {/* Background Decor - Only for Graphic Mode */}
@@ -126,8 +125,6 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
         
-        <Logo className="h-20 w-auto mb-8" />
-        
         {/* Login Card - Unified DOM */}
         <div className={cn(
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
@@ -140,6 +137,7 @@ export default function LoginPage() {
               className="justify-center"
             >
               <div className="flex flex-col items-center">
+                 <Logo className="h-20 w-auto mb-4" />
                  <h1 className="text-3xl font-bold font-headline text-foreground">
                   levelUp EDU
                 </h1>
@@ -237,22 +235,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Home link bar (app mode only) */}
-      {displayMode === 'app' && (
-      <div className={cn(
-        "fixed bottom-0 left-0 right-0 h-16 flex justify-center items-center px-8 border-t transition-colors",
-        isGraphic ? 'bg-background/95 backdrop-blur-md border-border' : 'bg-card border-border'
-      )}>
-        <Link href="/" className={cn(
-          "flex flex-col items-center gap-0.5 transition-colors min-h-[44px] min-w-[44px] justify-center",
-          isGraphic ? 'text-primary' : 'text-foreground hover:text-foreground/80'
-        )}>
-          <Home className="w-6 h-6" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Home</span>
-        </Link>
-      </div>
-      )}
     </div>
   );
 }
