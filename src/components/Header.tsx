@@ -95,8 +95,8 @@ export default function Header() {
       <>
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="flex justify-start">
-                 <Link href="/" data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
-                    <ArrowRightLeft className="h-5 w-5" />
+                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+                    <Home className="h-5 w-5" />
                 </Link>
             </div>
             <div className="text-center">
@@ -105,9 +105,6 @@ export default function Header() {
               )}
             </div>
             <div className="flex items-center justify-end gap-2">
-                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
-                    <Home className="h-5 w-5" />
-                </Link>
                 <SettingsModal />
             </div>
         </header>
