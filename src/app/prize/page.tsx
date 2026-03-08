@@ -25,6 +25,8 @@ import {
     ChevronRight,
     Clock,
     ShoppingBasket,
+    Plus,
+    Minus,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +55,7 @@ function ConfirmRedemptionDialog({
     onConfirm: (quantity: number) => void
 }) {
     const [quantity, setQuantity] = useState(1);
+    const playSound = useArcadeSound();
 
     useEffect(() => {
         if (isOpen) {
@@ -66,6 +69,12 @@ function ConfirmRedemptionDialog({
     const canAfford = student.points >= totalCost;
     const remainingPoints = student.points - totalCost;
 
+    const handleQuantityChange = (amount: number) => {
+        const newQuantity = Math.max(1, quantity + amount);
+        setQuantity(newQuantity);
+        playSound('click');
+    };
+
     return (
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
             <AlertDialogContent>
@@ -76,18 +85,14 @@ function ConfirmRedemptionDialog({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="py-4 space-y-4">
-                    <div className="flex items-center gap-4">
-                        <Label htmlFor="quantity" className="text-right">
-                            Quantity
-                        </Label>
-                        <Input
-                            id="quantity"
-                            type="number"
-                            min="1"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-24"
-                        />
+                    <div className="flex items-center justify-center gap-4">
+                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1}>
+                            <Minus className="w-5 h-5" />
+                        </Button>
+                        <div className="text-4xl font-bold w-20 text-center">{quantity}</div>
+                        <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => handleQuantityChange(1)} disabled={student.points < prize.points * (quantity + 1)}>
+                            <Plus className="w-5 h-5" />
+                        </Button>
                     </div>
                     <div className="text-sm space-y-1 bg-secondary p-3 rounded-lg">
                         <div className="flex justify-between"><span>Total Cost:</span> <span className="font-bold">{totalCost.toLocaleString()} pts</span></div>
@@ -190,12 +195,11 @@ function PrizeDashboard({
     }
     
     const visiblePrizes = (prizes || [])
-        .filter(p => p.inStock)
         .filter(p => {
-            if (!p.teacherId) { // school-wide prize
-                return true;
-            }
-            return student.teacherIds?.includes(p.teacherId) ?? false;
+            if (!p.inStock) return false;
+            const teacherMatch = !p.teacherId || (student.teacherIds || []).includes(p.teacherId);
+            const classMatch = !p.classId || student.classId === p.classId;
+            return teacherMatch && classMatch;
         })
         .sort((a, b) => a.points - b.points);
 

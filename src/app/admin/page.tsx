@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -814,6 +813,7 @@ function AdminDashboardInner() {
           setIsOpen={setIsPrizeModalOpen}
           prize={editingPrize}
           teachers={teachers || []}
+          allClasses={classes || []}
         />
         <CategoryModal
           isOpen={isCategoryModalOpen}

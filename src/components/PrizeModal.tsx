@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize, Teacher } from '@/lib/types';
+import type { Prize, Teacher, Class } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -25,15 +25,17 @@ interface PrizeModalProps {
   setIsOpen: (isOpen: boolean) => void;
   prize: Prize | null;
   teachers: Teacher[];
+  allClasses: Class[];
 }
 
-export function PrizeModal({ isOpen, setIsOpen, prize, teachers }: PrizeModalProps) {
+export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses }: PrizeModalProps) {
   const { addPrize, updatePrize } = useAppContext();
   const [name, setName] = useState('');
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
   const [teacherId, setTeacherId] = useState('');
+  const [classId, setClassId] = useState('');
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -47,12 +49,14 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers }: PrizeModalPro
         setIcon(prize.icon);
         setInStock(prize.inStock);
         setTeacherId(prize.teacherId || '');
+        setClassId(prize.classId || '');
       } else { // Create mode
         setName('');
         setPoints('0');
         setIcon('Gift');
         setInStock(true);
         setTeacherId('');
+        setClassId('');
       }
     }
   }, [prize, isOpen]);
@@ -71,12 +75,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers }: PrizeModalPro
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, addedBy: 'Admin' };
+      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
       await updatePrize(updatedPrize);
       playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, addedBy: 'Admin' };
+      const newPrize = { name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, classId: classId || undefined, addedBy: 'Admin' };
       await addPrize(newPrize);
       playSound('success');
       toast({ title: 'Prize added!' });
@@ -111,19 +115,35 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers }: PrizeModalPro
               </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="prize-teacher">Visibility</Label>
-            <Select value={teacherId} onValueChange={setTeacherId}>
-              <SelectTrigger id="prize-teacher">
-                <SelectValue placeholder="All Teachers (School-wide)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Teachers (School-wide)</SelectItem>
-                {teachers.map(t => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}'s Prizes</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="prize-teacher">Teacher Restriction</Label>
+              <Select value={teacherId} onValueChange={setTeacherId}>
+                <SelectTrigger id="prize-teacher">
+                  <SelectValue placeholder="School-wide" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">School-wide</SelectItem>
+                  {teachers.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}'s Prizes</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="prize-class">Class Restriction</Label>
+              <Select value={classId} onValueChange={setClassId}>
+                <SelectTrigger id="prize-class">
+                  <SelectValue placeholder="School-wide" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">School-wide</SelectItem>
+                  {allClasses.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
             <div className="space-y-0.5">

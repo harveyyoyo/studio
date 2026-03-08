@@ -58,6 +58,7 @@ export interface Prize {
   inStock: boolean;
   addedBy?: string;
   teacherId?: string;
+  classId?: string;
 }
 
 export interface Achievement {
