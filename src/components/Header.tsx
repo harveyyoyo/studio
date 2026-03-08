@@ -65,8 +65,8 @@ export default function Header() {
   if (settings.displayMode === 'app') {
     const navItems = [
       ...(isAdmin ? [{ id: 'admin', href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
-      { id: 'print', href: '/teacher', icon: Printer, label: 'Print', color: 'chart-2' },
-      { id: 'redeem', href: '/student', icon: GraduationCap, label: 'Redeem', color: 'chart-1' },
+      { id: 'print', href: '/teacher', icon: Printer, label: 'Teacher', color: 'chart-2' },
+      { id: 'redeem', href: '/student', icon: GraduationCap, label: 'Student', color: 'chart-1' },
       { id: 'prize', href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
       { id: 'fame', href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
     ].sort((a, b) => {
@@ -95,12 +95,12 @@ export default function Header() {
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="flex justify-start">
                  <Link href="/" data-main-home-button="true" className="inline-block">
-                    <Logo className="h-6 w-auto" />
+                    <Logo className="h-5 w-auto" />
                 </Link>
             </div>
             <div className="text-center">
               {loginState === 'school' && schoolId && (
-                <span className="font-bold text-sm text-muted-foreground truncate">{schoolName}</span>
+                <span className="font-black text-lg text-primary truncate">{schoolName}</span>
               )}
             </div>
             <div className="flex items-center justify-end gap-2">
