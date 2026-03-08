@@ -104,7 +104,7 @@ export default function LoginPage() {
 
   return (
     <div className={cn(
-      "min-h-screen relative overflow-hidden font-sans flex flex-col items-center transition-colors duration-500",
+      "min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center transition-colors duration-500",
       displayMode === 'app' ? 'pb-24' : 'pb-8'
     )}>
 
@@ -124,8 +124,10 @@ export default function LoginPage() {
         </>
       )}
 
-      <div className="relative z-10 w-full max-w-md px-6 pt-8 sm:pt-12 flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
 
+        <Logo className="h-20 w-auto mb-8" />
+        
         {/* Login Card - Unified DOM */}
         <div className={cn(
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
@@ -144,7 +146,6 @@ export default function LoginPage() {
                 <p className="text-base text-muted-foreground">
                   School Reward System
                 </p>
-                <Logo className="h-16 w-auto mt-4" />
               </div>
             </Helper>
           </div>

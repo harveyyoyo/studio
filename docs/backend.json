@@ -18,6 +18,11 @@
             "type": "object",
             "description": "A map of points earned per category, where keys are category names and values are points.",
             "additionalProperties": { "type": "number" }
+        },
+        "teacherIds": {
+            "type": "array",
+            "description": "A list of teacher IDs assigned to the student.",
+            "items": { "type": "string" }
         }
       },
       "required": ["firstName", "lastName", "nfcId", "points", "lifetimePoints"]
@@ -84,7 +89,8 @@
         "points": { "type": "number", "description": "The point cost of the item." },
         "icon": { "type": "string", "description": "The name of a Lucide icon for display." },
         "inStock": { "type": "boolean", "description": "If the item is available." },
-        "addedBy": { "type": "string", "description": "Name of the admin who added the prize." }
+        "addedBy": { "type": "string", "description": "Name of the admin who added the prize." },
+        "teacherId": { "type": "string", "description": "ID of the teacher who owns this prize. If empty, it is a school-wide prize." }
       },
       "required": ["id", "name", "points", "icon", "inStock"]
     },

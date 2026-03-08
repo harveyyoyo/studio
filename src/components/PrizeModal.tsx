@@ -14,23 +14,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize } from '@/lib/types';
+import type { Prize, Teacher } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
 import { Switch } from './ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface PrizeModalProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   prize: Prize | null;
+  teachers: Teacher[];
 }
 
-export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
+export function PrizeModal({ isOpen, setIsOpen, prize, teachers }: PrizeModalProps) {
   const { addPrize, updatePrize } = useAppContext();
   const [name, setName] = useState('');
   const [points, setPoints] = useState('0');
   const [icon, setIcon] = useState('Gift');
   const [inStock, setInStock] = useState(true);
+  const [teacherId, setTeacherId] = useState('');
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -43,11 +46,13 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
         setPoints(prize.points.toString());
         setIcon(prize.icon);
         setInStock(prize.inStock);
+        setTeacherId(prize.teacherId || '');
       } else { // Create mode
         setName('');
         setPoints('0');
         setIcon('Gift');
         setInStock(true);
+        setTeacherId('');
       }
     }
   }, [prize, isOpen]);
@@ -66,12 +71,12 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
     }
 
     if (isEditing && prize) {
-      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, addedBy: 'Admin' };
+      const updatedPrize: Prize = { ...prize, name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, addedBy: 'Admin' };
       await updatePrize(updatedPrize);
       playSound('success');
       toast({ title: 'Prize updated!' });
     } else {
-      const newPrize = { name, points: pointsValue, icon, inStock, addedBy: 'Admin' };
+      const newPrize = { name, points: pointsValue, icon, inStock, teacherId: teacherId || undefined, addedBy: 'Admin' };
       await addPrize(newPrize);
       playSound('success');
       toast({ title: 'Prize added!' });
@@ -105,6 +110,20 @@ export function PrizeModal({ isOpen, setIsOpen, prize }: PrizeModalProps) {
                 <DynamicIcon name={icon} className="w-6 h-6 text-primary" />
               </div>
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="prize-teacher">Visibility</Label>
+            <Select value={teacherId} onValueChange={setTeacherId}>
+              <SelectTrigger id="prize-teacher">
+                <SelectValue placeholder="All Teachers (School-wide)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Teachers (School-wide)</SelectItem>
+                {teachers.map(t => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}'s Prizes</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
             <div className="space-y-0.5">

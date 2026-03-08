@@ -188,6 +188,16 @@ function PrizeDashboard({
             </div>
         );
     }
+    
+    const visiblePrizes = (prizes || [])
+        .filter(p => p.inStock)
+        .filter(p => {
+            if (!p.teacherId) { // school-wide prize
+                return true;
+            }
+            return student.teacherIds?.includes(p.teacherId) ?? false;
+        })
+        .sort((a, b) => a.points - b.points);
 
     return (
         <TooltipProvider>
@@ -217,14 +227,14 @@ function PrizeDashboard({
                       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
                           {/* Prizes Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-fit">
-                              {(!prizes || prizes.filter(p => p.inStock).length === 0) ? (
+                              {visiblePrizes.length === 0 ? (
                                   <div className="col-span-full py-20 text-center bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border">
                                       <ShoppingBasket className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
                                       <p className="font-black text-2xl text-muted-foreground">The shop is empty</p>
                                       <p className="text-sm text-muted-foreground/60 font-medium mt-2 uppercase tracking-widest">Check back soon for new rewards!</p>
                                   </div>
                               ) : (
-                                  prizes.filter(p => p.inStock).sort((a, b) => a.points - b.points).map((prize: Prize, index) => {
+                                  visiblePrizes.map((prize: Prize, index) => {
                                       const canAfford = student.points >= prize.points;
                                       const isHovered = hoveredPrize === prize.id;
 
@@ -322,7 +332,7 @@ function PrizeDashboard({
                 </main>
                  <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
-                    onOpenChange={setConfirmingPrize}
+                    onOpenChange={() => setConfirmingPrize(null)}
                     student={student}
                     prize={confirmingPrize}
                     onConfirm={(quantity) => confirmingPrize && handleRedeemReward(confirmingPrize, quantity)}

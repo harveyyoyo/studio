@@ -33,6 +33,7 @@ export interface Student {
   nfcId: string;
   categoryPoints?: { [key: string]: number };
   earnedAchievements?: { achievementId: string; earnedAt: number }[];
+  teacherIds?: string[];
 }
 
 export interface Coupon {
@@ -56,6 +57,7 @@ export interface Prize {
   icon: string;
   inStock: boolean;
   addedBy?: string;
+  teacherId?: string;
 }
 
 export interface Achievement {

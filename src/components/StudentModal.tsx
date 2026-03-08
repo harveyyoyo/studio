@@ -18,10 +18,12 @@ import {
 } from '@/components/ui/select';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Class } from '@/lib/types';
+import type { Student, Class, Teacher } from '@/lib/types';
 import { useFirestore } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { ScrollArea } from './ui/scroll-area';
+import { Checkbox } from './ui/checkbox';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -29,9 +31,10 @@ interface StudentModalProps {
   student: Student | null;
   allStudents: Student[];
   allClasses: Class[];
+  allTeachers: Teacher[];
 }
 
-export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses }: StudentModalProps) {
+export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses, allTeachers }: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
   const firestore = useFirestore();
   const [firstName, setFirstName] = useState('');
@@ -41,6 +44,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [points, setPoints] = useState('0');
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
+  const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -56,6 +60,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setPoints(student.points.toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
+        setSelectedTeacherIds(student.teacherIds || []);
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -64,6 +69,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setPoints('0');
         setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
+        setSelectedTeacherIds([]);
       }
     }
   }, [student, isOpen]);
@@ -96,7 +102,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         nickname: nickname || undefined,
         points: parseInt(points) || 0, 
         classId: finalClassId, 
-        nfcId 
+        nfcId,
+        teacherIds: selectedTeacherIds,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -110,6 +117,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         nickname: nickname || undefined,
         points: parseInt(points) || 0,
         classId: finalClassId,
+        teacherIds: selectedTeacherIds,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -162,6 +170,29 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                 {allClasses?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Assign to Teacher(s)</Label>
+            <ScrollArea className="h-32 rounded-md border p-2">
+              <div className="space-y-2">
+                {allTeachers.map(teacher => (
+                  <div key={teacher.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`teacher-${teacher.id}`}
+                      checked={selectedTeacherIds.includes(teacher.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedTeacherIds(prev => [...prev, teacher.id]);
+                        } else {
+                          setSelectedTeacherIds(prev => prev.filter(id => id !== teacher.id));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`teacher-${teacher.id}`} className="font-normal">{teacher.name}</Label>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
         </div>
         <DialogFooter>

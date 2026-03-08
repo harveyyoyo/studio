@@ -807,11 +807,13 @@ function AdminDashboardInner() {
           student={editingStudent}
           allStudents={students || []}
           allClasses={classes || []}
+          allTeachers={teachers || []}
         />
         <PrizeModal
           isOpen={isPrizeModalOpen}
           setIsOpen={setIsPrizeModalOpen}
           prize={editingPrize}
+          teachers={teachers || []}
         />
         <CategoryModal
           isOpen={isCategoryModalOpen}
