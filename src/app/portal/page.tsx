@@ -86,7 +86,7 @@ export default function PortalPage() {
 
             <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 text-center">
-                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm">Where to?</h2>
+                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm">Get Started</h2>
                 </motion.div>
 
                 <div className="flex flex-col gap-4">

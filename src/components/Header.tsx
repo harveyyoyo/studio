@@ -1,3 +1,4 @@
+
 'use client';
 import { usePathname } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -101,7 +102,7 @@ export default function Header() {
             </div>
             <div className="text-center">
               {loginState === 'school' && schoolId && (
-                <span className="font-black text-2xl text-primary truncate">{schoolName}</span>
+                <Link href={`/s/${schoolId}`} className="font-black text-2xl text-primary truncate no-underline">{schoolName}</Link>
               )}
             </div>
             <div className="flex items-center justify-end gap-2">
@@ -153,9 +154,9 @@ export default function Header() {
 
         {/* Center: School Name */}
         {loginState === 'school' && schoolId && (
-            <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
+            <Link href={`/s/${schoolId}`} className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
                 <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md font-body">{schoolName}</span>
-            </div>
+            </Link>
         )}
 
         {/* Right: Actions */}
