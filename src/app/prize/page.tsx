@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,6 +28,7 @@ import {
     ShoppingBasket,
     Plus,
     Minus,
+    Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -366,10 +368,11 @@ export default function PrizePage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-                <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-                    <motion.div initial={{ x: '-100%' }} animate={{ x: '100%' }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-full h-full bg-primary" />
-                </div>
+            <div className="min-h-screen flex items-center justify-center">
+                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading Kiosk...
+                </Button>
             </div>
         );
     }

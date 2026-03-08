@@ -6,7 +6,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -368,7 +368,14 @@ export default function DeveloperPage() {
   };
 
   if (!isInitialized || loginState !== 'developer' || isUserLoading) {
-    return <p>Loading...</p>;
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Loading...
+            </Button>
+        </div>
+    );
   }
 
   return (

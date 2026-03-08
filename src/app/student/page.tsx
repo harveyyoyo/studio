@@ -43,6 +43,7 @@ import {
   Settings,
   Lock,
   Unlock,
+  Loader2
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -507,10 +508,12 @@ useEffect(() => {
 
   if (!isInitialized || loginState !== 'school') {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-16 h-16 bg-slate-200 rounded-2xl animate-pulse mb-4" />
-        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Initialising Kiosk...</p>
-      </div>
+        <div className="min-h-screen flex items-center justify-center">
+            <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Initializing Kiosk...
+            </Button>
+        </div>
     );
   }
 

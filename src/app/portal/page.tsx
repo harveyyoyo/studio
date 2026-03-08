@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, ChevronRight } from 'lucide-react';
+import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, ChevronRight, Loader2 } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from '@/components/ui/button';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
@@ -25,10 +26,11 @@ export default function PortalPage() {
 
     if (!isInitialized || loginState !== 'school') {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-                <div className="w-12 h-1 bg-muted rounded-full overflow-hidden">
-                    <motion.div initial={{ x: '-100%' }} animate={{ x: '100%' }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-full h-full bg-primary" />
-                </div>
+            <div className="min-h-screen flex items-center justify-center">
+                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading Portal...
+                </Button>
             </div>
         );
     }
