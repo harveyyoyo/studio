@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -360,7 +361,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-background/10 border-b border-border/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div>
-                            <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Faculty Portal</h1>
+                            <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</h1>
                             <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-2' : 'text-primary'}`}>{teacherName}</p>
                             <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Generate coupon sheets or award points directly.</p>
                         </div>
@@ -649,7 +650,10 @@ export default function TeacherPage() {
     if (!isInitialized || loginState !== 'school') {
         return (
             <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
-                Loading...
+                <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Initializing Portal...
+                </Button>
             </div>
         );
     }
@@ -671,7 +675,7 @@ export default function TeacherPage() {
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Faculty Portal</CardTitle>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
                             <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Select your name to start granting rewards.</CardDescription>
                         </div>
                     </CardHeader>

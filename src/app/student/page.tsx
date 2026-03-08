@@ -540,7 +540,7 @@ useEffect(() => {
         )}>
           <StudentScanner
             onStudentFound={setActiveStudentId}
-            title="Student Kiosk"
+            title="Student Portal"
             isLocked={isKioskLocked}
             setIsLocked={setIsKioskLocked}
             onUnlockRequest={handleUnlockRequest}

@@ -37,8 +37,8 @@ export default function PortalPage() {
 
     const portals = [
         ...(isAdmin ? [{ id: 'admin', href: '/admin', title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog, color: 'destructive' }] : []),
-        { id: 'print', href: '/teacher', title: 'Print Coupons', description: 'Generate sheets for teachers.', icon: Printer, color: 'chart-2' },
-        { id: 'redeem', href: '/student', title: 'Redeem Coupons', description: 'Scan student ID or check points.', icon: GraduationCap, color: 'chart-1' },
+        { id: 'print', href: '/teacher', title: 'Teacher Portal', description: 'Print coupons or award points directly to students.', icon: Printer, color: 'chart-2' },
+        { id: 'redeem', href: '/student', title: 'Student Portal', description: 'Redeem coupon codes, view points, and check transaction history.', icon: GraduationCap, color: 'chart-1' },
         { id: 'prize', href: '/prize', title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
         { id: 'fame', href: '/halloffame', title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy, color: 'chart-5' },
     ];
