@@ -95,12 +95,12 @@ export default function Header() {
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
             <div className="flex justify-start">
                  <Link href="/" data-main-home-button="true" className="inline-block">
-                    <Logo className="h-5 w-auto" />
+                    <Logo className="h-4 w-auto" />
                 </Link>
             </div>
             <div className="text-center">
               {loginState === 'school' && schoolId && (
-                <span className="font-black text-lg text-primary truncate">{schoolName}</span>
+                <span className="font-black text-2xl text-primary truncate">{schoolName}</span>
               )}
             </div>
             <div className="flex items-center justify-end gap-2">
