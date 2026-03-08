@@ -3,6 +3,7 @@
 import type { Coupon } from '@/lib/types';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const { settings } = useSettings();
@@ -23,8 +24,11 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           NEW
         </div>
       )}
-      <div className={cn("font-bold text-[10px] uppercase tracking-wider px-1", isColored ? '' : 'text-muted-foreground')}>
-        {title}
+      <div className="flex items-center gap-1 mb-1">
+        <Image src="/logo coupon.png" alt="Logo" width={20} height={20} className="object-contain" />
+        <div className={cn("font-bold text-[10px] uppercase tracking-wider px-1", isColored ? '' : 'text-muted-foreground')}>
+          {title}
+        </div>
       </div>
       <div className={cn("w-full flex items-center justify-center gap-3 border-y my-1 py-1", isColored ? 'border-[currentColor]/20' : 'border-border')}>
         <div className={cn("font-headline text-3xl font-extrabold flex flex-col items-center leading-none", !isColored && 'text-foreground')}>

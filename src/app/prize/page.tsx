@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -36,6 +35,76 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+
+function ConfirmRedemptionDialog({
+    student,
+    prize,
+    isOpen,
+    onOpenChange,
+    onConfirm
+}: {
+    student: Student | null,
+    prize: Prize | null,
+    isOpen: boolean,
+    onOpenChange: (open: boolean) => void,
+    onConfirm: (quantity: number) => void
+}) {
+    const [quantity, setQuantity] = useState(1);
+
+    useEffect(() => {
+        if (isOpen) {
+            setQuantity(1);
+        }
+    }, [isOpen]);
+
+    if (!prize || !student) return null;
+
+    const totalCost = prize.points * quantity;
+    const canAfford = student.points >= totalCost;
+    const remainingPoints = student.points - totalCost;
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        You are redeeming <span className="font-bold">{prize.name}</span>.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="flex items-center gap-4">
+                        <Label htmlFor="quantity" className="text-right">
+                            Quantity
+                        </Label>
+                        <Input
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            value={quantity}
+                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-24"
+                        />
+                    </div>
+                    <div className="text-sm space-y-1 bg-secondary p-3 rounded-lg">
+                        <div className="flex justify-between"><span>Total Cost:</span> <span className="font-bold">{totalCost.toLocaleString()} pts</span></div>
+                        <div className={`flex justify-between ${!canAfford ? 'text-destructive' : ''}`}><span>Your balance after:</span> <span className="font-bold">{remainingPoints.toLocaleString()} pts</span></div>
+                    </div>
+                    {!canAfford && <p className="text-sm text-destructive font-bold text-center">You don't have enough points for this quantity.</p>}
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => onOpenChange(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onConfirm(quantity)} disabled={!canAfford}>
+                        Confirm
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
 
 function PrizeActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
     const firestore = useFirestore();
@@ -90,6 +159,7 @@ function PrizeDashboard({
     const playSound = useArcadeSound();
     const [hoveredPrize, setHoveredPrize] = useState<string | null>(null);
     const { settings } = useSettings();
+    const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
 
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
@@ -97,13 +167,15 @@ function PrizeDashboard({
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
-    const handleRedeemReward = async (prize: Prize) => {
-        await redeemPrize(student!.id, prize);
+    const handleRedeemReward = async (prize: Prize, quantity: number) => {
+        if (!student) return;
+        await redeemPrize(student.id, prize, quantity);
         playSound('redeem');
         toast({
             title: 'Reward Redeemed!',
-            description: `Successfully redeemed ${prize.name}.`,
+            description: `Successfully redeemed ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}.`,
         });
+        setConfirmingPrize(null);
     };
 
     if (studentLoading || prizesLoading || !student) {
@@ -202,7 +274,7 @@ function PrizeDashboard({
                                               </div>
 
                                               <Button 
-                                                  onClick={() => handleRedeemReward(prize)} 
+                                                  onClick={() => setConfirmingPrize(prize)}
                                                   disabled={!canAfford}
                                                   className={cn(
                                                       "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
@@ -248,6 +320,13 @@ function PrizeDashboard({
                     </CardContent>
                   </Card>
                 </main>
+                 <ConfirmRedemptionDialog
+                    isOpen={!!confirmingPrize}
+                    onOpenChange={setConfirmingPrize}
+                    student={student}
+                    prize={confirmingPrize}
+                    onConfirm={(quantity) => confirmingPrize && handleRedeemReward(confirmingPrize, quantity)}
+                />
             </div>
         </TooltipProvider>
     );

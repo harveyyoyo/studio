@@ -1,4 +1,3 @@
-
 import {
   doc,
   setDoc,
@@ -551,7 +550,7 @@ export const deductPointsFromMultipleStudents = async (firestore: Firestore, sch
     }
 }
 
-export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize) => {
+export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize, quantity: number) => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   try {
     await runTransaction(firestore, async (transaction) => {
@@ -562,20 +561,21 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
       }
 
       const studentData = studentDoc.data() as Student;
+      const totalCost = prize.points * quantity;
 
-      if (studentData.points < prize.points) {
+      if (studentData.points < totalCost) {
         throw new Error("Not enough points.");
       }
 
       const newHistoryItem: HistoryItem = {
-        desc: `Redeemed: ${prize.name}`,
-        amount: -prize.points,
+        desc: `Redeemed: ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}`,
+        amount: -totalCost,
         date: Date.now(),
       };
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
 
-      transaction.update(studentRef, { points: studentData.points - prize.points });
+      transaction.update(studentRef, { points: studentData.points - totalCost });
       transaction.set(activityRef, newHistoryItem);
     });
   } catch (e) {
@@ -584,7 +584,7 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
       new FirestorePermissionError({
         path: studentRef.path,
         operation: 'update',
-        requestResourceData: { prizeId: prize.id },
+        requestResourceData: { prizeId: prize.id, quantity },
       })
     );
     throw e;

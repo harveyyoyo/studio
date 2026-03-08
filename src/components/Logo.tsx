@@ -1,12 +1,18 @@
 'use client';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export default function Logo({ className }: { className?: string }) {
   return (
-    <div className={cn("relative text-foreground", className)}>
-       <svg viewBox="0 0 96 36" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={cn("w-full h-full", className)}>
-        <path fillRule="evenodd" clipRule="evenodd" d="M0 0 H96 V36 H0 Z M91 2H5C3.34315 2 2 3.34315 2 5V12.5C3.38071 12.5 4.5 13.6193 4.5 15V21C4.5 22.3807 3.38071 23.5 2 23.5V31C2 32.6569 3.34315 34 5 34H91C92.6569 34 94 32.6569 94 31V23.5C92.6193 23.5 91.5 22.3807 91.5 21V15C91.5 13.6193 92.6193 12.5 94 12.5V5C94 3.34315 92.6569 2 91 2ZM20 10H18V26H20V10ZM24 10H22V26H24V10ZM28 10H26V26H28V10ZM32 10H30V26H32V10ZM36 10H34V26H36V10ZM48 15.1716L52.2426 19.4142L53.6568 18L48 12.3431L42.3431 18L43.7574 19.4142L48 15.1716ZM48 19.1716L52.2426 23.4142L53.6568 22L48 16.3431L42.3431 22L43.7574 23.4142L48 19.1716ZM48 23.1716L52.2426 27.4142L53.6568 26L48 20.3431L42.3431 26L43.7574 27.4142L48 23.1716ZM62 10H60V26H62V10ZM66 10H64V26H66V10ZM70 10H68V26H70V10ZM74 10H72V26H74V10ZM78 10H76V26H78V10Z" />
-       </svg>
+    <div className={cn("relative flex items-center justify-center", className)}>
+       <Image 
+         src="/logo coupon.png" 
+         alt="levelUp EDU Logo" 
+         width={100} 
+         height={42} 
+         className="w-full h-auto object-contain"
+         priority
+       />
     </div>
   );
 }

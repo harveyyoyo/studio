@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -64,7 +63,7 @@ interface AppContextType {
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
-  redeemPrize: (studentId: string, prize: Prize) => Promise<void>;
+  redeemPrize: (studentId: string, prize: Prize, quantity: number) => Promise<void>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<void>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
@@ -173,9 +172,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbDeductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason);
   }, [firestore, schoolId]);
 
-  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize) => {
+  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbRedeemPrize(firestore, schoolId, studentId, prize);
+    return dbRedeemPrize(firestore, schoolId, studentId, prize, quantity);
   }, [firestore, schoolId]);
 
   const addPrize_ = useCallback((p: Omit<Prize, 'id'>) => {

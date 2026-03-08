@@ -1,6 +1,5 @@
-
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
@@ -10,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher, Student, Class } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus } from 'lucide-react';
+import type { Coupon, Category, Teacher, Student, Class, HistoryItem } from '@/lib/types';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -25,7 +24,7 @@ import {
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,6 +32,97 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+
+function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; students: Student[], classes: Class[] }) {
+    const [redemptions, setRedemptions] = useState<(HistoryItem & { studentName: string; studentClass: string })[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const firestore = useFirestore();
+
+    const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
+    const getClassName = (classId: string) => classMap.get(classId) || 'Unassigned';
+
+    useEffect(() => {
+        if (!students || !schoolId || !firestore) {
+            setIsLoading(false);
+            return;
+        }
+
+        const fetchRedemptions = async () => {
+            setIsLoading(true);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const allRedemptions: (HistoryItem & { studentName: string; studentClass: string })[] = [];
+
+            // This is inefficient and will cause many reads on a large dataset.
+            for (const student of students) {
+                const activitiesRef = collection(firestore, `schools/${schoolId}/students/${student.id}/activities`);
+                const q = query(activitiesRef, where('date', '>=', today.getTime()));
+                
+                try {
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.forEach(doc => {
+                        const activity = doc.data() as HistoryItem;
+                        if (activity.desc.startsWith('Redeemed:')) {
+                            allRedemptions.push({
+                                studentName: `${student.firstName} ${student.lastName}`,
+                                studentClass: getClassName(student.classId || ''),
+                                ...activity
+                            });
+                        }
+                    });
+                } catch (e) {
+                    console.error(`Could not fetch activities for student ${student.id}`, e);
+                }
+            }
+            
+            setRedemptions(allRedemptions.sort((a, b) => b.date - a.date));
+            setIsLoading(false);
+        };
+
+        fetchRedemptions();
+    }, [students, schoolId, firestore, classMap]);
+
+    return (
+        <Card className="md:col-span-2 border-t-4 border-chart-3">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Gift className="w-5 h-5 text-chart-3" />
+                    Today's Prize Redemptions
+                </CardTitle>
+                <CardDescription>
+                    Prizes redeemed by all students today.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ScrollArea className="h-72">
+                    {isLoading ? (
+                        <div className="space-y-2 pr-4">
+                            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                        </div>
+                    ) : redemptions.length > 0 ? (
+                        <ul className="space-y-2 pr-4">
+                            {redemptions.map((item, index) => (
+                                <li key={index} className="flex justify-between items-center bg-secondary/20 p-3 rounded-lg border">
+                                    <div>
+                                        <p className="font-bold">{item.desc.replace('Redeemed: ', '')}</p>
+                                        <p className="text-xs text-muted-foreground">{item.studentName} ({item.studentClass})</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-sm text-destructive">{item.amount} pts</p>
+                                        <p className="text-xs text-muted-foreground">{new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-muted-foreground italic py-8">No prizes redeemed today.</p>
+                    )}
+                </ScrollArea>
+            </CardContent>
+        </Card>
+    );
+}
 
 function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, onLogout: () => void }) {
     const { addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents } = useAppContext();
@@ -270,7 +360,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                 <div className={`px-6 pt-10 pb-12 transition-colors duration-500 ${isGraphic ? 'bg-background/10 border-b border-border/20 shadow-lg' : 'bg-white border-b'}`}>
                     <div className="max-w-4xl mx-auto flex justify-between items-center">
                         <div>
-                            <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</h1>
+                            <h1 className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Faculty Portal</h1>
                             <p className={`text-xs font-bold uppercase tracking-wider ${isGraphic ? 'text-chart-2' : 'text-primary'}`}>{teacherName}</p>
                             <p className={`text-xs mt-0.5 ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Generate coupon sheets or award points directly.</p>
                         </div>
@@ -290,7 +380,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
                                     <Printer className="w-5 h-5 text-chart-2" />
-                                    Coupon Printer
+                                    Print Coupons
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
                                     Generate a sheet of 24 unique QR codes.
@@ -472,6 +562,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                 </div>
                             </CardContent>
                         </Card>
+                        <DailyRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} />
                     </div>
                 </div>
 
@@ -580,7 +671,7 @@ export default function TeacherPage() {
                             <UserCheck className="w-10 h-10" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
+                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Faculty Portal</CardTitle>
                             <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>Select your name to start granting rewards.</CardDescription>
                         </div>
                     </CardHeader>
