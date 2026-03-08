@@ -103,7 +103,8 @@
       "properties": {
         "desc": { "type": "string", "description": "Description of the activity." },
         "amount": { "type": "number", "description": "The change in points (+ or -)." },
-        "date": { "type": "number", "description": "Timestamp of the activity." }
+        "date": { "type": "number", "description": "Timestamp of the activity." },
+        "fulfilled": { "type": "boolean", "description": "For prize redemptions, whether the prize has been physically given to the student." }
       },
       "required": ["desc", "amount", "date"]
     }

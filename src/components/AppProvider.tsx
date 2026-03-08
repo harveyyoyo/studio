@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, Achievement } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, Achievement, HistoryItem } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
@@ -21,6 +21,7 @@ import {
   awardPointsToStudent as dbAwardPointsToStudent,
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
   deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
+  togglePrizeFulfillment as dbTogglePrizeFulfillment,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -71,6 +72,7 @@ interface AppContextType {
   addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
   updateAchievement: (achievement: Achievement) => Promise<void>;
   deleteAchievement: (achievementId: string) => Promise<void>;
+  togglePrizeFulfillment: (studentId: string, activityId: string, fulfilled: boolean) => Promise<void>;
   // Backup/School management
   createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
@@ -212,6 +214,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbDeleteAchievement(firestore, schoolId, id);
   }, [firestore, schoolId]);
 
+  const togglePrizeFulfillment_ = useCallback(async (studentId: string, activityId: string, fulfilled: boolean) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbTogglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled);
+  }, [firestore, schoolId]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
@@ -230,6 +237,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
     addAchievement: addAchievement_, updateAchievement: updateAchievement_, deleteAchievement: deleteAchievement_,
+    togglePrizeFulfillment: togglePrizeFulfillment_,
     // Backup
     ...backupCtx,
   }), [
@@ -241,6 +249,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     addAchievement_, updateAchievement_, deleteAchievement_,
+    togglePrizeFulfillment_,
   ]);
 
   return (

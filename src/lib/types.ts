@@ -1,7 +1,9 @@
 export interface HistoryItem {
+  id?: string;
   desc: string;
   amount: number;
   date: number;
+  fulfilled?: boolean;
 }
 
 export interface Class {

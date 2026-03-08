@@ -567,10 +567,11 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
         throw new Error("Not enough points.");
       }
 
-      const newHistoryItem: HistoryItem = {
+      const newHistoryItem: Omit<HistoryItem, 'id'> = {
         desc: `Redeemed: ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}`,
         amount: -totalCost,
         date: Date.now(),
+        fulfilled: false,
       };
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
@@ -588,6 +589,23 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
       })
     );
     throw e;
+  }
+};
+
+export const togglePrizeFulfillment = async (firestore: Firestore, schoolId: string, studentId: string, activityId: string, fulfilled: boolean) => {
+  const activityDocRef = doc(firestore, 'schools', schoolId, 'students', studentId, 'activities', activityId);
+  try {
+    await updateDoc(activityDocRef, { fulfilled });
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: activityDocRef.path,
+        operation: 'update',
+        requestResourceData: { fulfilled },
+      })
+    );
+    throw error;
   }
 };
 

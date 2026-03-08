@@ -34,13 +34,30 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; students: Student[], classes: Class[] }) {
-    const [redemptions, setRedemptions] = useState<(HistoryItem & { studentName: string; studentClass: string })[]>([]);
+function RecentRedemptions({ schoolId, students, classes }: { schoolId: string; students: Student[], classes: Class[] }) {
+    const [redemptions, setRedemptions] = useState<(HistoryItem & { id: string; studentId: string; studentName: string; studentClass: string })[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const firestore = useFirestore();
+    const { togglePrizeFulfillment } = useAppContext();
+    const { toast } = useToast();
 
     const classMap = useMemo(() => new Map(classes.map(c => [c.id, c.name])), [classes]);
     const getClassName = (classId: string) => classMap.get(classId) || 'Unassigned';
+    
+    const handleFulfillmentToggle = async (studentId: string, activityId: string, fulfilled: boolean) => {
+        try {
+            await togglePrizeFulfillment(studentId, activityId, fulfilled);
+            setRedemptions(prev => prev.map(r =>
+                r.id === activityId ? { ...r, fulfilled } : r
+            ));
+        } catch (e) {
+            toast({
+                variant: 'destructive',
+                title: 'Update failed',
+                description: (e as Error).message || 'Could not update fulfillment status.'
+            });
+        }
+    };
 
     useEffect(() => {
         if (!students || !schoolId || !firestore) {
@@ -50,15 +67,14 @@ function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; s
 
         const fetchRedemptions = async () => {
             setIsLoading(true);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-            const allRedemptions: (HistoryItem & { studentName: string; studentClass: string })[] = [];
+            const allRedemptions: (HistoryItem & { id: string, studentId: string, studentName: string; studentClass: string })[] = [];
 
-            // This is inefficient and will cause many reads on a large dataset.
             for (const student of students) {
                 const activitiesRef = collection(firestore, `schools/${schoolId}/students/${student.id}/activities`);
-                const q = query(activitiesRef, where('date', '>=', today.getTime()));
+                const q = query(activitiesRef, where('date', '>=', sevenDaysAgo.getTime()));
                 
                 try {
                     const querySnapshot = await getDocs(q);
@@ -66,9 +82,11 @@ function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; s
                         const activity = doc.data() as HistoryItem;
                         if (activity.desc.startsWith('Redeemed:')) {
                             allRedemptions.push({
+                                studentId: student.id,
                                 studentName: `${student.firstName} ${student.lastName}`,
                                 studentClass: getClassName(student.classId || ''),
-                                ...activity
+                                ...activity,
+                                id: doc.id,
                             });
                         }
                     });
@@ -89,10 +107,10 @@ function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; s
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Gift className="w-5 h-5 text-chart-3" />
-                    Today's Prize Redemptions
+                    Recent Prize Redemptions
                 </CardTitle>
                 <CardDescription>
-                    Prizes redeemed by all students today.
+                    Prizes redeemed by students recently. Check the box once the prize has been given.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -103,11 +121,19 @@ function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; s
                         </div>
                     ) : redemptions.length > 0 ? (
                         <ul className="space-y-2 pr-4">
-                            {redemptions.map((item, index) => (
-                                <li key={index} className="flex justify-between items-center bg-secondary/20 p-3 rounded-lg border">
-                                    <div>
-                                        <p className="font-bold">{item.desc.replace('Redeemed: ', '')}</p>
-                                        <p className="text-xs text-muted-foreground">{item.studentName} ({item.studentClass})</p>
+                            {redemptions.map((item) => (
+                                <li key={item.id} className="flex justify-between items-center bg-secondary/20 p-3 rounded-lg border">
+                                    <div className="flex items-center gap-3">
+                                        <Checkbox
+                                            id={`fulfilled-${item.id}`}
+                                            checked={item.fulfilled}
+                                            onCheckedChange={(checked) => handleFulfillmentToggle(item.studentId, item.id, !!checked)}
+                                            className="w-5 h-5"
+                                        />
+                                        <div>
+                                            <p className="font-bold">{item.desc.replace('Redeemed: ', '')}</p>
+                                            <p className="text-xs text-muted-foreground">{item.studentName} ({item.studentClass})</p>
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <p className="font-bold text-sm text-destructive">{item.amount} pts</p>
@@ -117,7 +143,7 @@ function DailyRedemptions({ schoolId, students, classes }: { schoolId: string; s
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-center text-muted-foreground italic py-8">No prizes redeemed today.</p>
+                        <p className="text-center text-muted-foreground italic py-8">No recent prize redemptions.</p>
                     )}
                 </ScrollArea>
             </CardContent>
@@ -563,7 +589,7 @@ function TeacherPrinterInner({ teacherName, onLogout }: { teacherName: string, o
                                 </div>
                             </CardContent>
                         </Card>
-                        <DailyRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} />
+                        <RecentRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} />
                     </div>
                 </div>
 
