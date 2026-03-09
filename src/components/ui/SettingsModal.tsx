@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useAppContext } from '@/components/AppProvider';
 import {
     Dialog,
     DialogContent,
@@ -23,31 +24,35 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 type SettingsView = 'main' | 'advanced' | 'features';
 
-function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true }: {
+function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true, isAdmin = true }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
-    settings: any; onToggle: (key: string, val: any) => void; isImplemented?: boolean;
+    settings: any; onToggle: (key: string, val: any) => void; isImplemented?: boolean; isAdmin?: boolean;
 }) {
     const isEnabled = settings[id] || false;
     return (
-        <div className="flex items-center justify-between py-2.5 px-2">
-            <div className={`flex items-center gap-3 ${!isImplemented && 'opacity-60'}`}>
-                <div className={`p-1.5 rounded-lg transition-colors ${(isEnabled && isImplemented) ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40' : 'bg-slate-200 text-slate-400 dark:bg-slate-700'}`}>
+        <div className="flex items-start justify-between py-4 px-3 border-b border-slate-100/50 dark:border-slate-800/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 rounded-xl transition-colors">
+            <div className={`flex items-start gap-4 ${!isImplemented && 'opacity-60'} mr-6`}>
+                <div className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${(isEnabled && isImplemented) ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                     {icon}
                 </div>
-                <div>
-                    <Label className="font-bold text-sm block text-slate-700 dark:text-slate-200" htmlFor={isImplemented ? id : undefined}>{label}</Label>
-                    <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{desc}</p>
+                <div className="flex flex-col">
+                    <Label className="font-bold text-sm block text-slate-800 dark:text-slate-200 mb-1" htmlFor={isImplemented && isAdmin ? id : undefined}>{label}</Label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed w-full pr-4">{desc}</p>
                 </div>
             </div>
             {isImplemented ? (
-                <Switch
-                    id={id}
-                    checked={isEnabled}
-                    onCheckedChange={(checked) => onToggle(id, checked)}
-                    className="data-[state=checked]:bg-amber-500"
-                />
+                <div className="flex flex-col flex-shrink-0 items-end justify-start min-h-[44px]">
+                    <Switch
+                        id={id}
+                        checked={isEnabled}
+                        onCheckedChange={(checked) => onToggle(id, checked)}
+                        disabled={!isAdmin}
+                        className="data-[state=checked]:bg-amber-500"
+                    />
+                    {!isAdmin && <span className="text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest whitespace-nowrap">Admin Only</span>}
+                </div>
             ) : (
-                <div className="text-xs font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-md mt-1 whitespace-nowrap">
                     Soon
                 </div>
             )}
@@ -56,6 +61,8 @@ function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented =
 }
 
 export function SettingsModal() {
+    const { loginState } = useAppContext();
+    const isAdmin = loginState === 'admin' || loginState === 'developer';
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [view, setView] = useState<SettingsView>('main');
@@ -76,7 +83,7 @@ export function SettingsModal() {
                     <Settings className="w-5 h-5 text-slate-600 dark:text-slate-300 group-hover:rotate-45 transition-transform duration-300" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-2xl p-0 overflow-hidden border border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+            <DialogContent className="sm:max-w-2xl rounded-2xl p-0 overflow-hidden border border-slate-200 dark:bg-slate-900 dark:border-slate-800 flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <DialogHeader>
@@ -93,7 +100,7 @@ export function SettingsModal() {
                     </DialogHeader>
                 </div>
 
-                <div key={view} className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 h-full min-h-[50vh]">
                     {view === 'main' && (
                         <>
                             {/* Graphic Mode */}
@@ -258,49 +265,61 @@ export function SettingsModal() {
                     )}
 
                     {view === 'features' && (
-                        <div className="space-y-1 animate-in slide-in-from-right-4 duration-300">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Guidance</p>
-                            <FeatureRow id="enableHelperMode" label="Helper Mode" desc="Show helpful tips on each page" icon={<HelpCircle className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
-                            
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Engagement</p>
-                            <FeatureRow id="enableAchievements" label="Achievements" desc="Digital badges for milestones" icon={<Trophy className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
-                            <FeatureRow id="enableLevels" label="Level System" desc="Students level up with points" icon={<Zap className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableStreaks" label="Daily Streaks" desc="Track consecutive earning days" icon={<History className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 pb-6">
 
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Insights</p>
-                            <FeatureRow id="enableTeacherCharts" label="Teacher Charts" desc="Class-level data visualization" icon={<BarChart3 className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableAdminAnalytics" label="School Analytics" desc="School-wide data trends" icon={<ShieldCheck className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableStudentReports" label="Printable Reports" desc="PDF reports for meetings" icon={<Printer className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
+                                <FeatureRow id="enableTeacherBudgets" label="Teacher Budgets & Allowances" desc="Assign monthly point limits to teachers. Enforces strict spending caps when printing coupons or awarding points, helping you control your school's reward economy." icon={<Users className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                <FeatureRow id="enableBulkPoints" label="Bulk Class Assignment (Soon)" desc="Award points to an entire class with a single click instead of individually." icon={<Users className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                            </div>
 
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Social</p>
-                            <FeatureRow id="enableNotifications" label="In-App Alerts" desc="Notify students on points earned" icon={<Bell className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableShoutouts" label="Public Shoutouts" desc="Teacher recognition feed" icon={<MessageSquare className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><BarChart3 className="w-3.5 h-3.5" /> Actionable Insights</p>
+                                <FeatureRow id="enableAdminAnalytics" label="School Analytics Dashboard" desc="Adds an Analytics tab for school administrators to view high-level engagement trends, total points issued, historical value redeemed, and active student metrics." icon={<ShieldCheck className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                <FeatureRow id="enableTeacherCharts" label="Teacher Analytics (Soon)" desc="Allow teachers to visualize points data explicitly for their own assigned classes." icon={<BarChart3 className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                                <FeatureRow id="enableStudentReports" label="Printable Data Reports (Soon)" desc="Generate clean, printable PDF tracking reports for specific students to use during parent-teacher conferences." icon={<Printer className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                            </div>
 
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Experience</p>
-                            <FeatureRow id="enableColorPrinting" label="Color Printing" desc="Add color to coupons and student IDs" icon={<Palette className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={true} />
-                            <FeatureRow id="enablePrizeImages" label="Prize Images" desc="Upload photos for shop items" icon={<ShoppingBag className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableWishlist" label="Wishlists" desc="Students save for prizes" icon={<Star className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableQrLogin" label="QR Card Login" desc="Login via QR code scanning" icon={<LayoutDashboard className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Student Experience</p>
+                                <FeatureRow id="enableStudentPortal" label="Student Home Login Portal" desc="Creates a dedicated link allowing students to securely log in from home (or personal devices) using their School ID and Badge Number to view their balances, recent activity, and browse eligible rewards in read-only mode." icon={<Smartphone className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                <FeatureRow id="enableQrLogin" label="QR Code Fast Login (Soon)" desc="Allow students to bypass manual typing by logging into kiosks by flashing a dynamic QR code." icon={<LayoutDashboard className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                                <FeatureRow id="enablePrizeImages" label="Rich Prize Images (Soon)" desc="Upgrade the prize shop UI to display uploaded photographs for each shop item instead of just icons." icon={<ShoppingBag className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                                <FeatureRow id="enableWishlist" label="Student Wishlists (Soon)" desc="Let students pin specific prizes so they can track their savings progress towards larger goals." icon={<Star className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                            </div>
 
-                            <div className="border-t border-slate-100 dark:border-slate-800 my-2" />
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 pt-1 pb-2">Workflow</p>
-                            <FeatureRow id="enableBulkPoints" label="Bulk Assignment" desc="Points to a whole class at once" icon={<Users className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
-                            <FeatureRow id="enableAuditLog" label="System Logs" desc="Track admin changes & actions" icon={<Database className="w-4 h-4" />} settings={settings} onToggle={handleToggle} isImplemented={false} />
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Advanced Engagement</p>
+                                <FeatureRow id="enableAchievements" label="Achievement Badges" desc="Setup digital milestone badges for students when they reach specific goals or accumulation thresholds." icon={<Trophy className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                <FeatureRow id="enableLevels" label="Leveling System (Soon)" desc="Convert total lifetime points into RPG-style tiers (Level 1, Level 2, etc.) for deeper engagement." icon={<Zap className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                                <FeatureRow id="enableStreaks" label="Daily Login Streaks (Soon)" desc="Track consecutive days logged in with point multipliers." icon={<History className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Misc & Platform</p>
+                                <FeatureRow id="enableColorPrinting" label="Vibrant Color Printing" desc="Render badges and coupons in full color when sending content to the physical printer." icon={<Palette className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                <FeatureRow id="enableHelperMode" label="Interactive Guidance" desc="Display helpful tooltips and onboarding elements across all platform pages to assist new staff members natively." icon={<HelpCircle className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                            </div>
                         </div>
                     )}
                 </div>
 
-                <DialogFooter className="px-6 pb-6 pt-2 sm:justify-center border-t border-slate-100 dark:border-slate-800">
+                <DialogFooter className="px-6 py-4 sm:justify-end border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 absolute bottom-0 w-full left-0 z-10 hidden sm:flex">
                     <DialogClose asChild>
-                        <Button className="w-full sm:w-auto px-12 h-11 text-base bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 dark:shadow-none">
-                            OK
+                        <Button className="w-full sm:w-auto px-10 h-10 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md cursor-pointer">
+                            Close
                         </Button>
                     </DialogClose>
                 </DialogFooter>
+
+                {/* Mobile absolute footer */}
+                <div className="p-4 border-t border-slate-100 dark:border-slate-800 sm:hidden">
+                    <DialogClose asChild>
+                        <Button className="w-full h-12 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md cursor-pointer">
+                            Close
+                        </Button>
+                    </DialogClose>
+                </div>
             </DialogContent>
         </Dialog>
     );

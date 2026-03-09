@@ -197,6 +197,23 @@ export const addTeacher = async (firestore: Firestore, schoolId: string, teacher
   }
 };
 
+export const updateTeacher = async (firestore: Firestore, schoolId: string, updatedTeacher: Teacher) => {
+  const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', updatedTeacher.id);
+  try {
+    await updateDoc(teacherDocRef, removeUndefined({ ...updatedTeacher }));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: teacherDocRef.path,
+        operation: 'update',
+        requestResourceData: updatedTeacher
+      })
+    );
+    throw error;
+  }
+};
+
 export const deleteTeacher = async (firestore: Firestore, schoolId: string, teacherId: string) => {
   const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', teacherId);
   try {
@@ -420,10 +437,10 @@ export const awardPointsToStudent = async (firestore: Firestore, schoolId: strin
 
       const newPoints = studentData.points + points;
       const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
-      
+
       const categoryPointsUpdate = { ...studentData.categoryPoints };
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
-      
+
       transaction.update(studentRef, {
         points: newPoints,
         lifetimePoints: newLifetimePoints,
@@ -449,105 +466,105 @@ export const awardPointsToStudent = async (firestore: Firestore, schoolId: strin
 };
 
 export const awardPointsToMultipleStudents = async (firestore: Firestore, schoolId: string, studentIds: string[], points: number, description: string): Promise<{ success: boolean; message: string; count: number }> => {
-    if (points <= 0) {
-        return { success: false, message: "Points must be a positive number.", count: 0 };
+  if (points <= 0) {
+    return { success: false, message: "Points must be a positive number.", count: 0 };
+  }
+  if (!studentIds || studentIds.length === 0) {
+    return { success: false, message: "No students selected.", count: 0 };
+  }
+
+  try {
+    const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
+    const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
+
+    const batch = writeBatch(firestore);
+    let processedCount = 0;
+
+    for (const studentDoc of studentDocs) {
+      if (!studentDoc.exists()) continue;
+
+      const studentData = studentDoc.data() as Student;
+
+      const newPoints = studentData.points + points;
+      const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
+
+      const categoryPointsUpdate = { ...studentData.categoryPoints };
+      categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
+
+      batch.update(studentDoc.ref, {
+        points: newPoints,
+        lifetimePoints: newLifetimePoints,
+        categoryPoints: categoryPointsUpdate
+      });
+
+      const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
+      batch.set(mainActivityRef, { desc: description, amount: points, date: Date.now() });
+
+      processedCount++;
     }
-    if (!studentIds || studentIds.length === 0) {
-        return { success: false, message: "No students selected.", count: 0 };
-    }
 
-    try {
-        const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
-        const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
+    await batch.commit();
 
-        const batch = writeBatch(firestore);
-        let processedCount = 0;
+    return { success: true, message: `Successfully awarded points.`, count: processedCount };
 
-        for (const studentDoc of studentDocs) {
-            if (!studentDoc.exists()) continue;
-
-            const studentData = studentDoc.data() as Student;
-            
-            const newPoints = studentData.points + points;
-            const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
-            
-            const categoryPointsUpdate = { ...studentData.categoryPoints };
-            categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
-            
-            batch.update(studentDoc.ref, {
-                points: newPoints,
-                lifetimePoints: newLifetimePoints,
-                categoryPoints: categoryPointsUpdate
-            });
-
-            const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
-            batch.set(mainActivityRef, { desc: description, amount: points, date: Date.now() });
-            
-            processedCount++;
-        }
-
-        await batch.commit();
-        
-        return { success: true, message: `Successfully awarded points.`, count: processedCount };
-
-    } catch (e: any) {
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: `schools/${schoolId}/students`,
-                operation: 'write',
-                requestResourceData: { studentIds, points, description },
-            })
-        );
-        return { success: false, message: e.message || 'An unknown error occurred.', count: 0 };
-    }
+  } catch (e: any) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: `schools/${schoolId}/students`,
+        operation: 'write',
+        requestResourceData: { studentIds, points, description },
+      })
+    );
+    return { success: false, message: e.message || 'An unknown error occurred.', count: 0 };
+  }
 };
 
 export const deductPointsFromMultipleStudents = async (firestore: Firestore, schoolId: string, studentIds: string[], points: number, reason: string): Promise<{ success: boolean; message: string; count: number; }> => {
-    if (points <= 0) {
-        return { success: false, message: "Points to deduct must be a positive number.", count: 0 };
+  if (points <= 0) {
+    return { success: false, message: "Points to deduct must be a positive number.", count: 0 };
+  }
+  if (!studentIds || studentIds.length === 0) {
+    return { success: false, message: "No students selected.", count: 0 };
+  }
+
+  try {
+    const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
+    const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
+
+    const batch = writeBatch(firestore);
+    let processedCount = 0;
+
+    for (const studentDoc of studentDocs) {
+      if (!studentDoc.exists()) continue;
+
+      const studentData = studentDoc.data() as Student;
+
+      const newPoints = Math.max(0, studentData.points - points);
+
+      batch.update(studentDoc.ref, { points: newPoints });
+
+      const activityRef = doc(collection(studentDoc.ref, 'activities'));
+      batch.set(activityRef, { desc: reason, amount: -points, date: Date.now() });
+
+      processedCount++;
     }
-    if (!studentIds || studentIds.length === 0) {
-        return { success: false, message: "No students selected.", count: 0 };
-    }
 
-    try {
-        const studentRefs = studentIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
-        const studentDocs = await Promise.all(studentRefs.map(ref => getDoc(ref)));
+    await batch.commit();
 
-        const batch = writeBatch(firestore);
-        let processedCount = 0;
+    return { success: true, message: `Successfully deducted points.`, count: processedCount };
 
-        for (const studentDoc of studentDocs) {
-            if (!studentDoc.exists()) continue;
-
-            const studentData = studentDoc.data() as Student;
-            
-            const newPoints = Math.max(0, studentData.points - points);
-            
-            batch.update(studentDoc.ref, { points: newPoints });
-
-            const activityRef = doc(collection(studentDoc.ref, 'activities'));
-            batch.set(activityRef, { desc: reason, amount: -points, date: Date.now() });
-            
-            processedCount++;
-        }
-
-        await batch.commit();
-        
-        return { success: true, message: `Successfully deducted points.`, count: processedCount };
-
-    } catch (e: any) {
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: `schools/${schoolId}/students`,
-                operation: 'write',
-                requestResourceData: { studentIds, points, reason },
-            })
-        );
-        return { success: false, message: e.message || 'An unknown error occurred.', count: 0 };
-    }
+  } catch (e: any) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: `schools/${schoolId}/students`,
+        operation: 'write',
+        requestResourceData: { studentIds, points, reason },
+      })
+    );
+    return { success: false, message: e.message || 'An unknown error occurred.', count: 0 };
+  }
 }
 
 export const redeemPrize = async (firestore: Firestore, schoolId: string, studentId: string, prize: Prize, quantity: number) => {
@@ -572,6 +589,7 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
         amount: -totalCost,
         date: Date.now(),
         fulfilled: false,
+        teacherId: prize.teacherId,
       };
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));

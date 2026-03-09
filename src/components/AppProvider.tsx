@@ -16,7 +16,7 @@ import {
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass,
-  deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
+  deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
   addAchievement as dbAddAchievement, updateAchievement as dbUpdateAchievement, deleteAchievement as dbDeleteAchievement,
   awardPointsToStudent as dbAwardPointsToStudent,
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
@@ -37,12 +37,16 @@ interface AppContextType {
   // Auth
   isInitialized: boolean;
   isUserLoading: boolean;
-  loginState: 'loggedOut' | 'school' | 'developer';
+  loginState: 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
   isAdmin: boolean;
+  isTeacher: boolean;
+  userName: string | null;
+  userId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer', credentials: { schoolId?: string; passcode?: string }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string }) => Promise<boolean>;
   logout: () => void;
+  setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
   setIsKioskLocked: (locked: boolean) => void;
   // Print
@@ -55,6 +59,7 @@ interface AppContextType {
   addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
   deleteClass: (classId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
+  updateTeacher: (teacher: Teacher) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
   addCategory: (category: { name: string; points: number; color?: string; }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
@@ -127,6 +132,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const addTeacher_ = useCallback((t: Omit<Teacher, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddTeacher(firestore, schoolId, t);
+  }, [firestore, schoolId]);
+
+  const updateTeacher_ = useCallback((t: Teacher) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbUpdateTeacher(firestore, schoolId, t);
   }, [firestore, schoolId]);
 
   const deleteTeacher_ = useCallback((id: string) => {
@@ -223,12 +233,13 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     // Auth
     ...authCtx,
     isAdmin: authCtx.isAdmin,
+    isTeacher: authCtx.isTeacher,
     // Print
     ...printCtx,
     // CRUD
     addStudent: addStudent_, updateStudent: updateStudent_, deleteStudent: deleteStudent_,
     addClass: addClass_, deleteClass: deleteClass_,
-    addTeacher: addTeacher_, deleteTeacher: deleteTeacher_,
+    addTeacher: addTeacher_, updateTeacher: updateTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
     addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, awardPoints: awardPoints_,
     awardPointsToMultipleStudents: awardPointsToMultipleStudents_,
@@ -243,7 +254,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
-    addClass_, deleteClass_, addTeacher_, deleteTeacher_,
+    addClass_, deleteClass_, addTeacher_, updateTeacher_, deleteTeacher_,
     addCategory_, updateCategory_, deleteCategory_, addCoupons_,
     redeemCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,

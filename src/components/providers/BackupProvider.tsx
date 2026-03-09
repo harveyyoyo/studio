@@ -55,7 +55,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const schoolDocRef = doc(firestore, 'schools', cleanId);
         const schoolExists = (await getDoc(schoolDocRef)).exists();
-        
+
         if (schoolExists) {
             if (cleanId === 'yeshiva' || cleanId === 'schoolabc') {
                 // It's a sample school, so we'll reset it.
@@ -76,7 +76,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                             const activitiesRef = collection(studentDoc.ref, "activities");
                             const activitiesSnap = await getDocs(activitiesRef);
                             if (activitiesSnap.empty) continue;
-                            
+
                             for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
                                 const batch = writeBatch(firestore);
                                 activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
@@ -84,7 +84,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                             }
                         }
                     }
-                    
+
                     for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
                         const batch = writeBatch(firestore);
                         snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
@@ -104,11 +104,11 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         if (cleanId === 'yeshiva') {
             newPasscode = passcode || '1234';
             schoolData = YESHIVA_DATA;
-            if(name) schoolData.name = name;
+            if (name) schoolData.name = name;
         } else if (cleanId === 'schoolabc') {
             newPasscode = passcode || '1234';
             schoolData = SCHOOL_DATA;
-            if(name) schoolData.name = name;
+            if (name) schoolData.name = name;
         } else {
             newPasscode = passcode || Math.floor(1000 + Math.random() * 9000).toString();
             schoolData = {
@@ -121,6 +121,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                     nfcId: '100',
                     points: 0,
                     classId: '',
+                }],
+                teachers: [{
+                    id: 't1',
+                    name: 'Teacher',
+                    username: 'teacher',
+                    passcode: '1234',
                 }],
             };
         }

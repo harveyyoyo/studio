@@ -43,7 +43,8 @@ import {
   Settings,
   Lock,
   Unlock,
-  Loader2
+  Loader2,
+  Clock
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -62,6 +63,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
   const firestore = useFirestore();
@@ -75,33 +77,76 @@ function StudentActivityList({ schoolId, studentId }: { schoolId: string; studen
   const { data: history, isLoading } = useCollection<HistoryItem>(activitiesQuery);
 
   if (isLoading) {
-    return <div className="space-y-3 p-4">Loading history...</div>
+    return (
+      <div className="space-y-3 p-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex justify-between items-center py-3 border-b border-border/50 animate-pulse">
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded"></div>
+              <div className="h-3 w-16 bg-slate-100 dark:bg-slate-900 rounded"></div>
+            </div>
+            <div className="h-6 w-12 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
-    <ScrollArea className="h-48 w-full pr-4">
+    <ScrollArea className="h-[400px] w-full pr-4">
       <ul className="space-y-3">
         {history && history.length > 0 ? (
-          history.map((item, index) => (
-            <li
-              key={index}
-              className="flex justify-between items-center text-sm py-2 border-b border-border last:border-b-0"
-            >
-              <div>
-                <p className="font-semibold text-slate-700 dark:text-slate-200">{item.desc}</p>
-              </div>
-              <div className="flex items-center gap-3 min-h-[44px] min-w-[44px] items-center justify-end">
-                <span className="text-xs text-slate-500">{item.amount > 0 ? `+${item.amount}` : item.amount} pts</span>
-                <div className="w-8 h-8 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                  <ChevronRight size={16} />
+          history.map((item, index) => {
+            const isRedemption = item.desc.startsWith('Redeemed:');
+            const isPointGain = item.amount > 0;
+
+            return (
+              <li
+                key={index}
+                className="group p-4 rounded-2xl border border-slate-50 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all duration-300"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-bold text-slate-800 dark:text-slate-200 leading-tight">
+                    {item.desc}
+                  </p>
+                  <Badge
+                    variant={isPointGain ? 'default' : 'secondary'}
+                    className={cn(
+                      "font-black text-[10px] px-2 py-0.5 rounded-full tracking-tighter",
+                      isPointGain ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                    )}
+                  >
+                    {isPointGain ? `+${item.amount}` : item.amount} PTS
+                  </Badge>
                 </div>
-              </div>
-            </li>
-          ))
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 opacity-40">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                      {item.date ? format(new Date(item.date), 'MMM d, h:mm a') : 'Recently'}
+                    </span>
+                  </div>
+                  {isRedemption && (
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
+                      item.fulfilled
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    )}>
+                      {item.fulfilled ? 'Delivered' : 'Pending'}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })
         ) : (
-          <p className="text-center text-muted-foreground italic py-4 text-sm">
-            No transaction history yet.
-          </p>
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-slate-300" />
+            </div>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No activity found</p>
+          </div>
         )}
       </ul>
     </ScrollArea>
@@ -126,6 +171,9 @@ function StudentDashboardInner({
 
   const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
   const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+
+  const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(10);
@@ -157,7 +205,7 @@ function StudentDashboardInner({
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
-        setLogoutTimer(10);
+      setLogoutTimer(10);
     }
   }, [isKioskLocked]);
 
@@ -201,169 +249,209 @@ function StudentDashboardInner({
 
   return (
     <TooltipProvider>
-    <div className={cn(
-        `space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
-        settings.displayMode === 'app' && 'pb-24'
-    )}>
-      {/* Graphic Elements */}
-      {isGraphic && (
-        <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
-          <Star className="w-full h-full text-amber-400 fill-amber-400 animate-pulse" />
-        </div>
-      )}
-
-      {/* Hero Welcome Section */}
-      <Card className={cn("overflow-hidden shadow-xl border-t-8 border-chart-1", isGraphic ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : 'bg-card dark:bg-slate-800')}>
-        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="space-y-1 text-center md:text-left">
-            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
-            <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white">{student.firstName} {student.lastName}</h2>
+      <div
+        className={cn(
+          `space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
+          settings.displayMode === 'app' && 'pb-24'
+        )}
+        style={student.theme ? {
+          '--theme-bg': student.theme.background,
+          '--theme-text': student.theme.text,
+          '--theme-primary': student.theme.primary,
+          '--theme-card': student.theme.cardBackground,
+          '--theme-accent': student.theme.accent,
+          backgroundColor: 'var(--theme-bg)',
+          color: 'var(--theme-text)',
+        } as React.CSSProperties : undefined}
+      >
+        {/* Graphic Elements */}
+        {isGraphic && !student.theme && (
+          <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
+            <Star className="w-full h-full text-amber-400 fill-amber-400 animate-pulse" />
           </div>
-          <div className="text-center md:text-right">
-            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-0.5">Current Balance</p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-5xl md:text-7xl font-black text-slate-800 dark:text-white leading-none">
-                {student.points.toLocaleString()}
-              </span>
-              <span className="text-xl md:text-2xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
+        )}
+
+        {/* Hero Welcome Section */}
+        <Card
+          className={cn("overflow-hidden shadow-xl border-t-8 border-chart-1", isGraphic && !student.theme ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : !student.theme ? 'bg-card dark:bg-slate-800' : '')}
+          style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
+        >
+          <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="space-y-1 text-center md:text-left">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Welcome back,</p>
+              <h2 className="text-3xl md:text-5xl font-black flex items-center gap-3 mt-1">
+                {student.theme?.emoji && <span className="text-5xl md:text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>}
+                {student.firstName} {student.lastName}
+              </h2>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="text-center md:text-right">
+              <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Current Balance</p>
+              <div className="flex items-baseline gap-1.5" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>
+                <span className="text-5xl md:text-7xl font-black text-slate-800 dark:text-white leading-none">
+                  {student.points.toLocaleString()}
+                </span>
+                <span className="text-xl md:text-2xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-        {/* Left Section: Content */}
-        <div className="lg:col-span-2 space-y-5">
-          <Card className="border-none shadow-lg bg-white dark:bg-slate-900 overflow-hidden">
-            <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-              <Helper content="Enter a coupon code to add points to your account. You can type it in manually or use the camera to scan a QR code.">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <Wallet className="w-4 h-4 text-chart-1" />
-                    </div>
-                    Redeem Coupon Code
-                  </CardTitle>
-                  <div className={cn(
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+          {/* Left Section: Content */}
+          <div className="lg:col-span-2 space-y-5">
+            <Card
+              className={cn("border-none shadow-lg overflow-hidden", !student.theme ? "bg-white dark:bg-slate-900" : "")}
+              style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+            >
+              <CardHeader className="pb-3 border-b" style={student.theme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+                <Helper content="Enter a coupon code to add points to your account. You can type it in manually or use the camera to scan a QR code.">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-black flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={student.theme ? { backgroundColor: 'var(--theme-bg)' } : { backgroundColor: 'var(--theme-bg)' /* Will be overridden by classes if no theme */ }}>
+                        <Wallet className="w-4 h-4" style={student.theme ? { color: 'var(--theme-primary)' } : undefined} />
+                      </div>
+                      Redeem Coupon Code
+                    </CardTitle>
+                    <div className={cn(
                       "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
                       isKioskLocked
-                          ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                          : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
-                  )}>
+                        ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
+                    )}>
                       <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
+                    </div>
                   </div>
-                </div>
-              </Helper>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
-                  <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                    <Type className="w-4 h-4" /> Manual / USB
-                  </TabsTrigger>
-                  <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
-                    <Camera className="w-4 h-4" /> Webcam Scan
-                  </TabsTrigger>
-                </TabsList>
+                </Helper>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-12">
+                    <TabsTrigger value="manual" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                      <Type className="w-4 h-4" /> Manual / USB
+                    </TabsTrigger>
+                    <TabsTrigger value="camera" className="text-xs font-bold rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:shadow-sm flex items-center gap-2">
+                      <Camera className="w-4 h-4" /> Webcam Scan
+                    </TabsTrigger>
+                  </TabsList>
 
-                {activeTab === 'manual' ? (
-                  <div className="space-y-6">
-                    <div className="flex gap-3">
-                      <Input
-                        placeholder="Enter coupon code..."
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
-                        className="font-mono text-left tracking-widest h-14 border-2 focus-visible:ring-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/50 dark:border-slate-800"
-                        autoFocus
-                      />
-                      <Button onClick={() => handleRedeemCoupon()} className="h-14 px-10 font-black rounded-xl shadow-lg bg-chart-1 hover:bg-chart-1/90 text-white transition-all active:scale-95 uppercase tracking-widest">
-                        Redeem
-                      </Button>
-                    </div>
-                     <p className="text-xs text-center text-muted-foreground pt-2">
+                  {activeTab === 'manual' ? (
+                    <div className="space-y-6">
+                      <div className="flex gap-3">
+                        <Input
+                          placeholder="Enter coupon code..."
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => e.key === 'Enter' && handleRedeemCoupon()}
+                          className="font-mono text-left tracking-widest h-14 border-2 rounded-xl"
+                          style={student.theme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' } : undefined}
+                          autoFocus
+                        />
+                        <Button
+                          onClick={() => handleRedeemCoupon()}
+                          className="h-14 px-10 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-white"
+                          style={student.theme ? { backgroundColor: 'var(--theme-primary)' } : undefined}
+                        >
+                          Redeem
+                        </Button>
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground pt-2">
                         Available coupon codes can be viewed in the Admin panel.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
-                    <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
+                      </p>
                     </div>
+                  ) : (
+                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border-4 border-slate-100 dark:border-slate-800 shadow-inner">
+                      <video ref={videoRef as RefObject<HTMLVideoElement>} className="w-full h-full object-cover" playsInline muted />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-3/4 h-3/2 border-2 border-white/40 rounded-2xl border-dashed animate-pulse" />
+                      </div>
+                    </div>
+                  )}
+                </Tabs>
+
+                {animatedValue !== null && (
+                  <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
+                    <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
+                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
                   </div>
                 )}
-              </Tabs>
+              </CardContent>
+            </Card>
 
-              {animatedValue !== null && (
-                <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
-                  <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
+            {/* Eligible Rewards - Bottom Wide Section */}
+            <Card
+              className={cn("border-none shadow-lg", !student.theme ? "bg-white dark:bg-slate-900" : "")}
+              style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+            >
+              <CardHeader className="pb-3">
+                <Helper content="These are prizes you currently have enough points to redeem. Go to the Prize Shop to make a purchase.">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={student.theme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                      <Award className="w-4 h-4" style={student.theme ? { color: 'var(--theme-primary)' } : undefined} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-black">Eligible Rewards</CardTitle>
+                      <CardDescription className="text-xs font-medium" style={student.theme ? { color: 'var(--theme-text)', opacity: 0.7 } : undefined}>You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
+                    </div>
+                  </div>
+                </Helper>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {prizesLoading ? (
+                    [...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
+                  ) : (prizes || [])
+                    .filter(p => p.inStock && p.points <= student.points && (!p.teacherId || (student.teacherIds || []).includes(p.teacherId)) && (!p.classId || student.classId === p.classId))
+                    .sort((a, b) => b.points - a.points)
+                    .slice(0, 3)
+                    .map((reward) => (
+                      <div key={reward.id} className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group">
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                          <DynamicIcon name={reward.icon} className="w-6 h-6 text-primary" />
+                        </div>
+                        <p className="text-xs font-black text-slate-800 dark:text-white leading-tight line-clamp-1">{reward.name}</p>
+                        <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {reward.points.toLocaleString()} PTS
+                        </Badge>
+                      </div>
+                    ))}
+                  {!prizesLoading && (prizes || []).filter(p => p.inStock && p.points <= student.points).length === 0 && (
+                    <div className="col-span-full py-6 text-center text-muted-foreground text-xs font-medium uppercase tracking-widest opacity-60">
+                      Keep earning points to unlock rewards!
+                    </div>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Eligible Rewards - Bottom Wide Section */}
-          <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
-            <CardHeader className="pb-3">
-              <Helper content="These are prizes you currently have enough points to redeem. Go to the Prize Shop to make a purchase.">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <Award className="w-4 h-4 text-chart-1" />
+          {/* Right Section: Activity */}
+          <Card
+            className={cn("lg:col-span-1 border-none shadow-lg flex flex-col", !student.theme ? "bg-white dark:bg-slate-900" : "")}
+            style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)' } : undefined}
+          >
+            <CardHeader className="pb-3 border-b" style={student.theme ? { borderColor: 'var(--theme-bg)' } : undefined}>
+              <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
+                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={student.theme ? { backgroundColor: 'var(--theme-bg)' } : undefined}>
+                    <ChevronRight className="w-5 h-5 text-chart-1" style={student.theme ? { color: 'var(--theme-primary)' } : undefined} />
                   </div>
-                  <div>
-                    <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
-                    <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Go to the Prize Shop to redeem them.</CardDescription>
-                  </div>
-                </div>
+                  <span style={student.theme ? { color: 'var(--theme-text)' } : undefined}>Activity</span>
+                </CardTitle>
               </Helper>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[
-                  { name: 'Sticker Pack', cost: 50, icon: '😊', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                  { name: 'Homework Pass', cost: 100, icon: '📝', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                  { name: 'Eraser Collection', cost: 25, icon: '🧹', color: 'bg-indigo-50/50 dark:bg-indigo-900/20' },
-                ].map((reward) => (
-                  <div key={reward.name} className={`${reward.color} p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300`}>
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner">
-                      <span className="text-2xl">{reward.icon}</span>
-                    </div>
-                    <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">{reward.name}</p>
-                    <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                      {reward.cost} PTS
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="flex-1 pt-4">
+              <StudentActivityList schoolId={schoolId} studentId={student.id} />
             </CardContent>
+            <div className="p-4 border-t" style={student.theme ? { borderColor: 'var(--theme-bg)', backgroundColor: 'var(--theme-bg)' } : undefined}>
+              <Button variant="outline" onClick={onDone} className="w-full h-11 font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                style={student.theme ? { color: 'var(--theme-text)', borderColor: 'var(--theme-text)', backgroundColor: 'transparent' } : undefined}
+              >
+                <LogOut className="h-4 w-4" /> Log Out Now
+              </Button>
+            </div>
           </Card>
         </div>
-
-        {/* Right Section: Activity */}
-        <Card className="lg:col-span-1 border-none shadow-lg bg-white dark:bg-slate-900 flex flex-col">
-          <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-            <Helper content="A log of your most recent point transactions, including coupons redeemed and prizes purchased.">
-                <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <ChevronRight className="w-5 h-5 text-chart-1" />
-                  </div>
-                  Activity
-                </CardTitle>
-            </Helper>
-          </CardHeader>
-          <CardContent className="flex-1 pt-4">
-            <StudentActivityList schoolId={schoolId} studentId={student.id} />
-          </CardContent>
-          <div className="p-4 border-t border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <Button variant="outline" onClick={onDone} className="w-full h-11 font-black uppercase tracking-widest border-2 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
-              <LogOut className="h-4 w-4" /> Log Out Now
-            </Button>
-          </div>
-        </Card>
       </div>
-    </div>
     </TooltipProvider>
   );
 }
@@ -485,9 +573,9 @@ export default function StudentLoginPage() {
         window.removeEventListener('popstate', handlePopState);
       };
     }
-}, [isKioskLocked, setIsLogoutDialogOpen]);
+  }, [isKioskLocked, setIsLogoutDialogOpen]);
 
-useEffect(() => {
+  useEffect(() => {
     if (isKioskLocked) {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         // This is the standard way to trigger the confirmation prompt.
@@ -506,15 +594,13 @@ useEffect(() => {
   }, [isKioskLocked]);
 
 
-  if (!isInitialized || loginState !== 'school') {
-    return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Initializing Kiosk...
-            </Button>
-        </div>
-    );
+  if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
+    return <div className="min-h-screen flex items-center justify-center p-8 bg-background">
+      <div className="text-center space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+        <p className="text-muted-foreground font-medium animate-pulse">Loading Student Portal...</p>
+      </div>
+    </div>;
   }
 
   if (activeStudentId) {
@@ -534,9 +620,9 @@ useEffect(() => {
     <ErrorBoundary name="StudentLoginPage">
       <TooltipProvider>
         <div className={cn(
-            "flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans",
-            isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
-            settings.displayMode === 'app' && 'pb-24'
+          "flex flex-col items-center justify-center min-h-[80vh] py-8 px-4 font-sans",
+          isGraphic ? 'animate-in fade-in zoom-in-95 duration-500' : '',
+          settings.displayMode === 'app' && 'pb-24'
         )}>
           <StudentScanner
             onStudentFound={setActiveStudentId}

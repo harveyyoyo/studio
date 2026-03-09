@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
-import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, ChevronRight, Loader2 } from 'lucide-react';
+import { GraduationCap, Printer, ShoppingBag, UserCog, Trophy, ChevronRight, Loader2, Home } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
@@ -19,12 +19,12 @@ export default function PortalPage() {
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
     useEffect(() => {
-        if (isInitialized && loginState !== 'school') {
+        if (isInitialized && !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
             router.replace('/');
         }
     }, [isInitialized, loginState, router]);
 
-    if (!isInitialized || loginState !== 'school') {
+    if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
@@ -36,9 +36,10 @@ export default function PortalPage() {
     }
 
     const portals = [
-        ...(isAdmin ? [{ id: 'admin', href: '/admin', title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog, color: 'destructive' }] : []),
+        { id: 'admin', href: '/admin', title: 'Admin Portal', description: 'Manage school data and settings.', icon: UserCog, color: 'destructive' },
         { id: 'print', href: '/teacher', title: 'Teacher Portal', description: 'Print coupons or award points directly to students.', icon: Printer, color: 'chart-2' },
-        { id: 'redeem', href: '/student', title: 'Student Portal', description: 'Redeem coupon codes, view points, and check transaction history.', icon: GraduationCap, color: 'chart-1' },
+        { id: 'redeem', href: '/student', title: 'Student Kiosk', description: 'Scan your badge to redeem coupon codes and view points.', icon: GraduationCap, color: 'chart-1' },
+        ...(settings.enableStudentPortal ? [{ id: 'student-home', href: '/student-home', title: 'Student Home Portal', description: 'Log in from home to check your points and prizes.', icon: Home, color: 'chart-4' }] : []),
         { id: 'prize', href: '/prize', title: 'Prize Shop', description: 'Spend your points for awesome prizes.', icon: ShoppingBag, color: 'chart-3' },
         { id: 'fame', href: '/halloffame', title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy, color: 'chart-5' },
     ];
@@ -48,6 +49,7 @@ export default function PortalPage() {
         'chart-1': 'bg-chart-1',
         'chart-2': 'bg-chart-2',
         'chart-3': 'bg-chart-3',
+        'chart-4': 'bg-chart-4',
         'chart-5': 'bg-chart-5',
     };
 
@@ -56,6 +58,7 @@ export default function PortalPage() {
         'chart-1': 'text-chart-1',
         'chart-2': 'text-chart-2',
         'chart-3': 'text-chart-3',
+        'chart-4': 'text-chart-4',
         'chart-5': 'text-chart-5',
     };
 
@@ -65,23 +68,23 @@ export default function PortalPage() {
             <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
             {settings.graphicMode === 'graphics' && (
-              <>
-                <motion.div
-                    animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="pointer-events-none fixed -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] z-0"
-                />
-                <motion.div
-                    animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
-                    transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-                    className="pointer-events-none fixed bottom-20 left-20 h-[400px] w-[400px] rounded-full bg-chart-5/10 blur-[120px] z-0"
-                />
-                <motion.div
-                    animate={{ x: [0, 20, 0], y: [0, -30, 0] }}
-                    transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                    className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-chart-2/5 blur-[150px] z-0"
-                />
-              </>
+                <>
+                    <motion.div
+                        animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                        className="pointer-events-none fixed -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px] z-0"
+                    />
+                    <motion.div
+                        animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
+                        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+                        className="pointer-events-none fixed bottom-20 left-20 h-[400px] w-[400px] rounded-full bg-chart-5/10 blur-[120px] z-0"
+                    />
+                    <motion.div
+                        animate={{ x: [0, 20, 0], y: [0, -30, 0] }}
+                        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                        className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-chart-2/5 blur-[150px] z-0"
+                    />
+                </>
             )}
 
             <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">

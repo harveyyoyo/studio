@@ -71,6 +71,11 @@ service cloud.firestore {
         allow read: if isAuth() && request.auth.uid == uid;
       }
 
+      match /roles_teacher/{uid} {
+        allow write: if isAuth() && request.auth.uid == uid;
+        allow read: if isAuth() && request.auth.uid == uid;
+      }
+
       // Passcode stored here; never readable by clients.
       // The Cloud Function verifySchoolPasscode reads this via the admin SDK.
       match /secrets/{docId} {

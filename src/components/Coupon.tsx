@@ -18,7 +18,10 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
   } : {};
 
   return (
-    <div style={style} className={cn("p-2 border border-dashed rounded-lg flex flex-col items-center justify-between shadow-sm relative overflow-hidden text-center h-full bg-white")}>
+    <div style={style} className={cn(
+      "p-4 border-2 border-dashed rounded-2xl flex flex-col items-center justify-between shadow-xl relative overflow-hidden text-center h-full bg-white transition-all hover:scale-[1.02]",
+      !isColored && "border-slate-200"
+    )}>
       {isNew && (
         <div className="absolute top-1 right-1 bg-primary/80 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
           NEW

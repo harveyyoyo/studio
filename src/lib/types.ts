@@ -4,6 +4,7 @@ export interface HistoryItem {
   amount: number;
   date: number;
   fulfilled?: boolean;
+  teacherId?: string;
 }
 
 export interface Class {
@@ -14,6 +15,10 @@ export interface Class {
 export interface Teacher {
   id: string;
   name: string;
+  username?: string;
+  passcode?: string;
+  monthlyBudget?: number;
+  spentThisMonth?: number;
 }
 
 export interface Category {
@@ -21,6 +26,15 @@ export interface Category {
   name: string;
   points: number;
   color?: string;
+}
+
+export interface StudentTheme {
+  background: string;
+  text: string;
+  primary: string;
+  cardBackground: string;
+  accent: string;
+  emoji?: string;
 }
 
 export interface Student {
@@ -36,6 +50,7 @@ export interface Student {
   categoryPoints?: { [key: string]: number };
   earnedAchievements?: { achievementId: string; earnedAt: number }[];
   teacherIds?: string[];
+  theme?: StudentTheme;
 }
 
 export interface Coupon {
@@ -93,6 +108,7 @@ export interface BackupInfo {
 export interface Database {
   name: string;
   passcode: string;
+  adminPasscode?: string;
   // All array fields are now subcollections
   students?: Student[];
   classes?: Class[];

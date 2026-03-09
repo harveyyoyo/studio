@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/AppProvider';
 
 export default function Header() {
-  const { loginState, school, logoutToPortal } = useAppContext();
+  const { loginState, logout, schoolId } = useAppContext();
 
   // Do not render the header on login/kiosk pages
-  if (loginState === 'none' || loginState === 'loggedOut' || loginState === 'kiosk') {
+  if (loginState === 'loggedOut' || loginState === 'developer') {
     return null;
   }
 
@@ -19,14 +19,14 @@ export default function Header() {
         <div className="mr-4 flex">
           <Link href="/portal" className="flex items-center space-x-2">
             <School className="h-6 w-6" />
-            {school && <span className="font-bold sm:inline-block">{school.name}</span>}
+            {schoolId && <span className="font-bold sm:inline-block capitalize">{schoolId}</span>}
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-            <Button variant="outline" onClick={() => logoutToPortal()}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+          <Button variant="outline" onClick={() => logout()}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </div>
     </header>

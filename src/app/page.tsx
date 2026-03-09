@@ -18,7 +18,7 @@ export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
   const [schoolPasscode, setSchoolPasscode] = useState('');
   const [isDeveloper, setIsDeveloper] = useState(false);
-  const { login } = useAppContext();
+  const { login, isInitialized, isUserLoading } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
   const playSound = useArcadeSound();
@@ -43,8 +43,10 @@ export default function LoginPage() {
       });
       return;
     }
+
+    playSound('click');
     const success = await login('school', {
-      schoolId: schoolId,
+      schoolId: schoolId.trim(),
       passcode: schoolPasscode,
     });
     if (success) {
@@ -96,9 +98,9 @@ export default function LoginPage() {
     }
   };
 
-  // Prevent hydration mismatch
-  if (!mounted) {
-     return <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">Loading...</div>;
+  // Prevent hydration mismatch and wait for auth to be ready
+  if (!mounted || !isInitialized || isUserLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">Loading...</div>;
   }
 
   return (
@@ -112,19 +114,19 @@ export default function LoginPage() {
         <>
           <div className="absolute inset-0 z-0 opacity-20">
             <Sparkles className="absolute top-10 left-10 w-8 h-8 text-chart-1 animate-float" style={{ animationDelay: '0s' }} />
-            <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }}/>
+            <Gamepad2 className="absolute top-32 left-8 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '1s' }} />
             <Sparkles className="absolute top-40 right-16 w-6 h-6 text-chart-5 animate-float" style={{ animationDelay: '2s' }} />
-            <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-foreground/50 rotate-12 animate-float" style={{ animationDelay: '3s' }}/>
-            <Sparkles className="absolute bottom-40 left-12 w-10 h-10 text-chart-2 animate-float" style={{ animationDelay: '4s' }}/>
-            <Gamepad2 className="absolute bottom-32 right-12 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '5s' }}/>
-            <Sparkles className="absolute bottom-20 right-24 w-8 h-8 text-chart-3 animate-float" style={{ animationDelay: '6s' }}/>
+            <Gamepad2 className="absolute top-20 right-6 w-10 h-10 text-foreground/50 rotate-12 animate-float" style={{ animationDelay: '3s' }} />
+            <Sparkles className="absolute bottom-40 left-12 w-10 h-10 text-chart-2 animate-float" style={{ animationDelay: '4s' }} />
+            <Gamepad2 className="absolute bottom-32 right-12 w-12 h-12 text-foreground/50 -rotate-12 animate-float" style={{ animationDelay: '5s' }} />
+            <Sparkles className="absolute bottom-20 right-24 w-8 h-8 text-chart-3 animate-float" style={{ animationDelay: '6s' }} />
           </div>
           <div className="absolute inset-0 z-0 bg-gradient-to-br from-chart-1/10 via-chart-5/10 to-chart-3/10" />
         </>
       )}
 
       <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
-        
+
         {/* Login Card - Unified DOM */}
         <div className={cn(
           "w-full rounded-[2.5rem] p-8 relative transition-all border",
@@ -137,8 +139,8 @@ export default function LoginPage() {
               className="justify-center"
             >
               <div className="flex flex-col items-center">
-                 <Logo className="h-20 w-auto mb-4" />
-                 <h1 className="text-3xl font-bold font-headline text-foreground">
+                <Logo className="h-20 w-auto mb-4" />
+                <h1 className="text-3xl font-bold font-headline text-foreground">
                   levelUp EDU
                 </h1>
                 <p className="text-base text-muted-foreground">

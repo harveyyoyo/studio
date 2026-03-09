@@ -195,7 +195,7 @@ function PrizeDashboard({
             </div>
         );
     }
-    
+
     const visiblePrizes = (prizes || [])
         .filter(p => {
             if (!p.inStock) return false;
@@ -207,136 +207,183 @@ function PrizeDashboard({
 
     return (
         <TooltipProvider>
-            <div className={cn("min-h-screen bg-background text-foreground relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24')}>
-                 {/* Noise overlay */}
+            <div
+                className={cn("min-h-screen relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24', !student.theme ? "bg-background text-foreground" : "")}
+                style={student.theme ? {
+                    '--theme-bg': student.theme.background,
+                    '--theme-text': student.theme.text,
+                    '--theme-primary': student.theme.primary,
+                    '--theme-card': student.theme.cardBackground,
+                    '--theme-accent': student.theme.accent,
+                    backgroundColor: 'var(--theme-bg)',
+                    color: 'var(--theme-text)',
+                } as React.CSSProperties : undefined}
+            >
+                {/* Noise overlay */}
                 <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
-                <main className="relative z-10 w-full max-w-6xl px-8">
-                  <Card className="border-t-8 border-chart-3 shadow-2xl mt-12 mb-24 bg-card/80 backdrop-blur-md">
-                    <CardContent className="p-6 md:p-8">
-                      {/* Header */}
-                      <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
-                          <div className="text-center md:text-left">
-                              <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
-                                  <ShoppingBag className="w-12 h-12 text-chart-3" /> Prize Shop
-                              </h2>
-                              <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                                  Redeem your points for rewards
-                              </p>
-                          </div>
-                          <div className="bg-card/40 backdrop-blur-md border-2 border-primary/20 rounded-3xl p-6 px-10 text-center shadow-xl">
-                              <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{student.firstName} {student.lastName}</p>
-                              <p className="text-4xl font-black text-primary tracking-tighter">{(student.points || 0).toLocaleString()} <span className="text-sm text-primary/60 font-bold uppercase tracking-widest ml-1">pts</span></p>
-                          </div>
-                      </div>
+                <main className="relative z-10 w-full max-w-[1400px] px-8">
+                    <Card
+                        className={cn("border-t-8 shadow-2xl mt-12 mb-24 backdrop-blur-md", !student.theme ? "border-chart-3 bg-card/80" : "bg-card/40")}
+                        style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
+                    >
+                        <CardContent className="p-6 md:p-8">
+                            {/* Header */}
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-16">
+                                <div className="text-center md:text-left">
+                                    <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
+                                        {student.theme?.emoji ? (
+                                            <span className="text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>
+                                        ) : (
+                                            <ShoppingBag className="w-12 h-12" style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'var(--theme-primary)' }} />
+                                        )}
+                                        <span style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'var(--theme-primary)' }}>Prize Shop</span>
+                                    </h2>
+                                    <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
+                                        Redeem your points for rewards
+                                    </p>
+                                </div>
+                                <div className="backdrop-blur-md border-2 rounded-3xl p-6 px-10 text-center shadow-xl" style={student.theme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-primary)' } : { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-primary)', opacity: 0.2 }}>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{student.firstName} {student.lastName}</p>
+                                    <p className="text-4xl font-black tracking-tighter" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: student.theme ? 'var(--theme-primary)' : undefined, opacity: 0.6 }}>pts</span></p>
+                                </div>
+                            </div>
 
-                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
-                          {/* Prizes Grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 h-fit">
-                              {visiblePrizes.length === 0 ? (
-                                  <div className="col-span-full py-20 text-center bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border">
-                                      <ShoppingBasket className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
-                                      <p className="font-black text-2xl text-muted-foreground">The shop is empty</p>
-                                      <p className="text-sm text-muted-foreground/60 font-medium mt-2 uppercase tracking-widest">Check back soon for new rewards!</p>
-                                  </div>
-                              ) : (
-                                  visiblePrizes.map((prize: Prize, index) => {
-                                      const canAfford = student.points >= prize.points;
-                                      const isHovered = hoveredPrize === prize.id;
+                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
+                                {/* Prizes Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 h-fit">
+                                    {visiblePrizes.length === 0 ? (
+                                        <div className="col-span-full py-20 text-center bg-card/30 backdrop-blur-sm rounded-3xl border-2 border-dashed border-border">
+                                            <ShoppingBasket className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
+                                            <p className="font-black text-2xl text-muted-foreground">The shop is empty</p>
+                                            <p className="text-sm text-muted-foreground/60 font-medium mt-2 uppercase tracking-widest">Check back soon for new rewards!</p>
+                                        </div>
+                                    ) : (
+                                        visiblePrizes.map((prize: Prize, index) => {
+                                            const canAfford = student.points >= prize.points;
+                                            const isHovered = hoveredPrize === prize.id;
 
-                                      return (
-                                          <motion.div
-                                              key={prize.id}
-                                              initial={{ opacity: 0, y: 20 }}
-                                              animate={{ opacity: 1, y: 0 }}
-                                              transition={{ delay: index * 0.05 }}
-                                              onMouseEnter={() => setHoveredPrize(prize.id)}
-                                              onMouseLeave={() => setHoveredPrize(null)}
-                                              className={cn(
-                                                  "group relative flex flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300",
-                                                  canAfford ? "bg-card/40 backdrop-blur-sm hover:bg-card hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "bg-card/10 opacity-60 grayscale cursor-not-allowed"
-                                              )}
-                                          >
-                                               {/* SVG Border Draw Animation */}
-                                              {isHovered && canAfford && (
-                                                  <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible rounded-3xl z-20">
-                                                      <motion.rect
-                                                          initial={{ pathLength: 0 }}
-                                                          animate={{ pathLength: 1 }}
-                                                          transition={{ duration: 0.6 }}
-                                                          width="100%"
-                                                          height="100%"
-                                                          rx="24"
-                                                          className="stroke-primary stroke-[3px] fill-none"
-                                                      />
-                                                  </svg>
-                                              )}
+                                            return (
+                                                <motion.div
+                                                    key={prize.id}
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: index * 0.05 }}
+                                                    onMouseEnter={() => setHoveredPrize(prize.id)}
+                                                    onMouseLeave={() => setHoveredPrize(null)}
+                                                    className={cn(
+                                                        "group relative flex flex-col items-center justify-between text-center p-8 rounded-3xl border-2 border-transparent transition-all duration-300 backdrop-blur-sm",
+                                                        canAfford ? "hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1" : "opacity-60 grayscale cursor-not-allowed"
+                                                    )}
+                                                    style={student.theme ? {
+                                                        backgroundColor: canAfford ? 'var(--theme-card)' : 'transparent',
+                                                        borderColor: (isHovered && canAfford) ? 'var(--theme-primary)' : 'transparent'
+                                                    } : {
+                                                        backgroundColor: canAfford ? 'hsl(var(--card) / 0.4)' : 'hsl(var(--card) / 0.1)'
+                                                    }}
+                                                >
+                                                    {/* SVG Border Draw Animation */}
+                                                    {isHovered && canAfford && (
+                                                        <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible rounded-3xl z-20">
+                                                            <motion.rect
+                                                                initial={{ pathLength: 0 }}
+                                                                animate={{ pathLength: 1 }}
+                                                                transition={{ duration: 0.6 }}
+                                                                width="100%"
+                                                                height="100%"
+                                                                rx="24"
+                                                                className="stroke-primary stroke-[3px] fill-none"
+                                                            />
+                                                        </svg>
+                                                    )}
 
-                                              <div className={cn(
-                                                  "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500",
-                                                  canAfford ? "bg-primary/10 text-primary group-hover:scale-110 group-hover:rotate-6" : "bg-muted text-muted-foreground",
-                                                  isHovered && canAfford ? "grayscale-0" : "grayscale"
-                                              )}>
-                                                  <DynamicIcon name={prize.icon} className="w-10 h-10" />
-                                              </div>
+                                                    <div className={cn(
+                                                        "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500",
+                                                        canAfford ? "group-hover:scale-110 group-hover:rotate-6" : "",
+                                                        isHovered && canAfford ? "grayscale-0" : "grayscale"
+                                                    )}
+                                                        style={student.theme ? {
+                                                            backgroundColor: canAfford ? 'var(--theme-bg)' : 'transparent',
+                                                            color: canAfford ? 'var(--theme-primary)' : 'var(--theme-text)'
+                                                        } : {
+                                                            backgroundColor: canAfford ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--muted))',
+                                                            color: canAfford ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
+                                                        }}
+                                                    >
+                                                        <DynamicIcon name={prize.icon} className="w-10 h-10" />
+                                                    </div>
 
-                                              <div className="mb-6">
-                                                  <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1">{prize.name}</h3>
-                                                  <div className="mt-3 flex items-center justify-center gap-2">
-                                                      <Badge className="bg-primary text-primary-foreground font-black text-base px-4 py-1 rounded-xl">
-                                                          {prize.points.toLocaleString()} pts
-                                                      </Badge>
-                                                  </div>
-                                              </div>
+                                                    <div className="mb-6">
+                                                        <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1">{prize.name}</h3>
+                                                        <div className="mt-3 flex items-center justify-center gap-2">
+                                                            <Badge
+                                                                className="font-black text-base px-4 py-1 rounded-xl text-white"
+                                                                style={student.theme ? { backgroundColor: 'var(--theme-primary)' } : { backgroundColor: 'hsl(var(--primary))' }}
+                                                            >
+                                                                {prize.points.toLocaleString()} pts
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
 
-                                              <Button 
-                                                  onClick={() => setConfirmingPrize(prize)}
-                                                  disabled={!canAfford}
-                                                  className={cn(
-                                                      "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
-                                                      canAfford ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground"
-                                                  )}
-                                              >
-                                                  <Gift className="mr-2 w-4 h-4" /> Redeem Now
-                                              </Button>
+                                                    <Button
+                                                        onClick={() => setConfirmingPrize(prize)}
+                                                        disabled={!canAfford}
+                                                        className={cn(
+                                                            "w-full h-12 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg text-white"
+                                                        )}
+                                                        style={student.theme && canAfford ? { backgroundColor: 'var(--theme-primary)' } : canAfford ? { backgroundColor: 'hsl(var(--primary))' } : { backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
+                                                    >
+                                                        <Gift className="mr-2 w-4 h-4" /> Redeem Now
+                                                    </Button>
 
-                                              <AnimatePresence>
-                                                  {isHovered && canAfford && (
-                                                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.05 }} exit={{ opacity: 0 }} className="absolute inset-0 rounded-3xl pointer-events-none bg-primary" />
-                                                  )}
-                                              </AnimatePresence>
-                                          </motion.div>
-                                      );
-                                  })
-                              )}
-                          </div>
+                                                    <AnimatePresence>
+                                                        {isHovered && canAfford && (
+                                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.05 }} exit={{ opacity: 0 }} className="absolute inset-0 rounded-3xl pointer-events-none bg-primary" />
+                                                        )}
+                                                    </AnimatePresence>
+                                                </motion.div>
+                                            );
+                                        })
+                                    )}
+                                </div>
 
-                          {/* Sidebar */}
-                          <div className="space-y-6">
-                              <Card className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl overflow-hidden shadow-xl">
-                                  <CardHeader className="bg-primary/5 border-b border-border/50 py-6 px-8">
-                                      <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary">
-                                          <Clock className="w-5 h-5 text-chart-3" /> Recent Activity
-                                      </CardTitle>
-                                  </CardHeader>
-                                  <CardContent className="p-6">
-                                      <PrizeActivityList schoolId={schoolId!} studentId={student.id} />
-                                  </CardContent>
-                              </Card>
+                                {/* Sidebar */}
+                                <div className="space-y-6">
+                                    <Card
+                                        className="backdrop-blur-sm border-2 rounded-3xl overflow-hidden shadow-xl"
+                                        style={student.theme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--card) / 0.4)', borderColor: 'hsl(var(--border) / 0.5)' }}
+                                    >
+                                        <CardHeader className="border-b py-6 px-8" style={student.theme ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-bg)' } : { backgroundColor: 'hsl(var(--primary) / 0.05)', borderColor: 'hsl(var(--border) / 0.5)' }}>
+                                            <CardTitle className="text-sm font-black uppercase tracking-[0.3em] flex items-center gap-3" style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}>
+                                                <Clock className="w-5 h-5" style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--chart-3))' }} /> Recent Activity
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-6">
+                                            <PrizeActivityList schoolId={schoolId!} studentId={student.id} />
+                                        </CardContent>
+                                    </Card>
 
-                              <Button 
-                                  variant="outline" 
-                                  className="w-full h-16 rounded-3xl border-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 font-black uppercase tracking-widest text-xs transition-all group" 
-                                  onClick={onDone}
-                              >
-                                  <LogOut className="mr-2 w-5 h-5 transition-transform group-hover:-translate-x-1" /> Log Out & Finish
-                              </Button>
-                          </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full h-16 rounded-3xl border-2 font-black uppercase tracking-widest text-xs transition-all group"
+                                        onClick={onDone}
+                                        style={student.theme ? {
+                                            borderColor: 'var(--theme-text)',
+                                            color: 'var(--theme-text)',
+                                            backgroundColor: 'transparent'
+                                        } : {
+                                            borderColor: 'hsl(var(--rose-200))',
+                                            color: 'hsl(var(--rose-600))'
+                                        }}
+                                    >
+                                        <LogOut className="mr-2 w-5 h-5 transition-transform group-hover:-translate-x-1" /> Log Out & Finish
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </main>
-                 <ConfirmRedemptionDialog
+                <ConfirmRedemptionDialog
                     isOpen={!!confirmingPrize}
                     onOpenChange={() => setConfirmingPrize(null)}
                     student={student}
@@ -347,15 +394,18 @@ function PrizeDashboard({
         </TooltipProvider>
     );
 }
-
 export default function PrizePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const router = useRouter();
     const { toast } = useToast();
     const { settings } = useSettings();
+    const firestore = useFirestore();
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [isLocked, setIsLocked] = useState(false);
+
+    const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
+    const { data: prizes } = useCollection<Prize>(prizesQuery);
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
@@ -366,7 +416,7 @@ export default function PrizePage() {
         toast({ title: "Unlocked", description: "Scanner unlocked." });
     };
 
-    if (!isInitialized || loginState !== 'school') {
+    if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
@@ -379,6 +429,53 @@ export default function PrizePage() {
 
     if (activeStudentId) {
         return <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />;
+    }
+
+    // Direct access for teachers/admins
+    if (['teacher', 'admin', 'developer'].includes(loginState)) {
+        return (
+            <div className="w-full max-w-6xl mx-auto py-12 px-6">
+                <div className="mb-12 text-center">
+                    <h1 className="text-4xl font-black tracking-tight mb-2">Prize Shop Explorer</h1>
+                    <p className="text-muted-foreground font-medium">Viewing as {loginState}. To redeem for a student, use the scanner below.</p>
+                </div>
+
+                <div className="mb-16">
+                    <StudentScanner
+                        onStudentFound={setActiveStudentId}
+                        title="Scan to Redeem"
+                        description="Identify a student to process a redemption."
+                        icon={<Gift className="w-10 h-10 text-chart-3" />}
+                        isLocked={isLocked}
+                        setIsLocked={setIsLocked}
+                        onUnlockRequest={handleUnlockRequest}
+                    />
+                </div>
+
+                <div className="mt-12">
+                    <Card className="border-t-8 border-chart-3 shadow-2xl bg-card/80 backdrop-blur-md">
+                        <CardHeader className="p-8 pb-0">
+                            <CardTitle className="text-3xl font-black flex items-center gap-3"><ShoppingBag className="w-8 h-8 text-chart-3" /> Browsing All Prizes</CardTitle>
+                            <CardDescription>This is a preview of available prizes. Identify a student above to redeem.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {prizes?.sort((a: Prize, b: Prize) => a.points - b.points).map((prize: Prize) => (
+                                    <div key={prize.id} className="p-6 rounded-2xl bg-secondary/20 border flex flex-col items-center text-center">
+                                        <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                                            <DynamicIcon name={prize.icon} className="w-8 h-8 text-primary" />
+                                        </div>
+                                        <h3 className="font-bold text-lg mb-1">{prize.name}</h3>
+                                        <Badge variant="secondary" className="font-bold">{prize.points} pts</Badge>
+                                        {!prize.inStock && <Badge variant="destructive" className="mt-2">Out of Stock</Badge>}
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        );
     }
 
     return (

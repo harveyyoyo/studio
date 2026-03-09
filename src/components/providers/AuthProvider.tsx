@@ -15,20 +15,24 @@ import { httpsCallable } from 'firebase/functions';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
-export type LoginState = 'loggedOut' | 'school' | 'developer';
+export type LoginState = 'loggedOut' | 'school' | 'developer' | 'student' | 'teacher' | 'admin';
 
 interface AuthContextType {
     isInitialized: boolean;
     isUserLoading: boolean;
     loginState: LoginState;
     isAdmin: boolean;
+    isTeacher: boolean;
+    userName: string | null;
+    userId: string | null;
     schoolId: string | null;
     syncStatus: SyncStatus;
     login: (
         type: LoginState,
-        credentials: { schoolId?: string; passcode?: string }
+        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; }
     ) => Promise<boolean>;
     logout: () => void;
+    setUserName: (name: string | null) => void;
     isKioskLocked: boolean;
     setIsKioskLocked: (locked: boolean) => void;
 }
@@ -44,10 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isKioskLocked, setIsKioskLocked] = useState(false);
 
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isTeacher, setIsTeacher] = useState(false);
+    const [userName, setUserName] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
 
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
-    
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -60,16 +67,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const restore = async () => {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
+            const savedName = localStorage.getItem('userName');
 
-            if (savedState === 'school' && savedSchoolId) {
-                setLoginState('school');
+            if (savedState && savedSchoolId) {
+                setLoginState(savedState);
                 setSchoolId(savedSchoolId);
-                setIsAdmin(true); 
+                setUserName(savedName);
+                if (auth.currentUser) setUserId(auth.currentUser.uid);
+
+                // Legacy "school" state means admin under the new system
+                if (savedState === 'admin' || savedState === 'school') {
+                    setIsAdmin(true);
+                    setLoginState('admin'); // auto migrate
+                } else if (savedState === 'teacher') {
+                    setIsTeacher(true);
+                }
             } else if (savedState) {
                 setLoginState(savedState);
                 if (savedState === 'developer') setIsAdmin(true);
             }
-            
+
             setIsInitialized(true);
         };
 
@@ -89,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             return;
         }
-    
+
         const metadataRef = doc(firestore, 'schools', schoolId);
         const unsubscribe = onSnapshot(
             metadataRef,
@@ -107,14 +124,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setSyncStatus('error');
             }
         );
-    
+
         return () => unsubscribe();
     }, [firestore, schoolId, loginState]);
 
     const login = useCallback(
         async (
             type: LoginState,
-            credentials: { schoolId?: string; passcode?: string }
+            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; }
         ): Promise<boolean> => {
             if (type === 'developer') {
                 try {
@@ -127,13 +144,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     if (data.success) {
                         setLoginState('developer');
                         setIsAdmin(true);
+                        setUserName('Developer');
+                        setUserId('developer');
                         localStorage.setItem('loginState', 'developer');
+                        localStorage.setItem('userName', 'Developer');
                         return true;
                     }
                 } catch (e) {
                     console.error("Developer login error", e);
                 }
-            } else if (type === 'school' && credentials.schoolId && auth.currentUser) {
+            } else if (type === 'student' && credentials.schoolId) {
+                // Student/Public access just needs a valid school ID. No real auth.
+                const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                setSchoolId(lowerSchoolId);
+                setLoginState('student');
+                setIsAdmin(false);
+                setIsTeacher(false);
+                setUserName(null);
+                localStorage.setItem('loginState', 'student');
+                localStorage.setItem('schoolId', lowerSchoolId);
+                localStorage.removeItem('userName');
+                return true;
+            } else if ((type === 'school' || type === 'admin') && credentials.schoolId && auth.currentUser) {
                 const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
                 try {
                     // 1. Call the function to set the role on the backend
@@ -156,20 +188,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }
                         await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retrying
                     }
-                    
+
                     if (!roleConfirmed) {
-                       throw new Error("Could not confirm admin role after login. Your permissions might be out of sync. Please try again.");
+                        throw new Error("Could not confirm admin role after login. Your permissions might be out of sync. Please try again.");
                     }
 
                     // 3. Only now set the client state
                     setSchoolId(lowerSchoolId);
-                    setLoginState('school');
+                    setLoginState('admin'); // normalize to admin
                     setIsAdmin(true);
-                    localStorage.setItem('loginState', 'school');
+                    setIsTeacher(false);
+                    setUserName('Administrator');
+                    setUserId(auth.currentUser.uid);
+                    localStorage.setItem('loginState', 'admin');
                     localStorage.setItem('schoolId', lowerSchoolId);
+                    localStorage.setItem('userName', 'Administrator');
                     return true;
                 } catch (e) {
-                    console.error("School login error", e);
+                    console.error("Admin login error", e);
+                    return false;
+                }
+            } else if (type === 'teacher' && credentials.schoolId && auth.currentUser) {
+                const lowerSchoolId = credentials.schoolId.trim().toLowerCase();
+                try {
+                    const verify = httpsCallable(functions, 'verifyTeacherPasscode');
+                    await verify({
+                        schoolId: lowerSchoolId,
+                        username: credentials.username,
+                        passcode: credentials.passcode
+                    });
+
+                    // Poll the server to confirm the teacher role is readable
+                    const teacherRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_teacher', auth.currentUser.uid);
+                    let roleConfirmed = false;
+                    for (let i = 0; i < 15; i++) {
+                        try {
+                            const roleDoc = await getDocFromServer(teacherRoleRef);
+                            if (roleDoc.exists() && roleDoc.data().role === 'teacher') {
+                                roleConfirmed = true;
+                                break;
+                            }
+                        } catch (e) { }
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+
+                    if (!roleConfirmed) {
+                        throw new Error("Could not confirm teacher role after login.");
+                    }
+
+                    setSchoolId(lowerSchoolId);
+                    setLoginState('teacher');
+                    setIsAdmin(false);
+                    setIsTeacher(true);
+                    const name = credentials.teacherName || credentials.username || 'Teacher';
+                    setUserName(name);
+                    setUserId(auth.currentUser.uid);
+                    localStorage.setItem('loginState', 'teacher');
+                    localStorage.setItem('schoolId', lowerSchoolId);
+                    localStorage.setItem('userName', name);
+                    return true;
+                } catch (e) {
+                    console.error("Teacher login error", e);
                     return false;
                 }
             }
@@ -179,22 +258,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const logout = useCallback(() => {
-        localStorage.removeItem('loginState');
-        localStorage.removeItem('schoolId');
-        setLoginState('loggedOut');
-        setSchoolId(null);
         setIsAdmin(false);
+        setIsTeacher(false);
         setIsKioskLocked(false);
-        router.push('/');
-    }, [router]);
+        setUserName(null);
+        localStorage.removeItem('userName');
+
+        if (loginState === 'admin' || loginState === 'teacher') {
+            localStorage.setItem('loginState', 'student');
+            setLoginState('student');
+            router.push('/portal');
+        } else {
+            localStorage.removeItem('loginState');
+            localStorage.removeItem('schoolId');
+            setLoginState('loggedOut');
+            setSchoolId(null);
+            router.push('/');
+        }
+    }, [loginState, router]);
 
     const value = useMemo(
         () => ({
-            isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus,
-            isKioskLocked, setIsKioskLocked,
-            login, logout,
+            isInitialized,
+            isUserLoading,
+            loginState,
+            isAdmin,
+            isTeacher,
+            userName,
+            userId,
+            schoolId,
+            syncStatus,
+            isKioskLocked,
+            setIsKioskLocked,
+            login,
+            logout,
+            setUserName
         }),
-        [isInitialized, isUserLoading, loginState, isAdmin, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout]
+        [isInitialized, isUserLoading, loginState, isAdmin, isTeacher, userName, userId, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout, setUserName]
     );
 
     if (!isMounted) {

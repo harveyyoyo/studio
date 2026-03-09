@@ -21,8 +21,8 @@ export default function RootLayout({
   // Unregister service workers to prevent stale cache issues
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
           registration.unregister();
         }
       });
@@ -57,7 +57,7 @@ export default function RootLayout({
             <AppProvider>
               <div className="min-h-screen flex flex-col">
                 {!isLoginPage && <Header />}
-                <main id="app" className={isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10"}>
+                <main id="screen-view" className={isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10"}>
                   {children}
                 </main>
               </div>

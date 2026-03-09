@@ -85,6 +85,22 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       toast({ variant: 'destructive', title: 'Student ID is required.' });
       return;
     }
+
+    // Duplicate check
+    const isDuplicate = allStudents.some(s =>
+      (s.nfcId === nfcId || s.id === nfcId) && (!isEditing || s.id !== student?.id)
+    );
+
+    if (isDuplicate) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Student ID',
+        description: `The ID "${nfcId}" is already assigned to another student.`
+      });
+      return;
+    }
+
     if (!firestore || !schoolId) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Database connection not found.' });
@@ -94,14 +110,14 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     const finalClassId = classId === 'none' ? '' : classId;
 
     if (isEditing && student) {
-      const updatedStudent: Student = { 
-        ...student, 
-        firstName, 
+      const updatedStudent: Student = {
+        ...student,
+        firstName,
         middleName: middleName || undefined,
-        lastName, 
+        lastName,
         nickname: nickname || undefined,
-        points: parseInt(points) || 0, 
-        classId: finalClassId, 
+        points: parseInt(points) || 0,
+        classId: finalClassId,
         nfcId,
         teacherIds: selectedTeacherIds,
       };
@@ -111,7 +127,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     } else {
       const newStudent = {
         nfcId,
-        firstName, 
+        firstName,
         middleName: middleName || undefined,
         lastName,
         nickname: nickname || undefined,
@@ -134,23 +150,23 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="firstName">First Name</Label>
               <Input id="firstName" value={firstName} onChange={e => setFirstName(e.target.value)} />
             </div>
-             <div className="space-y-1">
+            <div className="space-y-1">
               <Label htmlFor="lastName">Last Name</Label>
               <Input id="lastName" value={lastName} onChange={e => setLastName(e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-                <Label htmlFor="middleName">Middle Name (Optional)</Label>
-                <Input id="middleName" value={middleName} onChange={e => setMiddleName(e.target.value)} />
+              <Label htmlFor="middleName">Middle Name (Optional)</Label>
+              <Input id="middleName" value={middleName} onChange={e => setMiddleName(e.target.value)} />
             </div>
             <div className="space-y-1">
-                <Label htmlFor="nickname">Nickname (Optional)</Label>
-                <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+              <Label htmlFor="nickname">Nickname (Optional)</Label>
+              <Input id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1">

@@ -43,8 +43,11 @@ interface Settings {
     enableQrLogin: boolean;
     enableParentView: boolean;
     enableMultiAdmin: boolean;
+    enableStudentPortal: boolean;
     // Guidance
     enableHelperMode: boolean;
+    // Workflow
+    enableTeacherBudgets: boolean;
 }
 
 interface SettingsContextType {
@@ -91,7 +94,9 @@ const defaultSettings: Settings = {
     enableQrLogin: false,
     enableParentView: false,
     enableMultiAdmin: false,
+    enableStudentPortal: false,
     enableHelperMode: true,
+    enableTeacherBudgets: false,
 };
 
 export { colorSchemes };

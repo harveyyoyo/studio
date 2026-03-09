@@ -36,14 +36,14 @@ import Logo from './Logo';
 
 export default function Header() {
   const pathname = usePathname();
-  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin, isKioskLocked } = useAppContext();
+  const { loginState, schoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const firestore = useFirestore();
 
   const schoolDocRef = useMemoFirebase(() => {
-      if (!firestore || !schoolId) return null;
-      return doc(firestore, 'schools', schoolId);
+    if (!firestore || !schoolId) return null;
+    return doc(firestore, 'schools', schoolId);
   }, [firestore, schoolId]);
 
   const { data: schoolData } = useDoc<{ name: string }>(schoolDocRef);
@@ -60,7 +60,7 @@ export default function Header() {
     return null;
   }
 
-  const logoLink = loginState === 'developer' ? '/developer' : '/';
+  const logoLink = '/';
 
 
   // --- APP MODE HEADER ---
@@ -72,16 +72,16 @@ export default function Header() {
       { id: 'prize', href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
       { id: 'fame', href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
     ].sort((a, b) => {
-        const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
-        return order.indexOf(a.id) - order.indexOf(b.id);
+      const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
+      return order.indexOf(a.id) - order.indexOf(b.id);
     });
 
     const colorClasses: Record<string, string> = {
-        destructive: 'text-destructive',
-        'chart-1': 'text-chart-1',
-        'chart-2': 'text-chart-2',
-        'chart-3': 'text-chart-3',
-        'chart-5': 'text-chart-5',
+      destructive: 'text-destructive',
+      'chart-1': 'text-chart-1',
+      'chart-2': 'text-chart-2',
+      'chart-3': 'text-chart-3',
+      'chart-5': 'text-chart-5',
     };
 
     const hoverColorClasses: Record<string, string> = {
@@ -95,21 +95,21 @@ export default function Header() {
     return (
       <>
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
-            <div className="flex justify-start">
-                <Link href="/portal" data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
-                    <Home className="h-5 w-5" />
-                </Link>
-            </div>
-            <div className="text-center">
-              {loginState === 'school' && schoolId && (
-                <Link href="/portal" className="font-black text-2xl text-primary truncate no-underline">{schoolName}</Link>
-              )}
-            </div>
-            <div className="flex items-center justify-end gap-2">
-                <SettingsModal />
-            </div>
+          <div className="flex justify-start">
+            <Link href={schoolId ? "/portal" : "/"} data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
+              <Home className="h-5 w-5" />
+            </Link>
+          </div>
+          <div className="text-center">
+            {schoolId && (
+              <Link href="/portal" className="font-black text-2xl text-primary truncate no-underline">{schoolName}</Link>
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <SettingsModal />
+          </div>
         </header>
-        
+
         {loginState === 'school' && !isKioskLocked && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
             settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
@@ -117,9 +117,9 @@ export default function Header() {
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
-                const activeClass = isActive 
-                    ? `scale-110 ${colorClasses[color] || 'text-primary'}` 
-                    : `text-slate-400 ${hoverColorClasses[color] || 'hover:text-primary'}`;
+                const activeClass = isActive
+                  ? `scale-110 ${colorClasses[color] || 'text-primary'}`
+                  : `text-slate-400 ${hoverColorClasses[color] || 'hover:text-primary'}`;
                 return (
                   <Link key={href} href={href} className={cn('flex flex-col items-center transition-all px-3 py-1', activeClass)}>
                     <Icon className="w-6 h-6" />
@@ -138,64 +138,73 @@ export default function Header() {
   return (
     <header className={cn(
       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
-      "bg-background/80 backdrop-blur-xl" 
+      "bg-background/80 backdrop-blur-xl"
     )}>
       <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
-            <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
-                <Logo className="h-10 w-auto" />
-                <div className="flex flex-col">
-                    <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-                     <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
-                </div>
-            </Link>
+          <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
+            <Logo className="h-10 w-auto" />
+            <div className="flex flex-col">
+              <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
+              <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
+            </div>
+          </Link>
         </div>
 
         {/* Center: School Name */}
-        {loginState === 'school' && schoolId && (
-            <Link href="/portal" className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
-                <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md font-body">{schoolName}</span>
-            </Link>
+        {schoolId && (
+          <Link href="/portal" className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
+            <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md font-body">{schoolName}</span>
+          </Link>
         )}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 shrink-0">
-            {isInitialized && (
-                <>
-                    {loginState === 'school' && (
-                        <div className="flex items-center gap-3 bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
-                             <span className="relative flex h-2 w-2">
-                                {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />}
-                                <span className={cn("relative inline-flex h-2 w-2 rounded-full", syncStatus === 'synced' ? "bg-emerald-400" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
-                            </span>
-                            <span className="text-xs font-black uppercase tracking-widest text-primary/80">{syncStatus === 'synced' ? 'Live Sync' : syncStatus}</span>
-                        </div>
-                    )}
-                    
-                    {loginState === 'developer' ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="font-bold gap-2 text-destructive h-12 px-4 rounded-xl">
-                                  <User className="w-5 h-5" />
-                                  <span className="hidden sm:inline">Dev Mode</span>
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Developer Mode</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={handleLogout} className="text-base py-2 hover:bg-destructive/10 hover:text-destructive"><LogOut className="mr-2 h-5 w-5" /> Log Out</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                    ) : (
-                      <Link href={logoLink} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90"><Home className="h-6 w-6" /></Link>
-                    )}
+          {isInitialized && (
+            <>
+              {schoolId && loginState !== 'loggedOut' && (
+                <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+                  <span className="relative flex h-1.5 w-1.5">
+                    {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
+                    <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-tighter text-emerald-600/80">{syncStatus === 'synced' ? 'Live' : syncStatus}</span>
+                </div>
+              )}
 
-                    <div className="h-8 w-px bg-primary/20" />
-                    
-                    <SettingsModal />
-                </>
-            )}
+              {loginState !== 'student' && loginState !== 'loggedOut' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className={cn("font-bold gap-2 h-12 px-4 rounded-xl", loginState === 'developer' ? "text-destructive" : "text-primary")}>
+                      <User className="w-5 h-5" />
+                      <span className="hidden sm:inline">
+                        {userName || (loginState === 'developer' ? 'Dev Mode' : loginState === 'admin' ? 'Admin' : loginState === 'teacher' ? 'Teacher' : 'School')}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-base py-2 hover:bg-destructive/10 hover:text-destructive cursor-pointer">
+                      <LogOut className="mr-2 h-5 w-5" /> Log Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+              <div className="h-8 w-px bg-primary/20" />
+
+              <Link href={schoolId ? "/portal" : "/"} data-home-button="true" className="rounded-xl p-3 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center gap-2">
+                <Home className="h-6 w-6" />
+                <span className="hidden sm:inline font-bold">Home</span>
+              </Link>
+
+              <div className="h-8 w-px bg-primary/20" />
+
+              <SettingsModal />
+            </>
+          )}
         </div>
       </div>
     </header>

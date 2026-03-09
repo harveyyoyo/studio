@@ -9,14 +9,14 @@ export function SchoolGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && (!schoolId || loginState !== 'school')) {
+    if (isInitialized && (!schoolId || loginState === 'loggedOut')) {
       router.push('/portal');
     }
   }, [isInitialized, schoolId, loginState, router]);
 
   if (!isInitialized) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
-  
-  if (!schoolId || loginState !== 'school') return null;
+
+  if (!schoolId || !['student', 'teacher', 'admin', 'school'].includes(loginState)) return null;
 
   return <>{children}</>;
 }

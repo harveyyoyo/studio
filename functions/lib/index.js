@@ -374,6 +374,40 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     return { success: true };
 });
 // ========================================================================
+// Callable: Verify teacher username and passcode
+// ========================================================================
+exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.username, "username");
+    requireString(data.passcode, "passcode");
+    const db = admin.firestore();
+    // Find teacher by username in the teachers subcollection
+    const teachersSnap = await db.collection("schools").doc(data.schoolId).collection("teachers")
+        .where("username", "==", data.username)
+        .limit(1)
+        .get();
+    if (teachersSnap.empty) {
+        throw new functions.https.HttpsError("not-found", "Teacher not found.");
+    }
+    const teacherDoc = teachersSnap.docs[0];
+    const teacherData = teacherDoc.data();
+    // Check if the passcode matches
+    if (teacherData.passcode !== data.passcode) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
+    }
+    // Provision teacher role using the Admin SDK
+    const teacherRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_teacher").doc(context.auth.uid);
+    // Note: We also set 'admin' role in 'roles_admin' to ensure they have read/write to the needed collections
+    // This allows teachers to access students, activities, prizes, etc as currently defined in firestore.rules
+    const adminRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_admin").doc(context.auth.uid);
+    const batch = db.batch();
+    batch.set(teacherRoleRef, { role: 'teacher', teacherId: teacherDoc.id });
+    batch.set(adminRoleRef, { role: 'admin' });
+    await batch.commit();
+    return { success: true };
+});
+// ========================================================================
 // Migration functions (unchanged from original)
 // ========================================================================
 exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, context) => {

@@ -167,7 +167,10 @@
         page-break-inside: avoid; font-family: 'PT Sans', sans-serif; background: #fff;
         display: flex; flex-direction: column; align-items: center; justify-content: space-around;
     }
-    .print-id-name { font-size: 14pt; font-weight: bold; font-family: 'Playfair Display', serif; }
+    .print-id-name { font-size: 14pt; font-weight: bold; font-family: 'Playfair Display', serif; margin-bottom: 0.05in; }
+    .print-id-class { font-size: 10pt; color: #666; font-weight: bold; margin-bottom: 0.1in; }
+    .print-id-barcode-container { width: 100%; display: flex; justify-content: center; align-items: center; flex-grow: 1; }
+    .print-id-card .font-barcode { font-size: 52pt; line-height: 1; color: #000 !important; }
 }
 
 @keyframes fly-up {
