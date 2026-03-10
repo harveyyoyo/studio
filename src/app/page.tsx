@@ -109,6 +109,11 @@ export default function LoginPage() {
       displayMode === 'app' ? 'pb-8' : 'pb-8'
     )}>
 
+      {/* Settings Gear for Legacy Mode Access */}
+      <div className="absolute top-6 right-6 z-50">
+        <SettingsModal />
+      </div>
+
       {/* Background Decor - Only for Graphic Mode */}
       {isGraphic && (
         <>

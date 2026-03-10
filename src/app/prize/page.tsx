@@ -33,7 +33,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -42,6 +42,8 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { GoogleFontLoader } from '@/components/GoogleFontLoader';
+
 
 function ConfirmRedemptionDialog({
     student,
@@ -67,9 +69,11 @@ function ConfirmRedemptionDialog({
 
     if (!prize || !student) return null;
 
-    const totalCost = prize.points * quantity;
-    const canAfford = student.points >= totalCost;
-    const remainingPoints = student.points - totalCost;
+    const studentPoints = typeof student.points === 'number' ? student.points : 0;
+    const prizePoints = typeof prize.points === 'number' ? prize.points : 0;
+    const totalCost = prizePoints * quantity;
+    const canAfford = studentPoints >= totalCost;
+    const remainingPoints = studentPoints - totalCost;
 
     const handleQuantityChange = (amount: number) => {
         const newQuantity = Math.max(1, quantity + amount);
@@ -115,13 +119,14 @@ function ConfirmRedemptionDialog({
 
 function PrizeActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
     const firestore = useFirestore();
-    const activitiesQuery = useMemoFirebase(() => (
-        query(
+    const activitiesQuery = useMemoFirebase(() => {
+        if (!schoolId || !studentId) return null;
+        return query(
             collection(firestore, `schools/${schoolId}/students/${studentId}/activities`),
             orderBy('date', 'desc'),
             limit(20)
-        )
-    ), [firestore, schoolId, studentId]);
+        );
+    }, [firestore, schoolId, studentId]);
     const { data: history, isLoading } = useCollection<HistoryItem>(activitiesQuery);
 
     if (isLoading) {
@@ -140,8 +145,18 @@ function PrizeActivityList({ schoolId, studentId }: { schoolId: string; studentI
                                     {item.amount > 0 ? `+${item.amount}` : item.amount} pts
                                 </Badge>
                             </div>
-                            {item.date && (
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{format(new Date(item.date), 'MMM d, h:mm a')}</p>
+                            {item.date ? (
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                    {(() => {
+                                        try {
+                                            return format(new Date(item.date), 'MMM d, h:mm a');
+                                        } catch (e) {
+                                            return 'Date unknown';
+                                        }
+                                    })()}
+                                </p>
+                            ) : (
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-30">Date unknown</p>
                             )}
                         </li>
                     ))
@@ -176,13 +191,23 @@ function PrizeDashboard({
 
     const handleRedeemReward = async (prize: Prize, quantity: number) => {
         if (!student) return;
-        await redeemPrize(student.id, prize, quantity);
-        playSound('redeem');
-        toast({
-            title: 'Reward Redeemed!',
-            description: `Successfully redeemed ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}.`,
-        });
-        setConfirmingPrize(null);
+        try {
+            await redeemPrize(student.id, prize, quantity);
+            playSound('redeem');
+            toast({
+                title: 'Reward Redeemed!',
+                description: `Successfully redeemed ${prize.name}${quantity > 1 ? ` (x${quantity})` : ''}.`,
+            });
+            setConfirmingPrize(null);
+        } catch (error: any) {
+            console.error('Redemption error:', error);
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Redemption Failed',
+                description: error.message || 'An error occurred during redemption.',
+            });
+        }
     };
 
     if (studentLoading || prizesLoading || !student) {
@@ -203,26 +228,29 @@ function PrizeDashboard({
             const classMatch = !p.classId || student.classId === p.classId;
             return teacherMatch && classMatch;
         })
-        .sort((a, b) => a.points - b.points);
+        .sort((a, b) => (a.points || 0) - (b.points || 0));
 
     return (
         <TooltipProvider>
             <div
-                className={cn("min-h-screen relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24', !student.theme ? "bg-background text-foreground" : "")}
-                style={student.theme ? {
-                    '--theme-bg': student.theme.background,
-                    '--theme-text': student.theme.text,
-                    '--theme-primary': student.theme.primary,
-                    '--theme-card': student.theme.cardBackground,
-                    '--theme-accent': student.theme.accent,
+                className={cn("min-h-screen relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24', (!student || !student.theme) ? "bg-background text-foreground" : "")}
+                style={(student && student.theme) ? {
+                    '--theme-bg': student.theme.background || 'transparent',
+                    '--theme-text': student.theme.text || 'inherit',
+                    '--theme-primary': student.theme.primary || 'hsl(var(--primary))',
+                    '--theme-card': student.theme.cardBackground || 'hsl(var(--card))',
+                    '--theme-accent': student.theme.accent || 'hsl(var(--accent))',
                     backgroundColor: 'var(--theme-bg)',
                     color: 'var(--theme-text)',
-                } as React.CSSProperties : undefined}
+                    fontFamily: student.theme.fontFamily || 'inherit',
+                } as React.CSSProperties : {}}
             >
+                {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
+
                 {/* Noise overlay */}
                 <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
-                <main className="relative z-10 w-full max-w-[1400px] px-8">
+                <main className="relative z-10 w-full max-w-full px-8">
                     <Card
                         className={cn("border-t-8 shadow-2xl mt-12 mb-24 backdrop-blur-md", !student.theme ? "border-chart-3 bg-card/80" : "bg-card/40")}
                         style={student.theme ? { backgroundColor: 'var(--theme-card)', color: 'var(--theme-text)', borderColor: 'var(--theme-primary)' } : undefined}
@@ -235,17 +263,26 @@ function PrizeDashboard({
                                         {student.theme?.emoji ? (
                                             <span className="text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>
                                         ) : (
-                                            <ShoppingBag className="w-12 h-12" style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'var(--theme-primary)' }} />
+                                            <ShoppingBag className="w-12 h-12 text-primary" />
                                         )}
-                                        <span style={student.theme ? { color: 'var(--theme-primary)' } : { color: 'var(--theme-primary)' }}>Prize Shop</span>
+                                        <span style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>Prize Shop</span>
                                     </h2>
                                     <p className="text-sm font-bold uppercase tracking-[0.3em]" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
                                         Redeem your points for rewards
                                     </p>
                                 </div>
-                                <div className="backdrop-blur-md border-2 rounded-3xl p-6 px-10 text-center shadow-xl" style={student.theme ? { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-primary)' } : { backgroundColor: 'var(--theme-card)', borderColor: 'var(--theme-primary)', opacity: 0.2 }}>
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{student.firstName} {student.lastName}</p>
-                                    <p className="text-4xl font-black tracking-tighter" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: student.theme ? 'var(--theme-primary)' : undefined, opacity: 0.6 }}>pts</span></p>
+                                <div
+                                    className="backdrop-blur-md border-2 rounded-3xl p-6 px-10 text-center shadow-xl"
+                                    style={student.theme ? {
+                                        backgroundColor: 'var(--theme-card)',
+                                        borderColor: 'var(--theme-primary)'
+                                    } : {
+                                        backgroundColor: 'hsl(var(--card) / 0.8)',
+                                        borderColor: 'hsl(var(--primary) / 0.2)'
+                                    }}
+                                >
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{getStudentNickname(student)} {student.lastName}</p>
+                                    <p className="text-4xl font-black tracking-tighter" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span></p>
                                 </div>
                             </div>
 
@@ -306,11 +343,11 @@ function PrizeDashboard({
                                                             backgroundColor: canAfford ? 'var(--theme-bg)' : 'transparent',
                                                             color: canAfford ? 'var(--theme-primary)' : 'var(--theme-text)'
                                                         } : {
-                                                            backgroundColor: canAfford ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--muted))',
+                                                            backgroundColor: canAfford ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--muted) / 0.5)',
                                                             color: canAfford ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                                                         }}
                                                     >
-                                                        <DynamicIcon name={prize.icon} className="w-10 h-10" />
+                                                        <DynamicIcon name={prize.icon || 'Gift'} className="w-10 h-10" />
                                                     </div>
 
                                                     <div className="mb-6">
@@ -320,7 +357,7 @@ function PrizeDashboard({
                                                                 className="font-black text-base px-4 py-1 rounded-xl text-white"
                                                                 style={student.theme ? { backgroundColor: 'var(--theme-primary)' } : { backgroundColor: 'hsl(var(--primary))' }}
                                                             >
-                                                                {prize.points.toLocaleString()} pts
+                                                                {(prize.points || 0).toLocaleString()} pts
                                                             </Badge>
                                                         </div>
                                                     </div>
@@ -404,8 +441,6 @@ export default function PrizePage() {
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
     const [isLocked, setIsLocked] = useState(false);
 
-    const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
-    const { data: prizes } = useCollection<Prize>(prizesQuery);
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
@@ -416,7 +451,7 @@ export default function PrizePage() {
         toast({ title: "Unlocked", description: "Scanner unlocked." });
     };
 
-    if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
+    if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
@@ -431,52 +466,7 @@ export default function PrizePage() {
         return <PrizeDashboard studentId={activeStudentId} onDone={handleDone} />;
     }
 
-    // Direct access for teachers/admins
-    if (['teacher', 'admin', 'developer'].includes(loginState)) {
-        return (
-            <div className="w-full max-w-6xl mx-auto py-12 px-6">
-                <div className="mb-12 text-center">
-                    <h1 className="text-4xl font-black tracking-tight mb-2">Prize Shop Explorer</h1>
-                    <p className="text-muted-foreground font-medium">Viewing as {loginState}. To redeem for a student, use the scanner below.</p>
-                </div>
 
-                <div className="mb-16">
-                    <StudentScanner
-                        onStudentFound={setActiveStudentId}
-                        title="Scan to Redeem"
-                        description="Identify a student to process a redemption."
-                        icon={<Gift className="w-10 h-10 text-chart-3" />}
-                        isLocked={isLocked}
-                        setIsLocked={setIsLocked}
-                        onUnlockRequest={handleUnlockRequest}
-                    />
-                </div>
-
-                <div className="mt-12">
-                    <Card className="border-t-8 border-chart-3 shadow-2xl bg-card/80 backdrop-blur-md">
-                        <CardHeader className="p-8 pb-0">
-                            <CardTitle className="text-3xl font-black flex items-center gap-3"><ShoppingBag className="w-8 h-8 text-chart-3" /> Browsing All Prizes</CardTitle>
-                            <CardDescription>This is a preview of available prizes. Identify a student above to redeem.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {prizes?.sort((a: Prize, b: Prize) => a.points - b.points).map((prize: Prize) => (
-                                    <div key={prize.id} className="p-6 rounded-2xl bg-secondary/20 border flex flex-col items-center text-center">
-                                        <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                                            <DynamicIcon name={prize.icon} className="w-8 h-8 text-primary" />
-                                        </div>
-                                        <h3 className="font-bold text-lg mb-1">{prize.name}</h3>
-                                        <Badge variant="secondary" className="font-bold">{prize.points} pts</Badge>
-                                        {!prize.inStock && <Badge variant="destructive" className="mt-2">Out of Stock</Badge>}
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <TooltipProvider>

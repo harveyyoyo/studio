@@ -44,10 +44,21 @@ interface Settings {
     enableParentView: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
+    // Badges
+    enableStudentBadges: boolean;
+    badgeCategory: string;
+    badgeBronzeThreshold: number;
+    badgeSilverThreshold: number;
+    badgeGoldThreshold: number;
+    enableCategoryBadges: boolean;
+    categoryBronzeThreshold: number;
+    categorySilverThreshold: number;
+    categoryGoldThreshold: number;
     // Guidance
     enableHelperMode: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
+    legacyMode: boolean;
 }
 
 interface SettingsContextType {
@@ -95,8 +106,18 @@ const defaultSettings: Settings = {
     enableParentView: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
+    enableStudentBadges: false,
+    badgeCategory: 'all',
+    badgeBronzeThreshold: 100,
+    badgeSilverThreshold: 500,
+    badgeGoldThreshold: 1000,
+    enableCategoryBadges: false,
+    categoryBronzeThreshold: 50,
+    categorySilverThreshold: 200,
+    categoryGoldThreshold: 500,
     enableHelperMode: true,
     enableTeacherBudgets: false,
+    legacyMode: false,
 };
 
 export { colorSchemes };
@@ -169,6 +190,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isLoaded) return;
         document.documentElement.setAttribute('data-color-scheme', settings.colorScheme ?? 'default');
     }, [settings.colorScheme, isLoaded]);
+
+    // Apply legacy class to document root
+    useEffect(() => {
+        if (!isLoaded) return;
+        const root = document.documentElement;
+        if (settings.legacyMode) {
+            root.classList.add('legacy');
+        } else {
+            root.classList.remove('legacy');
+        }
+    }, [settings.legacyMode, isLoaded]);
 
     return (
         <SettingsContext.Provider value={{ settings, updateSettings }}>

@@ -24,6 +24,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
+import { getStudentNickname } from '@/lib/utils';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -146,7 +147,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Student' : 'New Student'}</DialogTitle>
+          <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-4">

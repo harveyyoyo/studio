@@ -4,3 +4,18 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export function getStudentNickname(student: { firstName: string; nickname?: string; lastName?: string }) {
+  if (!student) return '';
+  return student.nickname && student.nickname.trim() !== '' ? student.nickname : student.firstName;
+}
+
+export function getContrastColor(hexColor: string): 'black' | 'white' {
+  if (!hexColor || hexColor === 'transparent') return 'black';
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? 'black' : 'white';
+}

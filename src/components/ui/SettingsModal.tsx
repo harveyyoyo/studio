@@ -13,11 +13,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
     Settings, Volume2, VolumeX, Monitor, Smartphone, ChevronRight,
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
+    Cpu, Award, Tags, LayoutList
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -170,6 +172,26 @@ export function SettingsModal() {
                                 </div>
                             </div>
 
+                            {/* Legacy Mode */}
+                            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${settings.legacyMode ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                            <Cpu className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-foreground">Legacy Mode</h4>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Disables heavy effects for older hardware</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        checked={settings.legacyMode}
+                                        onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
+                                        className="data-[state=checked]:bg-orange-600 scale-110"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Display Mode */}
                             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-100 dark:border-slate-800">
                                 <div className="flex items-center gap-3 mb-3">
@@ -291,6 +313,59 @@ export function SettingsModal() {
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Advanced Engagement</p>
                                 <FeatureRow id="enableAchievements" label="Achievement Badges" desc="Setup digital milestone badges for students when they reach specific goals or accumulation thresholds." icon={<Trophy className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+
+                                <FeatureRow id="enableStudentBadges" label="Student Custom Badges" desc="Dynamically assign Bronze/Silver/Gold badges to students based on points earned." icon={<Award className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                {settings.enableStudentBadges && (
+                                    <div className="px-4 pb-4 pt-1 space-y-4 animate-in fade-in zoom-in-95 duration-200 border-b border-border mb-2 ml-10">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[11px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                                                <Tags className="w-3.5 h-3.5" /> Ruleset Category
+                                            </Label>
+                                            <Input
+                                                value={settings.badgeCategory}
+                                                onChange={e => handleToggle('badgeCategory', e.target.value)}
+                                                className="h-9 text-xs font-mono font-bold bg-background border-border"
+                                                placeholder="e.g. 'all', 'academics'"
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">Type &lsquo;all&lsquo; to trigger from total points, or target a specific coupon category ID.</p>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="space-y-1.5 bg-orange-50 dark:bg-orange-950/20 p-2 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-orange-600 dark:text-orange-400">Bronze</Label>
+                                                <Input type="number" value={settings.badgeBronzeThreshold} onChange={e => handleToggle('badgeBronzeThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-orange-200 dark:border-orange-900/50 focus-visible:ring-orange-500" />
+                                            </div>
+                                            <div className="space-y-1.5 bg-slate-100 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-slate-500 dark:text-slate-400">Silver</Label>
+                                                <Input type="number" value={settings.badgeSilverThreshold} onChange={e => handleToggle('badgeSilverThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-slate-200 dark:border-slate-800 focus-visible:ring-slate-500" />
+                                            </div>
+                                            <div className="space-y-1.5 bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-xl border border-yellow-200 dark:border-yellow-900/30">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-yellow-600 dark:text-yellow-400">Gold</Label>
+                                                <Input type="number" value={settings.badgeGoldThreshold} onChange={e => handleToggle('badgeGoldThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-yellow-200 dark:border-yellow-900/50 focus-visible:ring-yellow-500" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <FeatureRow id="enableCategoryBadges" label="Category Badges" desc="Dynamically assign Bronze/Silver/Gold badges to students for each individual coupon category based on points earned specifically in that category." icon={<LayoutList className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={true} isAdmin={isAdmin} />
+                                {settings.enableCategoryBadges && (
+                                    <div className="px-4 pb-4 pt-1 space-y-4 animate-in fade-in zoom-in-95 duration-200 border-b border-border mb-2 ml-10">
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="space-y-1.5 bg-orange-50 dark:bg-orange-950/20 p-2 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-orange-600 dark:text-orange-400">Bronze</Label>
+                                                <Input type="number" value={settings.categoryBronzeThreshold} onChange={e => handleToggle('categoryBronzeThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-orange-200 dark:border-orange-900/50 focus-visible:ring-orange-500" />
+                                            </div>
+                                            <div className="space-y-1.5 bg-slate-100 dark:bg-slate-800/40 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-slate-500 dark:text-slate-400">Silver</Label>
+                                                <Input type="number" value={settings.categorySilverThreshold} onChange={e => handleToggle('categorySilverThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-slate-200 dark:border-slate-800 focus-visible:ring-slate-500" />
+                                            </div>
+                                            <div className="space-y-1.5 bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-xl border border-yellow-200 dark:border-yellow-900/30">
+                                                <Label className="text-[10px] uppercase font-black tracking-widest text-yellow-600 dark:text-yellow-400">Gold</Label>
+                                                <Input type="number" value={settings.categoryGoldThreshold} onChange={e => handleToggle('categoryGoldThreshold', parseInt(e.target.value) || 0)} className="h-8 text-xs font-black shadow-inner bg-background/50 border-yellow-200 dark:border-yellow-900/50 focus-visible:ring-yellow-500" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <FeatureRow id="enableLevels" label="Leveling System (Soon)" desc="Convert total lifetime points into RPG-style tiers (Level 1, Level 2, etc.) for deeper engagement." icon={<Zap className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
                                 <FeatureRow id="enableStreaks" label="Daily Login Streaks (Soon)" desc="Track consecutive days logged in with point multipliers." icon={<History className="w-5 h-5" />} settings={settings} onToggle={handleToggle} isImplemented={false} isAdmin={isAdmin} />
                             </div>

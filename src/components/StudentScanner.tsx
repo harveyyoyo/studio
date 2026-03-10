@@ -14,7 +14,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { lookupStudentId } from '@/lib/db';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface StudentScannerProps {
@@ -92,14 +92,37 @@ export function StudentScanner({
     useEffect(() => {
         if (isActive && loginTab === 'nfc') {
             const timer = setTimeout(() => nfcInputRef.current?.focus(), 100);
-            return () => clearTimeout(timer);
+
+            // Global keydown listener to hijack input for the scanner
+            const handleGlobalKeyDown = (e: KeyboardEvent) => {
+                // Ignore if they are typing in another input element explicitly
+                if (
+                    document.activeElement?.tagName === 'INPUT' &&
+                    document.activeElement !== nfcInputRef.current &&
+                    (document.activeElement as HTMLInputElement).type !== 'hidden'
+                ) {
+                    return;
+                }
+
+                // Focus the hidden field so typing goes there
+                if (nfcInputRef.current && document.activeElement !== nfcInputRef.current) {
+                    nfcInputRef.current.focus();
+                }
+            };
+
+            window.addEventListener('keydown', handleGlobalKeyDown);
+
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('keydown', handleGlobalKeyDown);
+            };
         }
     }, [isActive, loginTab]);
 
     return (
         <div className={cn(
             "w-full max-w-sm rounded-[2.5rem] p-8 transition-all duration-700 relative z-10",
-            isGraphic ? 'bg-card/5 backdrop-blur-2xl border border-border shadow-2xl shadow-primary/10' : 'bg-background shadow-2xl border border-border'
+            isGraphic ? 'bg-card/5 backdrop-blur-2xl border border-border shadow-2xl shadow-primary/10' : 'bg-card shadow-2xl border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
             {isGraphic && (
@@ -108,30 +131,32 @@ export function StudentScanner({
 
             <div className={cn(
                 "p-6 text-center relative z-10",
-                isGraphic ? 'border-b border-border' : 'bg-slate-50 border-b'
+                isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 <div className="absolute top-3 right-3">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 rounded-full"
-                                onClick={() => {
-                                    if (isLocked) {
-                                        onUnlockRequest();
-                                    } else {
-                                        setIsLocked(true);
-                                    }
-                                }}
-                            >
-                                {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{isLocked ? 'Kiosk is locked. Click to unlock with passcode.' : 'Lock kiosk to prevent auto-logout.'}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-full"
+                                    onClick={() => {
+                                        if (isLocked) {
+                                            onUnlockRequest();
+                                        } else {
+                                            setIsLocked(true);
+                                        }
+                                    }}
+                                >
+                                    {isLocked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-green-500" />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{isLocked ? 'Kiosk is locked. Click to unlock with passcode.' : 'Lock kiosk to prevent auto-logout.'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
                 <div className={cn(
                     "w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3 transition-transform hover:rotate-0",
@@ -147,7 +172,7 @@ export function StudentScanner({
 
             <div className="p-6">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
-                    <TabsList className={cn("grid w-full grid-cols-3 p-1 rounded-xl mb-6", isGraphic ? 'bg-foreground/5' : 'bg-slate-100/50')}>
+                    <TabsList className={cn("grid w-full grid-cols-3 p-1 rounded-xl mb-6", isGraphic ? 'bg-foreground/5' : 'bg-muted/50')}>
                         <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
                             <Nfc className="mr-2 h-4 w-4" /> Card
                         </TabsTrigger>
@@ -162,13 +187,13 @@ export function StudentScanner({
                     <TabsContent value="nfc" className="text-center">
                         <div className="py-12 space-y-8">
                             <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                                <div className={cn("absolute inset-0 rounded-full animate-ping opacity-25", isGraphic ? 'bg-primary' : 'bg-slate-400')}></div>
-                                <div className={cn("w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-background border-primary text-primary' : 'bg-white border-slate-800 text-slate-800')}>
+                                <div className={cn("absolute inset-0 rounded-full animate-ping opacity-25", isGraphic ? 'bg-primary' : 'bg-muted-foreground')}></div>
+                                <div className={cn("w-24 h-24 rounded-full flex items-center justify-center border-4 relative z-10 shadow-xl transition-all", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
                                     <Nfc className="w-12 h-12" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <p className={cn("font-black text-lg", isGraphic ? 'text-foreground' : 'text-slate-800')}>System Ready</p>
+                                <p className={cn("font-black text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>System Ready</p>
                                 <p className="text-muted-foreground text-sm font-medium">Please place your card on the reader</p>
                             </div>
                             <Input
@@ -198,13 +223,13 @@ export function StudentScanner({
                                 <Input
                                     value={nfcId}
                                     onChange={e => setNfcId(e.target.value)}
-                                    className={cn("h-20 text-4xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'border-border bg-secondary/30 text-foreground')}
+                                    className={cn("h-20 text-4xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-foreground/5 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
                                     placeholder="----"
                                     autoFocus
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
-                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-14 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-slate-800 hover:bg-slate-700')}>
+                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-14 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}>
                                 Identify Student
                             </Button>
                         </div>

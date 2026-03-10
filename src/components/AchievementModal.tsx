@@ -114,7 +114,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                 <DialogHeader>
                     <DialogTitle>{isEditing ? 'Edit Achievement' : 'New Achievement'}</DialogTitle>
                     <DialogDescription>
-                        Define the rules for earning this achievement.
+                        Define how students unlock this achievement and what reward they get.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -145,7 +145,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                     <Separator />
 
                     <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-widest opacity-70">Criteria</Label>
+                        <Label className="text-xs font-bold uppercase tracking-widest opacity-70">How to Earn</Label>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label>Type</Label>
@@ -155,27 +155,32 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="points">Current Points</SelectItem>
-                                        <SelectItem value="lifetimePoints">Total Points</SelectItem>
-                                        <SelectItem value="coupons">Coupons Redeemed</SelectItem>
-                                        <SelectItem value="manual">Manual Award</SelectItem>
+                                        <SelectItem value="lifetimePoints">Total Lifetime Points</SelectItem>
+                                        <SelectItem value="coupons">Category Threshold</SelectItem>
+                                        <SelectItem value="manual">Manual Award Only</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                    {type === 'points' && "Unlocked when current points reach threshold."}
+                                    {type === 'lifetimePoints' && "Unlocked when total points earned reach threshold."}
+                                    {type === 'coupons' && "Unlocked when points in a specific category reach threshold."}
+                                    {type === 'manual' && "This achievement must be awarded by a teacher manually."}
+                                </p>
                             </div>
                             <div className="space-y-1">
                                 <Label>Threshold</Label>
-                                <Input type="number" value={threshold} onChange={e => setThreshold(e.target.value)} disabled={type === 'manual'} />
+                                <Input type="number" value={threshold} onChange={e => setThreshold(e.target.value)} disabled={type === 'manual'} placeholder="100" />
                             </div>
                         </div>
 
-                        {type === 'points' && (
+                        {type === 'coupons' && (
                             <div className="space-y-1">
-                                <Label>Specific Category (Optional)</Label>
-                                <Select value={categoryId || 'all'} onValueChange={v => setCategoryId(v === 'all' ? '' : v)}>
+                                <Label>Select Category</Label>
+                                <Select value={categoryId} onValueChange={v => setCategoryId(v)}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="All Categories" />
+                                        <SelectValue placeholder="Choose Category..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Categories</SelectItem>
                                         {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>

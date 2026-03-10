@@ -1,22 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, Category } from '@/lib/types';
 import DynamicIcon from '@/components/DynamicIcon';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
+import { motion } from 'framer-motion';
 import {
     Star,
     Award,
@@ -27,8 +28,10 @@ import {
     Clock,
     School,
     IdCard,
-    LogIn
+    LogIn,
+    Camera
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -140,15 +143,55 @@ function StudentHomeDashboardInner({
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
+    const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+    const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
+
+    const pointsToCompare = (!settings.badgeCategory || settings.badgeCategory.toLowerCase() === 'all')
+        ? student?.points || 0
+        : (student?.categoryPoints?.[settings.badgeCategory] || 0);
+
+    const earnedBadges: string[] = [];
+    if (settings.enableStudentBadges && student) {
+        if (pointsToCompare >= settings.badgeBronzeThreshold) earnedBadges.push('bronze');
+        if (pointsToCompare >= settings.badgeSilverThreshold) earnedBadges.push('silver');
+        if (pointsToCompare >= settings.badgeGoldThreshold) earnedBadges.push('gold');
+    }
+
+    // Determine earned category badges
+    const earnedCategoryBadges: { categoryName: string, level: 'bronze' | 'silver' | 'gold', color?: string }[] = [];
+    if (settings.enableCategoryBadges && student && categories) {
+        for (const cat of categories) {
+            const catPoints = student.categoryPoints?.[cat.name] || 0;
+            if (catPoints >= settings.categoryGoldThreshold) {
+                earnedCategoryBadges.push({ categoryName: cat.name, level: 'gold', color: cat.color });
+            } else if (catPoints >= settings.categorySilverThreshold) {
+                earnedCategoryBadges.push({ categoryName: cat.name, level: 'silver', color: cat.color });
+            } else if (catPoints >= settings.categoryBronzeThreshold) {
+                earnedCategoryBadges.push({ categoryName: cat.name, level: 'bronze', color: cat.color });
+            }
+        }
+    }
+
     if (studentLoading || !student || !schoolId) {
         return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
     }
 
+    const themeFont = student.theme?.fontFamily;
+
     return (
-        <div className={cn(
-            `space-y-6 relative max-w-5xl mx-auto px-4 py-8 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
-            settings.displayMode === 'app' && 'pb-24'
-        )}>
+        <div
+            className={cn(
+                `space-y-6 relative max-w-5xl mx-auto px-4 py-8 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
+                settings.displayMode === 'app' && 'pb-24'
+            )}
+            style={themeFont ? { fontFamily: `"${themeFont}", sans-serif` } : undefined}
+        >
+            {/* Dynamic Font Loader */}
+            {themeFont && (
+                <style dangerouslySetInnerHTML={{
+                    __html: `@import url('https://fonts.googleapis.com/css2?family=${themeFont.replace(/\s+/g, '+')}&display=swap');`
+                }} />
+            )}
             {isGraphic && (
                 <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
                     <Star className="w-full h-full text-amber-400 fill-amber-400 animate-pulse" />
@@ -160,16 +203,58 @@ function StudentHomeDashboardInner({
                 <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="space-y-1 text-center md:text-left">
                         <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
-                        <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white">{student.firstName} {student.lastName}</h2>
+                        <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white">{getStudentNickname(student)} {student.lastName}</h2>
                     </div>
                     <div className="text-center md:text-right">
-                        <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-0.5">Current Balance</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Current Balance</p>
                         <div className="flex items-baseline gap-1.5">
-                            <span className="text-5xl md:text-7xl font-black text-slate-800 dark:text-white leading-none">
-                                {student.points.toLocaleString()}
-                            </span>
-                            <span className="text-xl md:text-2xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
+                            <motion.span
+                                key={student.points}
+                                initial={{ scale: 1.5, color: '#10b981' }}
+                                animate={{ scale: 1, color: 'inherit' }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                                className="text-5xl md:text-7xl font-black text-foreground leading-none inline-block relative"
+                            >
+                                {(student.points || 0).toLocaleString()}
+                            </motion.span>
+                            <span className="text-xl md:text-2xl font-bold text-muted-foreground uppercase tracking-widest">pts</span>
                         </div>
+
+                        {settings.enableStudentBadges && earnedBadges.length > 0 && (
+                            <div className="flex items-center justify-center md:justify-end gap-2 mt-4">
+                                {earnedBadges.includes('bronze') && (
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 font-black tracking-widest text-[10px] uppercase shadow-sm">
+                                        <Award className="w-3.5 h-3.5 mr-1" /> Bronze
+                                    </Badge>
+                                )}
+                                {earnedBadges.includes('silver') && (
+                                    <Badge variant="outline" className="bg-slate-200 text-slate-800 border-slate-400 font-black tracking-widest text-[10px] uppercase shadow-sm">
+                                        <Award className="w-3.5 h-3.5 mr-1" /> Silver
+                                    </Badge>
+                                )}
+                                {earnedBadges.includes('gold') && (
+                                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 font-black tracking-widest text-[10px] uppercase shadow-sm">
+                                        <Award className="w-3.5 h-3.5 mr-1" /> Gold
+                                    </Badge>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Category Badges Render */}
+                        {settings.enableCategoryBadges && earnedCategoryBadges.length > 0 && (
+                            <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 mt-2">
+                                {earnedCategoryBadges.map((badge, idx) => (
+                                    <Badge key={idx} variant="outline" className={cn(
+                                        "font-black tracking-widest text-[9px] uppercase shadow-sm",
+                                        badge.level === 'gold' && "bg-yellow-100 text-yellow-800 border-yellow-400",
+                                        badge.level === 'silver' && "bg-slate-200 text-slate-800 border-slate-400",
+                                        badge.level === 'bronze' && "bg-orange-100 text-orange-800 border-orange-300"
+                                    )}>
+                                        <Award className="w-3 h-3 mr-1" /> {badge.categoryName} {badge.level}
+                                    </Badge>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -177,15 +262,15 @@ function StudentHomeDashboardInner({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
                 <div className="lg:col-span-2 space-y-5">
                     {/* Eligible Rewards */}
-                    <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
+                    <Card className="border-none shadow-lg bg-card text-card-foreground">
                         <CardHeader className="pb-3">
                             <div className="flex items-center gap-2">
                                 <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                     <Award className="w-4 h-4 text-chart-1" />
                                 </div>
                                 <div>
-                                    <CardTitle className="text-base font-black text-slate-800 dark:text-white">Eligible Rewards</CardTitle>
-                                    <CardDescription className="text-xs font-medium dark:text-slate-400">You have enough points for these items! Ask your teacher to redeem.</CardDescription>
+                                    <CardTitle className="text-base font-black text-foreground">Eligible Rewards</CardTitle>
+                                    <CardDescription className="text-xs font-medium text-muted-foreground">You have enough points for these items! Ask your teacher to redeem.</CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
@@ -198,13 +283,13 @@ function StudentHomeDashboardInner({
                                     .sort((a, b) => b.points - a.points)
                                     .slice(0, 6)
                                     .map((reward) => (
-                                        <div key={reward.id} className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 transition-all flex flex-col items-center text-center gap-2 bg-white/40 dark:bg-slate-800/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group">
-                                            <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
+                                        <div key={reward.id} className="p-4 rounded-xl border border-border transition-all flex flex-col items-center text-center gap-2 bg-muted/20 shadow-sm hover:shadow-md hover:-translate-y-0.5 transform duration-300 group">
+                                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
                                                 <DynamicIcon name={reward.icon} className="w-6 h-6 text-primary" />
                                             </div>
-                                            <p className="text-xs font-black text-slate-800 dark:text-white leading-tight line-clamp-1">{reward.name}</p>
-                                            <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                                                {reward.points.toLocaleString()} PTS
+                                            <p className="text-xs font-black text-foreground leading-tight line-clamp-1">{reward.name}</p>
+                                            <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-muted text-muted-foreground">
+                                                {(reward.points || 0).toLocaleString()} PTS
                                             </Badge>
                                         </div>
                                     ))}
@@ -219,10 +304,10 @@ function StudentHomeDashboardInner({
                 </div>
 
                 {/* Right Section: Activity */}
-                <Card className="lg:col-span-1 border-none shadow-lg bg-white dark:bg-slate-900 flex flex-col">
-                    <CardHeader className="pb-3 border-b border-slate-50 dark:border-slate-800">
-                        <CardTitle className="text-base font-black flex items-center gap-2 text-slate-800 dark:text-white">
-                            <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <Card className="lg:col-span-1 border-none shadow-lg bg-card text-card-foreground flex flex-col">
+                    <CardHeader className="pb-3 border-b border-border">
+                        <CardTitle className="text-base font-black flex items-center gap-2 text-foreground">
+                            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
                                 <ChevronRight className="w-5 h-5 text-chart-1" />
                             </div>
                             Activity
@@ -252,7 +337,10 @@ export default function StudentHomePortal() {
 
     const [inputSchoolId, setInputSchoolId] = useState('');
     const [inputStudentId, setInputStudentId] = useState('');
+    const [scannerInput, setScannerInput] = useState('');
     const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [loginTab, setLoginTab] = useState('manual');
+    const scannerInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!settings.enableStudentPortal) {
@@ -260,15 +348,23 @@ export default function StudentHomePortal() {
         }
     }, [settings.enableStudentPortal, router]);
 
-    const handleLogin = async () => {
-        if (!inputSchoolId.trim() || !inputStudentId.trim()) {
+    // Focus the scanner input when the tab is selected
+    useEffect(() => {
+        if (loginTab === 'scanner') {
+            const timer = setTimeout(() => scannerInputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [loginTab]);
+
+    const executeLogin = async (school: string, nfc: string) => {
+        if (!school.trim() || !nfc.trim()) {
             playSound('error');
             toast({ variant: 'destructive', title: 'Missing Information', description: 'Please enter both School ID and your Badge Number.' });
             return;
         }
 
         setIsLoggingIn(true);
-        const success = await login('student', { schoolId: inputSchoolId.trim(), nfcId: inputStudentId.trim() } as any);
+        const success = await login('student', { schoolId: school.trim(), nfcId: nfc.trim() } as any);
         if (success) {
             playSound('login');
             toast({ title: 'Welcome back!' });
@@ -277,6 +373,13 @@ export default function StudentHomePortal() {
             toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid School ID or Student Badge Number.' });
         }
         setIsLoggingIn(false);
+    };
+
+    const handleLogin = () => executeLogin(inputSchoolId, inputStudentId);
+
+    const handleScannerLogin = () => {
+        executeLogin(inputSchoolId, scannerInput);
+        setScannerInput(''); // Reset for next scan
     };
 
     const handleLogout = () => {
@@ -329,7 +432,7 @@ export default function StudentHomePortal() {
                     <CardContent className="space-y-6">
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="school-id" className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
+                                <Label htmlFor="school-id" className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
                                     <School className="w-3.5 h-3.5" /> School ID
                                 </Label>
                                 <Input
@@ -337,31 +440,76 @@ export default function StudentHomePortal() {
                                     value={inputSchoolId}
                                     onChange={e => setInputSchoolId(e.target.value)}
                                     placeholder="e.g. springfield_elementary"
-                                    className={cn("h-14 rounded-xl text-lg font-mono tracking-widest text-center", isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50')}
+                                    className={cn("h-14 rounded-xl text-lg font-mono tracking-widest text-center", isGraphic ? 'bg-foreground/5 border-border' : 'bg-muted/30')}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="student-badge" className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>
-                                    <IdCard className="w-3.5 h-3.5" /> Badge Number
-                                </Label>
-                                <Input
-                                    id="student-badge"
-                                    value={inputStudentId}
-                                    onChange={e => setInputStudentId(e.target.value)}
-                                    placeholder="Enter the number on your badge"
-                                    className={cn("h-14 rounded-xl text-lg font-mono tracking-widest text-center", isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50')}
-                                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                                />
-                            </div>
-                        </div>
 
-                        <Button onClick={handleLogin} disabled={isLoggingIn} className={cn(
-                            "w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-white",
-                            isGraphic ? 'bg-chart-4 hover:bg-chart-4/90 shadow-chart-4/20' : 'bg-slate-800 hover:bg-slate-700'
-                        )}>
-                            {isLoggingIn ? <Loader2 className="mr-3 w-6 h-6 animate-spin" /> : <LogIn className="mr-3 w-6 h-6" />}
-                            {isLoggingIn ? 'Logging In...' : 'Login'}
-                        </Button>
+                            <Tabs defaultValue="manual" value={loginTab} onValueChange={setLoginTab} className="w-full pt-2">
+                                <TabsList className={cn("grid w-full grid-cols-2 p-1 rounded-xl mb-6", isGraphic ? 'bg-foreground/5' : 'bg-muted/50')}>
+                                    <TabsTrigger value="manual" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                                        <IdCard className="mr-2 h-4 w-4" /> Type ID
+                                    </TabsTrigger>
+                                    <TabsTrigger value="scanner" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                                        <Camera className="mr-2 h-4 w-4" /> Scan Badge
+                                    </TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="manual" className="space-y-6">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="student-badge" className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>
+                                            <IdCard className="w-3.5 h-3.5" /> Badge Number
+                                        </Label>
+                                        <Input
+                                            id="student-badge"
+                                            value={inputStudentId}
+                                            onChange={e => setInputStudentId(e.target.value)}
+                                            placeholder="Enter the number on your badge"
+                                            className={cn("h-14 rounded-xl text-lg font-mono tracking-widest text-center", isGraphic ? 'bg-foreground/5 border-border' : 'bg-muted/30')}
+                                            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                                        />
+                                    </div>
+                                    <Button onClick={handleLogin} disabled={isLoggingIn} className={cn(
+                                        "w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground",
+                                        isGraphic ? 'bg-primary hover:bg-primary/90 shadow-primary/20' : 'bg-primary hover:bg-primary/90'
+                                    )}>
+                                        {isLoggingIn ? <Loader2 className="mr-3 w-6 h-6 animate-spin" /> : <LogIn className="mr-3 w-6 h-6" />}
+                                        {isLoggingIn ? 'Logging In...' : 'Login'}
+                                    </Button>
+                                </TabsContent>
+
+                                <TabsContent value="scanner" className="space-y-6 text-center">
+                                    <div className="py-8 space-y-6">
+                                        <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                                            <div className="absolute inset-0 rounded-full animate-ping opacity-25 bg-primary"></div>
+                                            <div className={cn("w-20 h-20 rounded-full flex items-center justify-center border-4 relative z-10 shadow-lg", isGraphic ? 'bg-background border-primary text-primary' : 'bg-card border-slate-800 dark:border-slate-200 text-slate-800 dark:text-slate-200')}>
+                                                <Camera className="w-10 h-10" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <p className="font-black text-lg text-foreground">Waiting for Scanner...</p>
+                                            <p className="text-muted-foreground text-xs font-medium px-4">Ensure your School ID is typed above, then place your cursor in the box below and scan your badge.</p>
+                                        </div>
+
+                                        <div className="px-6">
+                                            <Input
+                                                ref={scannerInputRef}
+                                                value={scannerInput}
+                                                onChange={e => setScannerInput(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && handleScannerLogin()}
+                                                placeholder="Scan barcode here"
+                                                className={cn("h-16 text-2xl font-black text-center tracking-[0.2em] rounded-xl transition-all shadow-inner", isGraphic ? 'bg-foreground/5 border-border text-foreground focus-visible:ring-primary' : 'bg-muted/50 border-border text-foreground focus-visible:ring-primary')}
+                                            />
+                                        </div>
+
+                                        <Button onClick={handleScannerLogin} disabled={isLoggingIn || !scannerInput} variant="secondary" className="w-2/3 mx-auto h-12 rounded-xl font-black text-sm uppercase tracking-widest transition-all">
+                                            {isLoggingIn ? <Loader2 className="mr-2 w-5 h-5 animate-spin" /> : null}
+                                            Manual Submit
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

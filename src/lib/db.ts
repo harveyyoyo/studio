@@ -27,6 +27,52 @@ const removeUndefined = (obj: any) => {
   return newObj;
 }
 
+/** Evaluates which achievements a student has newly earned based on their current state. */
+export const evaluateAchievements = (
+  student: Student,
+  achievements: Achievement[],
+  categories: Category[]
+): { achievementId: string; earnedAt: number; bonusPoints: number }[] => {
+  const newEarned: { achievementId: string; earnedAt: number; bonusPoints: number }[] = [];
+  const existingIds = new Set(student.earnedAchievements?.map(a => a.achievementId) || []);
+
+  for (const ach of achievements) {
+    if (existingIds.has(ach.id)) continue;
+    if (ach.criteria.type === 'manual') continue;
+
+    let isEarned = false;
+    const { type, threshold, categoryId } = ach.criteria;
+
+    if (type === 'points') {
+      if (categoryId) {
+        // Find category name to check categoryPoints
+        const cat = categories.find(c => c.id === categoryId);
+        const catName = cat ? cat.name : null;
+        if (catName && (student.categoryPoints?.[catName] || 0) >= threshold) {
+          isEarned = true;
+        }
+      } else {
+        if (student.points >= threshold) isEarned = true;
+      }
+    } else if (type === 'lifetimePoints') {
+      if ((student.lifetimePoints || 0) >= threshold) isEarned = true;
+    } else if (type === 'coupons') {
+      // Placeholder for coupons redeemed count if needed. 
+      // Manual/Manual check for now.
+    }
+
+    if (isEarned) {
+      newEarned.push({
+        achievementId: ach.id,
+        earnedAt: Date.now(),
+        bonusPoints: ach.bonusPoints || 0
+      });
+    }
+  }
+
+  return newEarned;
+};
+
 /** Look up a student by scanned ID (document ID, nfcId string, or nfcId number). Used by both student kiosk and prize redemption. */
 export const lookupStudentId = async (
   firestore: Firestore,
@@ -358,7 +404,14 @@ export const addCoupons = async (firestore: Firestore, schoolId: string, newCoup
   }
 };
 
-export const redeemCoupon = async (firestore: Firestore, schoolId: string, studentId: string, couponCode: string): Promise<{ success: boolean; message: string; value?: number }> => {
+export const redeemCoupon = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+  couponCode: string,
+  allAchievements: Achievement[] = [],
+  allCategories: Category[] = []
+): Promise<{ success: boolean; message: string; value?: number }> => {
   const couponRef = doc(firestore, 'schools', schoolId, 'coupons', couponCode.toUpperCase());
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
 
@@ -377,14 +430,41 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
       const addedValue = coupon.value;
       const newPoints = currentStudent.points + addedValue;
       const newLifetimePoints = (currentStudent.lifetimePoints || 0) + addedValue;
-      const categoryPoints = currentStudent.categoryPoints || {};
-      categoryPoints[coupon.category] = (categoryPoints[coupon.category] || 0) + addedValue;
+      const categoryPoints = { ...(currentStudent.categoryPoints || {}) };
+      const categoryName = coupon.category || 'Coupon';
+      categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + addedValue;
 
-      // Simplified update. No achievement logic.
-      transaction.update(studentRef, {
+      // Evaluate achievements
+      const updatedStudentForEval: Student = {
+        ...currentStudent,
         points: newPoints,
         lifetimePoints: newLifetimePoints,
+        categoryPoints: categoryPoints
+      };
+
+      const newAchievements = evaluateAchievements(updatedStudentForEval, allAchievements, allCategories);
+      const earnedAchievements = [...(currentStudent.earnedAchievements || [])];
+      let bonusTotal = 0;
+
+      for (const ach of newAchievements) {
+        earnedAchievements.push({ achievementId: ach.achievementId, earnedAt: ach.earnedAt });
+        bonusTotal += ach.bonusPoints;
+
+        // Add history for achievement
+        const achInfo = allAchievements.find(a => a.id === ach.achievementId);
+        const achievementActivityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        transaction.set(achievementActivityRef, {
+          desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
+          amount: ach.bonusPoints,
+          date: Date.now()
+        });
+      }
+
+      transaction.update(studentRef, {
+        points: newPoints + bonusTotal,
+        lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPoints,
+        earnedAchievements
       });
 
       // Simplified activity log.
@@ -421,13 +501,22 @@ export const redeemCoupon = async (firestore: Firestore, schoolId: string, stude
   }
 };
 
-export const awardPointsToStudent = async (firestore: Firestore, schoolId: string, studentId: string, points: number, description: string): Promise<{ success: boolean; message: string; bonusTotal?: number }> => {
+export const awardPointsToStudent = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+  points: number,
+  description: string,
+  allAchievements: Achievement[] = [],
+  allCategories: Category[] = []
+): Promise<{ success: boolean; message: string; bonusTotal?: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number." };
   }
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
 
   try {
+    let bonusTotal = 0;
     await runTransaction(firestore, async (transaction) => {
       const studentDoc = await transaction.get(studentRef);
       if (!studentDoc.exists()) {
@@ -441,17 +530,43 @@ export const awardPointsToStudent = async (firestore: Firestore, schoolId: strin
       const categoryPointsUpdate = { ...studentData.categoryPoints };
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
 
-      transaction.update(studentRef, {
+      // Evaluate achievements
+      const updatedStudentForEval: Student = {
+        ...studentData,
         points: newPoints,
         lifetimePoints: newLifetimePoints,
+        categoryPoints: categoryPointsUpdate
+      };
+
+      const newAchievements = evaluateAchievements(updatedStudentForEval, allAchievements, allCategories);
+      const earnedAchievements = [...(studentData.earnedAchievements || [])];
+
+      for (const ach of newAchievements) {
+        earnedAchievements.push({ achievementId: ach.achievementId, earnedAt: ach.earnedAt });
+        bonusTotal += ach.bonusPoints;
+
+        // Add history for achievement
+        const achInfo = allAchievements.find(a => a.id === ach.achievementId);
+        const achievementActivityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        transaction.set(achievementActivityRef, {
+          desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
+          amount: ach.bonusPoints,
+          date: Date.now()
+        });
+      }
+
+      transaction.update(studentRef, {
+        points: newPoints + bonusTotal,
+        lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPointsUpdate,
+        earnedAchievements
       });
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, { desc: description, amount: points, date: Date.now() });
     });
-    // For now, bonus points are not calculated here to simplify logic.
-    return { success: true, message: "Points awarded successfully.", bonusTotal: 0 };
+
+    return { success: true, message: bonusTotal > 0 ? `Points awarded! Unlocked ${bonusTotal} bonus points from achievements.` : "Points awarded successfully.", bonusTotal };
   } catch (e: any) {
     errorEmitter.emit(
       'permission-error',
@@ -465,7 +580,15 @@ export const awardPointsToStudent = async (firestore: Firestore, schoolId: strin
   }
 };
 
-export const awardPointsToMultipleStudents = async (firestore: Firestore, schoolId: string, studentIds: string[], points: number, description: string): Promise<{ success: boolean; message: string; count: number }> => {
+export const awardPointsToMultipleStudents = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentIds: string[],
+  points: number,
+  description: string,
+  allAchievements: Achievement[] = [],
+  allCategories: Category[] = []
+): Promise<{ success: boolean; message: string; count: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number.", count: 0 };
   }
@@ -491,10 +614,37 @@ export const awardPointsToMultipleStudents = async (firestore: Firestore, school
       const categoryPointsUpdate = { ...studentData.categoryPoints };
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
 
-      batch.update(studentDoc.ref, {
+      // Evaluate achievements
+      const updatedStudentForEval: Student = {
+        ...studentData,
         points: newPoints,
         lifetimePoints: newLifetimePoints,
         categoryPoints: categoryPointsUpdate
+      };
+
+      const newAchievements = evaluateAchievements(updatedStudentForEval, allAchievements, allCategories);
+      const earnedAchievements = [...(studentData.earnedAchievements || [])];
+      let bonusTotal = 0;
+
+      for (const ach of newAchievements) {
+        earnedAchievements.push({ achievementId: ach.achievementId, earnedAt: ach.earnedAt });
+        bonusTotal += ach.bonusPoints;
+
+        // Add history for achievement
+        const achInfo = allAchievements.find(a => a.id === ach.achievementId);
+        const achievementActivityRef = doc(collection(studentDoc.ref, 'activities'));
+        batch.set(achievementActivityRef, {
+          desc: `Achievement Unlocked: ${achInfo?.name || 'Unknown'}`,
+          amount: ach.bonusPoints,
+          date: Date.now()
+        });
+      }
+
+      batch.update(studentDoc.ref, {
+        points: newPoints + bonusTotal,
+        lifetimePoints: newLifetimePoints + bonusTotal,
+        categoryPoints: categoryPointsUpdate,
+        earnedAchievements
       });
 
       const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
@@ -595,7 +745,7 @@ export const redeemPrize = async (firestore: Firestore, schoolId: string, studen
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
 
       transaction.update(studentRef, { points: studentData.points - totalCost });
-      transaction.set(activityRef, newHistoryItem);
+      transaction.set(activityRef, removeUndefined(newHistoryItem));
     });
   } catch (e) {
     errorEmitter.emit(

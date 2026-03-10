@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Wand2, Loader2, Sparkles } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, getContrastColor } from '@/lib/utils';
+import { GoogleFontLoader } from './GoogleFontLoader';
+
 
 interface ThemeGeneratorModalProps {
     isOpen: boolean;
@@ -153,8 +155,11 @@ export function ThemeGeneratorModal({
                             style={previewTheme ? {
                                 backgroundColor: previewTheme.background,
                                 color: previewTheme.text,
+                                fontFamily: previewTheme.fontFamily || 'inherit',
                             } : undefined}
                         >
+                            {previewTheme?.fontFamily && <GoogleFontLoader fontFamily={previewTheme.fontFamily} />}
+
                             {!previewTheme ? (
                                 <p>No theme generated yet</p>
                             ) : (
@@ -166,7 +171,10 @@ export function ThemeGeneratorModal({
                                         </div>
                                         <div
                                             className="px-3 py-1 rounded-full text-sm font-bold shadow-sm"
-                                            style={{ backgroundColor: previewTheme.primary, color: '#fff' }}
+                                            style={{
+                                                backgroundColor: previewTheme.primary,
+                                                color: getContrastColor(previewTheme.primary) === 'black' ? '#000' : '#fff'
+                                            }}
                                         >
                                             ★ 1,250 Pts
                                         </div>

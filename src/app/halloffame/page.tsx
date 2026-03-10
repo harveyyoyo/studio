@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit as firestoreLimit } from 'firebase/firestore';
-import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings } from 'lucide-react';
+import { ArrowLeft, Trophy, Crown, Medal, ChevronRight, Settings, Cpu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import type { Student, Class, Category } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -22,6 +22,7 @@ import {
     DialogDescription,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,12 +33,12 @@ function HallOfFameSkeleton() {
     return (
         <div className="min-h-screen bg-background p-12 flex flex-col items-center">
             <Skeleton className="h-16 w-64 mb-16 rounded-2xl" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl items-end mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-full items-end mb-12">
                 <Skeleton className="h-64 w-full rounded-3xl" />
                 <Skeleton className="h-80 w-full rounded-3xl" />
                 <Skeleton className="h-56 w-full rounded-3xl" />
             </div>
-            <div className="w-full max-w-2xl space-y-3">
+            <div className="w-full max-w-full space-y-3">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
             </div>
         </div>
@@ -48,7 +49,7 @@ export default function HallOfFamePage() {
     const { loginState, isInitialized, schoolId } = useAppContext();
     const firestore = useFirestore();
     const router = useRouter();
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
     const [sortBy, setSortBy] = useState<string>('lifetimePoints');
@@ -57,7 +58,31 @@ export default function HallOfFamePage() {
     const [limit, setLimit] = useState<number>(50);
     const [podiumSize, setPodiumSize] = useState<number>(3);
     const [autoScroll, setAutoScroll] = useState<boolean>(false);
-    const [landscapeMode, setLandscapeMode] = useState<boolean>(false);
+    const [landscapeMode, setLandscapeMode] = useState<boolean>(true);
+
+    // Load persisted settings
+    useEffect(() => {
+        const saved = localStorage.getItem('hall_of_fame_settings');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed.sortBy) setSortBy(parsed.sortBy);
+                if (parsed.scope) setScope(parsed.scope);
+                if (parsed.limit) setLimit(parsed.limit);
+                if (parsed.podiumSize !== undefined) setPodiumSize(parsed.podiumSize);
+                if (parsed.autoScroll !== undefined) setAutoScroll(parsed.autoScroll);
+                if (parsed.landscapeMode !== undefined) setLandscapeMode(parsed.landscapeMode);
+            } catch (e) {
+                console.error("Failed to parse persisted Hall of Fame settings", e);
+            }
+        }
+    }, []);
+
+    // Save settings on change
+    useEffect(() => {
+        const settingsToSave = { sortBy, scope, limit, podiumSize, autoScroll, landscapeMode };
+        localStorage.setItem('hall_of_fame_settings', JSON.stringify(settingsToSave));
+    }, [sortBy, scope, limit, podiumSize, autoScroll, landscapeMode]);
 
     useEffect(() => {
         if (isInitialized && !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
@@ -120,6 +145,35 @@ export default function HallOfFamePage() {
         if (sortBy === 'points') return student.points || 0;
         if (sortBy === 'lifetimePoints') return student.lifetimePoints || 0;
         return student.categoryPoints?.[sortBy] || 0;
+    }
+
+    const getHighestStudentBadge = (student: Student) => {
+        if (!settings.enableStudentBadges) return null;
+        const pointsToCompare = (!settings.badgeCategory || settings.badgeCategory.toLowerCase() === 'all')
+            ? student.points || 0
+            : (student.categoryPoints?.[settings.badgeCategory] || 0);
+
+        if (pointsToCompare >= settings.badgeGoldThreshold) return 'gold';
+        if (pointsToCompare >= settings.badgeSilverThreshold) return 'silver';
+        if (pointsToCompare >= settings.badgeBronzeThreshold) return 'bronze';
+        return null;
+    }
+
+    const getEarnedCategoryBadges = (student: Student) => {
+        const earnedCategoryBadges: { categoryName: string, level: 'bronze' | 'silver' | 'gold' }[] = [];
+        if (settings.enableCategoryBadges && categories) {
+            for (const cat of categories) {
+                const catPoints = student.categoryPoints?.[cat.name] || 0;
+                if (catPoints >= settings.categoryGoldThreshold) {
+                    earnedCategoryBadges.push({ categoryName: cat.name, level: 'gold' });
+                } else if (catPoints >= settings.categorySilverThreshold) {
+                    earnedCategoryBadges.push({ categoryName: cat.name, level: 'silver' });
+                } else if (catPoints >= settings.categoryBronzeThreshold) {
+                    earnedCategoryBadges.push({ categoryName: cat.name, level: 'bronze' });
+                }
+            }
+        }
+        return earnedCategoryBadges;
     }
 
     const getInitials = (firstName: string, lastName: string) => {
@@ -215,7 +269,7 @@ export default function HallOfFamePage() {
 
             <main className={cn(
                 "relative z-10 w-full px-8 pt-12 transition-all duration-500",
-                landscapeMode ? "max-w-[1400px]" : "max-w-4xl",
+                "max-w-full",
                 settings.displayMode === 'app' ? 'pb-24' : 'pb-12'
             )}>
                 <Card className="border-t-8 border-chart-5 shadow-2xl bg-card/80 backdrop-blur-md">
@@ -318,12 +372,31 @@ export default function HallOfFamePage() {
                                         className="text-center md:order-1"
                                     >
                                         <div className="bg-card/40 backdrop-blur-sm border-2 border-slate-200 rounded-3xl p-8 relative h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black text-xl border-4 border-background">2</div>
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                                <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black text-xl border-4 border-background">2</div>
+                                                {getHighestStudentBadge(podium[1]) === 'gold' && <span className="bg-yellow-400 text-yellow-900 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Gold</span>}
+                                                {getHighestStudentBadge(podium[1]) === 'silver' && <span className="bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Silver</span>}
+                                                {getHighestStudentBadge(podium[1]) === 'bronze' && <span className="bg-orange-300 text-orange-900 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Bronze</span>}
+                                            </div>
                                             <Avatar className="w-20 h-20 mx-auto mb-4 border-4 border-slate-100 shadow-md">
                                                 <AvatarFallback className="bg-secondary text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-xl truncate tracking-tight">{podium[1].firstName}</p>
+                                            <p className="font-black text-foreground text-xl truncate tracking-tight">{getStudentNickname(podium[1])}</p>
                                             <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[1]).toLocaleString()} pts</p>
+                                            {settings.enableCategoryBadges && getEarnedCategoryBadges(podium[1]).length > 0 && (
+                                                <div className="flex flex-wrap justify-center gap-1 mt-2">
+                                                    {getEarnedCategoryBadges(podium[1]).map((b, i) => (
+                                                        <span key={i} className={cn(
+                                                            "text-[8px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-sm shadow-sm",
+                                                            b.level === 'gold' && "bg-yellow-100/80 text-yellow-800 border-[0.5px] border-yellow-400/50",
+                                                            b.level === 'silver' && "bg-slate-200/80 text-slate-800 border-[0.5px] border-slate-400/50",
+                                                            b.level === 'bronze' && "bg-orange-100/80 text-orange-800 border-[0.5px] border-orange-300/50"
+                                                        )}>
+                                                            {b.categoryName} {b.level}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}
@@ -336,14 +409,31 @@ export default function HallOfFamePage() {
                                     className="text-center md:order-2"
                                 >
                                     <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-8 relative shadow-2xl h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
-                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                             <Crown className="w-16 h-16 text-chart-5 animate-float drop-shadow-lg" />
+                                            {getHighestStudentBadge(podium[0]) === 'gold' && <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full mt-1 shadow-md">Gold</span>}
+                                            {getHighestStudentBadge(podium[0]) === 'silver' && <span className="bg-slate-300 text-slate-700 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full mt-1 shadow-md">Silver</span>}
+                                            {getHighestStudentBadge(podium[0]) === 'bronze' && <span className="bg-orange-300 text-orange-900 text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full mt-1 shadow-md">Bronze</span>}
                                         </div>
                                         <Avatar className="w-28 h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl">
                                             <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-black text-foreground text-2xl truncate tracking-tighter">{podium[0].firstName}</p>
+                                        <p className="font-black text-foreground text-2xl truncate tracking-tighter">{getStudentNickname(podium[0])}</p>
                                         <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{getPointsForStudent(podium[0]).toLocaleString()} pts</p>
+                                        {settings.enableCategoryBadges && getEarnedCategoryBadges(podium[0]).length > 0 && (
+                                            <div className="flex flex-wrap justify-center gap-1 mt-3">
+                                                {getEarnedCategoryBadges(podium[0]).map((b, i) => (
+                                                    <span key={i} className={cn(
+                                                        "text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-sm shadow-sm",
+                                                        b.level === 'gold' && "bg-yellow-100/80 text-yellow-800 border-[0.5px] border-yellow-400/50",
+                                                        b.level === 'silver' && "bg-slate-200/80 text-slate-800 border-[0.5px] border-slate-400/50",
+                                                        b.level === 'bronze' && "bg-orange-100/80 text-orange-800 border-[0.5px] border-orange-300/50"
+                                                    )}>
+                                                        {b.categoryName} {b.level}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
 
@@ -356,12 +446,31 @@ export default function HallOfFamePage() {
                                         className="text-center md:order-3"
                                     >
                                         <div className="bg-card/40 backdrop-blur-sm border-2 border-orange-200/50 rounded-3xl p-8 relative h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xl border-4 border-background">3</div>
+                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xl border-4 border-background">3</div>
+                                                {getHighestStudentBadge(podium[2]) === 'gold' && <span className="bg-yellow-400 text-yellow-900 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Gold</span>}
+                                                {getHighestStudentBadge(podium[2]) === 'silver' && <span className="bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Silver</span>}
+                                                {getHighestStudentBadge(podium[2]) === 'bronze' && <span className="bg-orange-300 text-orange-900 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full mt-1 shadow-sm">Bronze</span>}
+                                            </div>
                                             <Avatar className="w-16 h-16 mx-auto mb-4 border-4 border-orange-50 shadow-md">
                                                 <AvatarFallback className="bg-orange-50 text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-lg truncate tracking-tight">{podium[2].firstName}</p>
+                                            <p className="font-black text-foreground text-lg truncate tracking-tight">{getStudentNickname(podium[2])}</p>
                                             <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[2]).toLocaleString()} pts</p>
+                                            {settings.enableCategoryBadges && getEarnedCategoryBadges(podium[2]).length > 0 && (
+                                                <div className="flex flex-wrap justify-center gap-1 mt-2">
+                                                    {getEarnedCategoryBadges(podium[2]).map((b, i) => (
+                                                        <span key={i} className={cn(
+                                                            "text-[8px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-sm shadow-sm",
+                                                            b.level === 'gold' && "bg-yellow-100/80 text-yellow-800 border-[0.5px] border-yellow-400/50",
+                                                            b.level === 'silver' && "bg-slate-200/80 text-slate-800 border-[0.5px] border-slate-400/50",
+                                                            b.level === 'bronze' && "bg-orange-100/80 text-orange-800 border-[0.5px] border-orange-300/50"
+                                                        )}>
+                                                            {b.categoryName} {b.level}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}
@@ -399,7 +508,22 @@ export default function HallOfFamePage() {
                                                 <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>
                                             </Avatar>
                                             <div>
-                                                <p className="font-black text-foreground tracking-tight">{student.firstName} {student.lastName}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-black text-foreground tracking-tight">{getStudentNickname(student)} {student.lastName}</p>
+                                                    {getHighestStudentBadge(student) === 'gold' && <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 font-black tracking-widest text-[8px] uppercase px-1 py-0 shadow-sm leading-tight h-4">Gold</Badge>}
+                                                    {getHighestStudentBadge(student) === 'silver' && <Badge variant="outline" className="bg-slate-200 text-slate-800 border-slate-400 font-black tracking-widest text-[8px] uppercase px-1 py-0 shadow-sm leading-tight h-4">Silver</Badge>}
+                                                    {getHighestStudentBadge(student) === 'bronze' && <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 font-black tracking-widest text-[8px] uppercase px-1 py-0 shadow-sm leading-tight h-4">Bronze</Badge>}
+                                                    {settings.enableCategoryBadges && getEarnedCategoryBadges(student).map((b, i) => (
+                                                        <Badge key={i} variant="outline" className={cn(
+                                                            "font-black tracking-widest text-[8px] uppercase px-1 py-0 shadow-sm leading-tight h-4",
+                                                            b.level === 'gold' && "bg-yellow-100/60 text-yellow-900 border-yellow-400/50",
+                                                            b.level === 'silver' && "bg-slate-200/60 text-slate-800 border-slate-400/50",
+                                                            b.level === 'bronze' && "bg-orange-100/60 text-orange-900 border-orange-300/50"
+                                                        )}>
+                                                            {b.categoryName} {b.level}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{getClassName(student.classId)}</p>
                                             </div>
                                         </div>

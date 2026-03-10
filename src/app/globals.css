@@ -34,6 +34,7 @@
     --chart-5: 280 70% 60%;
     --radius: 0.75rem;
   }
+
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
@@ -59,6 +60,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
   }
@@ -69,113 +71,287 @@
   --primary: 199 89% 48%;
   --background: 199 80% 98%;
 }
+
 [data-color-scheme="rose"] {
   --primary: 347 77% 50%;
   --background: 347 70% 98%;
 }
+
 [data-color-scheme="mint"] {
   --primary: 160 84% 39%;
   --background: 160 60% 98%;
 }
+
 [data-color-scheme="lavender"] {
   --primary: 263 70% 58%;
   --background: 263 60% 98%;
 }
+
 [data-color-scheme="peach"] {
   --primary: 25 95% 53%;
   --background: 25 80% 98%;
 }
 
 /* Dark mode variations for themes */
-.dark[data-color-scheme="sky"] { --background: 199 80% 5%; }
-.dark[data-color-scheme="rose"] { --background: 347 70% 5%; }
-.dark[data-color-scheme="mint"] { --background: 160 60% 5%; }
-.dark[data-color-scheme="lavender"] { --background: 263 60% 5%; }
-.dark[data-color-scheme="peach"] { --background: 25 80% 5%; }
+.dark[data-color-scheme="sky"] {
+  --background: 199 80% 5%;
+}
+
+.dark[data-color-scheme="rose"] {
+  --background: 347 70% 5%;
+}
+
+.dark[data-color-scheme="mint"] {
+  --background: 160 60% 5%;
+}
+
+.dark[data-color-scheme="lavender"] {
+  --background: 263 60% 5%;
+}
+
+.dark[data-color-scheme="peach"] {
+  --background: 25 80% 5%;
+}
 
 /* Print Styles */
-#print-container, #student-id-print-container { 
-  display: none; 
+#print-container,
+#student-id-print-container {
+  display: none;
 }
 
 @media print {
-    @page {
-        size: letter portrait;
-        margin: 0.5in;
-    }
-    
-    body, html { 
-        background: white !important; 
-        color: black !important;
-        margin: 0; 
-        padding: 0; 
-        width: 100%;
-        height: 100%;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    #screen-view, .no-print, [data-radix-toast-viewport] { 
-        display: none !important; 
-    }
-    
-    #print-container {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(8, 1fr);
-        gap: 0;
-        width: 7.5in; 
-        height: 10in; 
-        box-sizing: border-box;
-        page-break-after: always;
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-    
-    .print-coupon {
-        border: 1px dotted #999;
-        padding: 0.05in;
-        text-align: center;
-        height: 1.25in;
-        width: 2.5in;
-        page-break-inside: avoid;
-        box-sizing: border-box;
-        font-family: 'PT Sans', sans-serif;
-        background: #fff !important;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-around;
-    }
+  @page {
+    size: letter portrait;
+    margin: 0.5in;
+  }
 
-    .print-coupon-header { font-size: 6pt; font-weight: bold; color: #333; text-transform: uppercase; }
-    .print-coupon-main { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.1in; border-top: 1px solid #eee; border-bottom: 1px solid #eee; padding: 0.02in 0; }
-    .print-coupon-value { font-size: 22pt; font-weight: 900; line-height: 1; font-family: 'Playfair Display', serif; color: #000; }
-    .print-coupon-details { text-align: left; flex-grow: 1; font-size: 7pt; }
-    .print-coupon-barcode .font-barcode { font-size: 38pt; line-height: 1; color: #000 !important; }
+  body,
+  html {
+    background: white !important;
+    color: black !important;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
-    #student-id-print-container {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: repeat(5, 1fr);
-        width: 7.5in; height: 10in; position: absolute; top: 0; left: 0;
-    }
-    .print-id-card {
-        border: 1px dotted #999; padding: 0.1in; text-align: center; height: 2in; width: 3.75in;
-        page-break-inside: avoid; font-family: 'PT Sans', sans-serif; background: #fff;
-        display: flex; flex-direction: column; align-items: center; justify-content: space-around;
-    }
-    .print-id-name { font-size: 14pt; font-weight: bold; font-family: 'Playfair Display', serif; margin-bottom: 0.05in; }
-    .print-id-class { font-size: 10pt; color: #666; font-weight: bold; margin-bottom: 0.1in; }
-    .print-id-barcode-container { width: 100%; display: flex; justify-content: center; align-items: center; flex-grow: 1; }
-    .print-id-card .font-barcode { font-size: 52pt; line-height: 1; color: #000 !important; }
+  #screen-view,
+  .no-print,
+  [data-radix-toast-viewport] {
+    display: none !important;
+  }
+
+  #print-container {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 0;
+    width: 7.5in;
+    height: 10in;
+    box-sizing: border-box;
+    page-break-after: always;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .print-coupon {
+    border: 1px dotted #999;
+    padding: 0.05in;
+    text-align: center;
+    height: 1.25in;
+    width: 2.5in;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+    font-family: 'PT Sans', sans-serif;
+    background: #fff !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .print-coupon-header {
+    font-size: 6pt;
+    font-weight: bold;
+    color: #333;
+    text-transform: uppercase;
+  }
+
+  .print-coupon-main {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1in;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 0.02in 0;
+  }
+
+  .print-coupon-value {
+    font-size: 22pt;
+    font-weight: 900;
+    line-height: 1;
+    font-family: 'Playfair Display', serif;
+    color: #000;
+  }
+
+  .print-coupon-details {
+    text-align: left;
+    flex-grow: 1;
+    font-size: 7pt;
+  }
+
+  .print-coupon-barcode .font-barcode {
+    font-size: 38pt;
+    line-height: 1;
+    color: #000 !important;
+  }
+
+  #student-id-print-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    width: 7.5in;
+    height: 10in;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  .print-id-card {
+    border: 1px dotted #999;
+    padding: 0.1in;
+    text-align: center;
+    height: 2in;
+    width: 3.75in;
+    page-break-inside: avoid;
+    font-family: 'PT Sans', sans-serif;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+  }
+
+  .print-id-name {
+    font-size: 14pt;
+    font-weight: bold;
+    font-family: 'Playfair Display', serif;
+    margin-bottom: 0.05in;
+  }
+
+  .print-id-class {
+    font-size: 10pt;
+    color: #666;
+    font-weight: bold;
+    margin-bottom: 0.1in;
+  }
+
+  .print-id-barcode-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+  }
+
+  .print-id-card .font-barcode {
+    font-size: 52pt;
+    line-height: 1;
+    color: #000 !important;
+  }
 }
 
 @keyframes fly-up {
-  from { transform: scale(0.5) translateY(0); opacity: 1; }
-  to { transform: scale(2.5) translateY(-150px); opacity: 0; }
+  from {
+    transform: scale(0.5) translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(2.5) translateY(-150px);
+    opacity: 0;
+  }
 }
-.animate-fly-up { animation: fly-up 1.5s ease-out forwards; }
-.graphic-text-glow { text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3); }
+
+.animate-fly-up {
+  animation: fly-up 1.5s ease-out forwards;
+}
+
+.graphic-text-glow {
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+}
+
+/* Legacy Mode Overrides - Strips performance-heavy effects */
+.legacy * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+/* Force-kill all animations and fixed backgrounds */
+.legacy [class*="animate-"],
+.legacy .animate-pulse,
+.legacy .animate-bounce,
+.legacy .animate-spin,
+.legacy .animate-float,
+.legacy .animate-pulse-glow,
+.legacy .animate-fly-up {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Disable heavy background decorations */
+.legacy [style*="background-image"],
+.legacy .pointer-events-none.fixed.inset-0.opacity-\[0\.03\] {
+  background-image: none !important;
+  display: none !important;
+}
+
+/* Simplify gradients to solid backgrounds */
+.legacy .bg-gradient-to-br,
+.legacy .bg-gradient-to-tr,
+.legacy .bg-gradient-to-r,
+.legacy .bg-gradient-to-l {
+  background-image: none !important;
+  background-color: hsl(var(--secondary) / 0.1) !important;
+}
+
+.legacy .backdrop-blur-md,
+.legacy .backdrop-blur-sm,
+.legacy .backdrop-blur-lg,
+.legacy .backdrop-blur-xl,
+.legacy .backdrop-blur-2xl {
+  background-color: hsl(var(--background)) !important;
+  backdrop-filter: none !important;
+}
+
+/* Specific overrides for common translucent backgrounds to prevent "not good" look */
+.legacy .bg-background\/80,
+.legacy .bg-background\/95,
+.legacy .bg-card\/40,
+.legacy .bg-card\/50 {
+  background-color: hsl(var(--background)) !important;
+}
+
+.legacy .bg-card\/40.backdrop-blur-sm {
+  background-color: hsl(var(--card)) !important;
+}
+
+.dark.legacy .backdrop-blur-md,
+.dark.legacy .backdrop-blur-sm,
+.dark.legacy .backdrop-blur-lg,
+.dark.legacy .backdrop-blur-xl,
+.dark.legacy .backdrop-blur-2xl {
+  background-color: hsl(var(--background)) !important;
+}

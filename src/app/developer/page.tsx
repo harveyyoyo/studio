@@ -132,7 +132,7 @@ function SchoolStatsModal({ school, isOpen, onOpenChange }: { school: SchoolInfo
               <p className="text-sm text-muted-foreground">Prize Types</p>
             </div>
             <div className="bg-secondary p-4 rounded-lg">
-              <p className="text-2xl font-bold">{stats.totalPointsAwarded.toLocaleString()}</p>
+              <p className="text-2xl font-bold">{(stats.totalPointsAwarded || 0).toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Points Awarded</p>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function DeveloperPage() {
 
     allSchools.forEach((school) => {
       const adminRoleRef = doc(firestore, 'schools', school.id, 'roles_admin', user.uid);
-      setDoc(adminRoleRef, { role: 'admin' }).catch(() => {});
+      setDoc(adminRoleRef, { role: 'admin' }).catch(() => { });
     });
   }, [loginState, firestore, allSchools, schoolsLoading, auth]);
 
@@ -369,12 +369,12 @@ export default function DeveloperPage() {
 
   if (!isInitialized || loginState !== 'developer' || isUserLoading) {
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Loading...
-            </Button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Loading...
+        </Button>
+      </div>
     );
   }
 
@@ -499,8 +499,8 @@ export default function DeveloperPage() {
                 <span className="text-sm font-normal bg-slate-100 text-slate-600 px-2 py-1 rounded-md">{allSchools?.length || 0} total</span>
               </CardTitle>
             </Helper>
-             <CardDescription>
-                <Button onClick={() => setIsCreateSchoolDialogOpen(true)} className="mt-4"><Plus className="mr-2 h-4 w-4" />Create New School</Button>
+            <CardDescription>
+              <Button onClick={() => setIsCreateSchoolDialogOpen(true)} className="mt-4"><Plus className="mr-2 h-4 w-4" />Create New School</Button>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -604,47 +604,47 @@ export default function DeveloperPage() {
         </Card>
 
         <Dialog open={isCreateSchoolDialogOpen} onOpenChange={setIsCreateSchoolDialogOpen}>
-            <DialogContent>
-                <DialogHeader>
-                <DialogTitle>Create New School</DialogTitle>
-                <DialogDescription>
-                    Enter the new school's details below. The ID should be short and contain no spaces.
-                </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-1">
-                        <Label htmlFor="new-school-id">School ID</Label>
-                        <Input
-                        id="new-school-id"
-                        placeholder="e.g., 'washington_hs'"
-                        value={newSchoolId}
-                        onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="new-school-name">School Name</Label>
-                        <Input
-                        id="new-school-name"
-                        placeholder="e.g., Washington High School"
-                        value={newSchoolName}
-                        onChange={(e) => setNewSchoolName(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="new-school-passcode">Passcode</Label>
-                        <Input
-                        id="new-school-passcode"
-                        placeholder="(Leave blank to auto-generate)"
-                        value={newSchoolPasscode}
-                        onChange={(e) => setNewSchoolPasscode(e.target.value)}
-                        />
-                    </div>
-                </div>
-                <DialogFooter>
-                <Button variant="secondary" onClick={() => setIsCreateSchoolDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateSchool}>Create School</Button>
-                </DialogFooter>
-            </DialogContent>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New School</DialogTitle>
+              <DialogDescription>
+                Enter the new school's details below. The ID should be short and contain no spaces.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-1">
+                <Label htmlFor="new-school-id">School ID</Label>
+                <Input
+                  id="new-school-id"
+                  placeholder="e.g., 'washington_hs'"
+                  value={newSchoolId}
+                  onChange={(e) => setNewSchoolId(e.target.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="new-school-name">School Name</Label>
+                <Input
+                  id="new-school-name"
+                  placeholder="e.g., Washington High School"
+                  value={newSchoolName}
+                  onChange={(e) => setNewSchoolName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="new-school-passcode">Passcode</Label>
+                <Input
+                  id="new-school-passcode"
+                  placeholder="(Leave blank to auto-generate)"
+                  value={newSchoolPasscode}
+                  onChange={(e) => setNewSchoolPasscode(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setIsCreateSchoolDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateSchool}>Create School</Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
 
         <SchoolStatsModal

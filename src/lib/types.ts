@@ -35,6 +35,7 @@ export interface StudentTheme {
   cardBackground: string;
   accent: string;
   emoji?: string;
+  fontFamily?: string;
 }
 
 export interface Student {

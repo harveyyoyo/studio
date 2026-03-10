@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Achievement } from '@/lib/types';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import {
   ArrowLeft,
   Nfc,
@@ -48,6 +48,8 @@ import {
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GoogleFontLoader } from '@/components/GoogleFontLoader';
+
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -251,7 +253,7 @@ function StudentDashboardInner({
     <TooltipProvider>
       <div
         className={cn(
-          `space-y-6 relative max-w-5xl mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
+          `mt-12 space-y-6 relative max-w-full mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
           settings.displayMode === 'app' && 'pb-24'
         )}
         style={student.theme ? {
@@ -262,8 +264,11 @@ function StudentDashboardInner({
           '--theme-accent': student.theme.accent,
           backgroundColor: 'var(--theme-bg)',
           color: 'var(--theme-text)',
+          fontFamily: student.theme.fontFamily || 'inherit',
         } as React.CSSProperties : undefined}
       >
+        {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
+
         {/* Graphic Elements */}
         {isGraphic && !student.theme && (
           <div className="absolute -top-12 right-0 w-32 h-32 opacity-20 pointer-events-none z-0">
@@ -281,16 +286,16 @@ function StudentDashboardInner({
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Welcome back,</p>
               <h2 className="text-3xl md:text-5xl font-black flex items-center gap-3 mt-1">
                 {student.theme?.emoji && <span className="text-5xl md:text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>}
-                {student.firstName} {student.lastName}
+                {getStudentNickname(student)} {student.lastName}
               </h2>
             </div>
             <div className="text-center md:text-right">
               <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Current Balance</p>
               <div className="flex items-baseline gap-1.5" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>
-                <span className="text-5xl md:text-7xl font-black text-slate-800 dark:text-white leading-none">
-                  {student.points.toLocaleString()}
+                <span className="text-5xl md:text-7xl font-black leading-none" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>
+                  {(student.points || 0).toLocaleString()}
                 </span>
-                <span className="text-xl md:text-2xl font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">pts</span>
+                <span className="text-xl md:text-2xl font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-primary)' : undefined, opacity: 0.6 }}>pts</span>
               </div>
             </div>
           </CardContent>
@@ -348,8 +353,11 @@ function StudentDashboardInner({
                         />
                         <Button
                           onClick={() => handleRedeemCoupon()}
-                          className="h-14 px-10 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest text-white"
-                          style={student.theme ? { backgroundColor: 'var(--theme-primary)' } : undefined}
+                          className="h-14 px-10 font-black rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-widest"
+                          style={student.theme ? {
+                            backgroundColor: 'var(--theme-primary)',
+                            color: getContrastColor(student.theme.primary) === 'black' ? '#000' : '#fff'
+                          } : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }}
                         >
                           Redeem
                         </Button>
@@ -410,7 +418,7 @@ function StudentDashboardInner({
                         </div>
                         <p className="text-xs font-black text-slate-800 dark:text-white leading-tight line-clamp-1">{reward.name}</p>
                         <Badge variant="secondary" className="font-black text-[9px] tracking-widest rounded-md px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                          {reward.points.toLocaleString()} PTS
+                          {(reward.points || 0).toLocaleString()} PTS
                         </Badge>
                       </div>
                     ))}

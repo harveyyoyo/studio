@@ -34,6 +34,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
+import { getStudentNickname } from '@/lib/utils';
 
 
 function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolId: string; students: Student[], classes: Class[], teacherId: string }) {
@@ -623,7 +624,8 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
     };
 
     const filteredStudents = (students || []).filter(s => {
-        const nameMatch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearch.toLowerCase());
+        const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+        const nameMatch = computedName.includes(studentSearch.toLowerCase());
         const classMatch = filterClassId === 'all' || s.classId === filterClassId;
         return nameMatch && classMatch;
     }).sort((a, b) => a.lastName.localeCompare(b.lastName));
@@ -668,7 +670,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                     "px-6 pt-10 pb-12 transition-colors duration-500 relative z-10",
                     isGraphic ? 'bg-card/30 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'bg-white border-b'
                 )}>
-                    <div className="max-w-4xl mx-auto flex justify-between items-center">
+                    <div className="max-w-full mx-auto flex justify-between items-center">
                         <div className="animate-in fade-in slide-in-from-left duration-700">
                             <h1 className={cn("text-3xl font-black tracking-tighter uppercase font-headline", isGraphic ? 'text-primary drop-shadow-sm' : 'text-slate-800')}>Teacher Portal</h1>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -698,7 +700,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                     </div>
                 </div>
 
-                <div className="max-w-4xl mx-auto px-6 -mt-6 relative z-10 animate-in fade-in slide-in-from-bottom duration-700 delay-150 fill-mode-both">
+                <div className="max-w-full mx-auto px-6 -mt-6 relative z-10 animate-in fade-in slide-in-from-bottom duration-700 delay-150 fill-mode-both">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                         <Card className={cn(
@@ -859,7 +861,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                                                     className="rounded-md"
                                                                 />
                                                                 <div className="flex-grow">
-                                                                    <p className="font-bold text-sm leading-tight">{student.lastName}, {student.firstName}</p>
+                                                                    <p className="font-bold text-sm leading-tight">{student.lastName}, {getStudentNickname(student)}</p>
                                                                     <p className="text-[10px] font-medium opacity-50 uppercase tracking-tighter">ID: {student.nfcId || '---'}</p>
                                                                 </div>
                                                                 <div className="text-right">
@@ -947,7 +949,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function TeacherPrinterSkeleton() {
     return (
-        <div className="max-w-4xl mx-auto px-6 -mt-6 animate-pulse">
+        <div className="max-w-full mx-auto px-6 -mt-6 animate-pulse">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="border-t-4 border-primary">
                     <CardHeader>

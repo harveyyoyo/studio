@@ -46,7 +46,7 @@ import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
+import { cn, getStudentNickname } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -420,7 +420,7 @@ function AdminDashboardInner() {
 
   return (
     <TooltipProvider>
-      <div className={cn("space-y-6 max-w-7xl mx-auto p-4 md:p-8", settings.displayMode === 'app' && 'pb-24')}>
+      <div className={cn("space-y-6 max-w-full mx-auto p-4 md:p-8", settings.displayMode === 'app' && 'pb-24')}>
         <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
           <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
           <p className="text-muted-foreground">
@@ -478,7 +478,7 @@ function AdminDashboardInner() {
                     <Card className="bg-secondary/30 border-0 shadow-none">
                       <CardContent className="p-6">
                         <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Points Issued</h3>
-                        <p className="text-4xl font-black text-foreground">{students?.reduce((sum, s) => sum + (s.lifetimePoints || s.points), 0).toLocaleString() || 0}</p>
+                        <p className="text-4xl font-black text-foreground">{students?.reduce((sum, s) => sum + (s.lifetimePoints || s.points || 0), 0).toLocaleString() || 0}</p>
                       </CardContent>
                     </Card>
                     <Card className="bg-secondary/30 border-0 shadow-none">
@@ -702,7 +702,8 @@ function AdminDashboardInner() {
                         className="h-11 px-4 rounded-xl font-bold"
                         onClick={() => {
                           const currentFilteredIds = students?.filter(s => {
-                            const matchesSearch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+                            const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                               (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                             const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
                             return matchesSearch && matchesClass;
@@ -716,7 +717,8 @@ function AdminDashboardInner() {
                         }}
                       >
                         {selectedStudentIds.size > 0 && selectedStudentIds.size === (students?.filter(s => {
-                          const matchesSearch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                          const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+                          const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                             (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                           const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
                           return matchesSearch && matchesClass;
@@ -728,7 +730,8 @@ function AdminDashboardInner() {
                 <ScrollArea className="h-[500px]">
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
                     {students?.filter(s => {
-                      const matchesSearch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                      const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+                      const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                         (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                       const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
                       return matchesSearch && matchesClass;
@@ -751,10 +754,10 @@ function AdminDashboardInner() {
                             />
                           )}
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0">
-                            {s.firstName[0]}{s.lastName[0]}
+                            {(getStudentNickname(s)[0] || '')}{(s.lastName[0] || '')}
                           </div>
                           <div>
-                            <p className="font-bold text-lg">{s.lastName}, {s.firstName}</p>
+                            <p className="font-bold text-lg">{s.lastName}, {getStudentNickname(s)}</p>
                             <p className="text-xs text-muted-foreground font-medium mt-0.5">{getClassName(s.classId || '')} | ID: <span className="font-code">{s.nfcId || '---'}</span></p>
                             <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
                           </div>
