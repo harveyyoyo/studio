@@ -614,7 +614,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
     const selectedCategoryForPreview = categories?.find(c => c.id === printCategoryId);
     const previewCoupon: Coupon = {
         id: 'PREVIEW',
-        code: 'PREVIEW',
+        code: '123456',
         value: parseInt(printValue) || 0,
         category: selectedCategoryForPreview?.name || 'Category',
         teacher: teacherName,
@@ -781,9 +781,11 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                         </Button>
 
                                         <div className="flex flex-col items-center pt-8 border-t border-dashed border-border/50">
-                                            <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-40">Sheet Preview</p>
-                                            <div className="w-full max-w-[220px] shadow-2xl rounded-2xl overflow-hidden border border-white/10 group cursor-zoom-in transition-transform hover:scale-[1.02]">
-                                                <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                                            <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-40">Sheet Preview (scaled)</p>
+                                            <div className="w-full max-w-[260px] rounded-2xl border border-border/40 bg-slate-100/80 shadow-xl p-3 flex items-center justify-center">
+                                                <div className="origin-top-left scale-75">
+                                                    <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1051,7 +1053,7 @@ export default function TeacherPage() {
     }
 
     if (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer') {
-        const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Administrator' : 'Teacher');
+        const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
         return <TeacherPrinter teacherName={displayName} teacherId={userId || ''} onLogout={handleLogout} />;
     }
 

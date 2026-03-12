@@ -36,6 +36,8 @@ export interface StudentTheme {
   accent: string;
   emoji?: string;
   fontFamily?: string;
+  /** Full CSS background value (gradient or pattern). When set, used instead of solid background. */
+  backgroundStyle?: string | null;
 }
 
 export interface Student {
@@ -44,12 +46,17 @@ export interface Student {
   middleName?: string;
   lastName: string;
   nickname?: string;
+  photoUrl?: string;
   points: number;
   lifetimePoints?: number;
   classId?: string;
   nfcId: string;
   categoryPoints?: { [key: string]: number };
+  /** Category points within time periods (e.g. "2025-03" for month, "2025-H1" for semester). Used for category-based badges. */
+  categoryPointsByPeriod?: { [periodKey: string]: { [categoryName: string]: number } };
   earnedAchievements?: { achievementId: string; earnedAt: number }[];
+  /** Badges earned for reaching category point thresholds in a time period. */
+  earnedBadges?: { badgeId: string; earnedAt: number; periodKey: string }[];
   teacherIds?: string[];
   theme?: StudentTheme;
 }
@@ -91,6 +98,28 @@ export interface Achievement {
   };
   bonusPoints?: number;
   unlockedCount?: number;
+  /** Visual tier for badge styling (bronze/silver/gold/platinum). */
+  tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
+  /** Hex or CSS color for badge card border/glow. */
+  accentColor?: string;
+}
+
+/** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  /** Category that counts toward this badge (e.g. Good Behavior). */
+  categoryId: string;
+  /** Points required in the category within the period to earn the badge. */
+  pointsRequired: number;
+  /** Time period over which points are counted. */
+  period: 'month' | 'semester' | 'year' | 'all_time';
+  tier?: 'bronze' | 'silver' | 'gold' | 'platinum';
+  accentColor?: string;
+  /** When false, this badge is not awarded (existing earners are unchanged). Default true. */
+  enabled?: boolean;
 }
 
 export interface BackupInfo {

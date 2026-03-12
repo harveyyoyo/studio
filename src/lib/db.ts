@@ -12,7 +12,7 @@ import {
   where,
   Firestore,
 } from 'firebase/firestore';
-import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Achievement } from './types';
+import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Achievement, Badge } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -73,6 +73,66 @@ export const evaluateAchievements = (
   return newEarned;
 };
 
+/** Returns period keys for a given timestamp (for category-based badges). */
+export function getPeriodKeys(now: number): { month: string; semester: string; year: string; all_time: string } {
+  const d = new Date(now);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1; // 1-12
+  const month = `${y}-${String(m).padStart(2, '0')}`;
+  const semester = m <= 6 ? `${y}-H1` : `${y}-H2`;
+  const year = String(y);
+  return { month, semester, year, all_time: 'all' };
+}
+
+/** Update categoryPointsByPeriod for an award of `points` in `categoryName` at time `now`. */
+function applyCategoryPointsByPeriod(
+  current: Student['categoryPointsByPeriod'],
+  categoryName: string,
+  points: number,
+  now: number
+): Student['categoryPointsByPeriod'] {
+  const keys = getPeriodKeys(now);
+  const periodKeys = [keys.month, keys.semester, keys.year, keys.all_time];
+  const next = { ...current } as Record<string, Record<string, number>>;
+  for (const key of periodKeys) {
+    if (!next[key]) next[key] = {};
+    next[key][categoryName] = (next[key][categoryName] || 0) + points;
+  }
+  return next;
+}
+
+/** Evaluates which (real) badges a student has newly earned based on category points in the relevant period. */
+export function evaluateBadges(
+  student: Student,
+  badges: Badge[],
+  categories: Category[]
+): { badgeId: string; periodKey: string; earnedAt: number }[] {
+  const newEarned: { badgeId: string; periodKey: string; earnedAt: number }[] = [];
+  const earnedSet = new Set((student.earnedBadges || []).map(e => `${e.badgeId}:${e.periodKey}`));
+  const byPeriod = student.categoryPointsByPeriod || {};
+  const now = Date.now();
+  const keys = getPeriodKeys(now);
+
+  for (const badge of badges) {
+    if (badge.enabled === false) continue;
+    const cat = categories.find(c => c.id === badge.categoryId);
+    const categoryName = cat?.name;
+    if (!categoryName) continue;
+
+    const periodKey = badge.period === 'month' ? keys.month
+      : badge.period === 'semester' ? keys.semester
+        : badge.period === 'year' ? keys.year
+          : 'all';
+    const periodPoints = byPeriod[periodKey]?.[categoryName] ?? 0;
+    if (periodPoints < badge.pointsRequired) continue;
+    if (earnedSet.has(`${badge.id}:${periodKey}`)) continue;
+
+    earnedSet.add(`${badge.id}:${periodKey}`);
+    newEarned.push({ badgeId: badge.id, periodKey, earnedAt: now });
+  }
+  return newEarned;
+};
+
 /** Look up a student by scanned ID (document ID, nfcId string, or nfcId number). Used by both student kiosk and prize redemption. */
 export const lookupStudentId = async (
   firestore: Firestore,
@@ -110,7 +170,9 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
     points: 0,
     lifetimePoints: 0,
     categoryPoints: {},
+    categoryPointsByPeriod: {},
     earnedAchievements: [],
+    earnedBadges: [],
   };
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   try {
@@ -410,8 +472,9 @@ export const redeemCoupon = async (
   studentId: string,
   couponCode: string,
   allAchievements: Achievement[] = [],
-  allCategories: Category[] = []
-): Promise<{ success: boolean; message: string; value?: number }> => {
+  allCategories: Category[] = [],
+  allBadges: Badge[] = []
+): Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }> => {
   const couponRef = doc(firestore, 'schools', schoolId, 'coupons', couponCode.toUpperCase());
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
 
@@ -433,6 +496,31 @@ export const redeemCoupon = async (
       const categoryPoints = { ...(currentStudent.categoryPoints || {}) };
       const categoryName = coupon.category || 'Coupon';
       categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + addedValue;
+
+      const now = Date.now();
+      const categoryPointsByPeriod = applyCategoryPointsByPeriod(
+        currentStudent.categoryPointsByPeriod,
+        categoryName,
+        addedValue,
+        now
+      );
+      const updatedStudentForBadges: Student = {
+        ...currentStudent,
+        categoryPoints,
+        categoryPointsByPeriod,
+      };
+      const newBadges = evaluateBadges(updatedStudentForBadges, allBadges, allCategories);
+      const earnedBadges = [...(currentStudent.earnedBadges || [])];
+      for (const b of newBadges) {
+        earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
+        const badgeInfo = allBadges.find(x => x.id === b.badgeId);
+        const badgeActivityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        transaction.set(badgeActivityRef, {
+          desc: `Badge earned: ${badgeInfo?.name || 'Unknown'}`,
+          amount: 0,
+          date: b.earnedAt,
+        });
+      }
 
       // Evaluate achievements
       const updatedStudentForEval: Student = {
@@ -464,7 +552,9 @@ export const redeemCoupon = async (
         points: newPoints + bonusTotal,
         lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPoints,
-        earnedAchievements
+        categoryPointsByPeriod,
+        earnedAchievements,
+        earnedBadges,
       });
 
       // Simplified activity log.
@@ -483,9 +573,9 @@ export const redeemCoupon = async (
         usedBy: studentId,
       });
 
-      return { baseValue: coupon.value };
+      return { baseValue: coupon.value, bonusTotal };
     });
-    return { success: true, message: "Redeemed successfully", value: result.baseValue };
+    return { success: true, message: "Redeemed successfully", value: result.baseValue, bonusTotal: result.bonusTotal };
   } catch (e: any) {
     if (e.name === 'FirebaseError' && e.code === 'permission-denied') {
       errorEmitter.emit(
@@ -508,7 +598,8 @@ export const awardPointsToStudent = async (
   points: number,
   description: string,
   allAchievements: Achievement[] = [],
-  allCategories: Category[] = []
+  allCategories: Category[] = [],
+  allBadges: Badge[] = []
 ): Promise<{ success: boolean; message: string; bonusTotal?: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number." };
@@ -529,6 +620,31 @@ export const awardPointsToStudent = async (
 
       const categoryPointsUpdate = { ...studentData.categoryPoints };
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
+
+      const now = Date.now();
+      const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
+        studentData.categoryPointsByPeriod,
+        description,
+        points,
+        now
+      );
+      const updatedStudentForBadges: Student = {
+        ...studentData,
+        categoryPoints: categoryPointsUpdate,
+        categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+      };
+      const newBadges = evaluateBadges(updatedStudentForBadges, allBadges, allCategories);
+      const earnedBadges = [...(studentData.earnedBadges || [])];
+      for (const b of newBadges) {
+        earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
+        const badgeInfo = allBadges.find(x => x.id === b.badgeId);
+        const badgeActivityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        transaction.set(badgeActivityRef, {
+          desc: `Badge earned: ${badgeInfo?.name || 'Unknown'}`,
+          amount: 0,
+          date: b.earnedAt,
+        });
+      }
 
       // Evaluate achievements
       const updatedStudentForEval: Student = {
@@ -559,7 +675,9 @@ export const awardPointsToStudent = async (
         points: newPoints + bonusTotal,
         lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPointsUpdate,
-        earnedAchievements
+        categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+        earnedAchievements,
+        earnedBadges
       });
 
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
@@ -587,7 +705,8 @@ export const awardPointsToMultipleStudents = async (
   points: number,
   description: string,
   allAchievements: Achievement[] = [],
-  allCategories: Category[] = []
+  allCategories: Category[] = [],
+  allBadges: Badge[] = []
 ): Promise<{ success: boolean; message: string; count: number }> => {
   if (points <= 0) {
     return { success: false, message: "Points must be a positive number.", count: 0 };
@@ -613,6 +732,31 @@ export const awardPointsToMultipleStudents = async (
 
       const categoryPointsUpdate = { ...studentData.categoryPoints };
       categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
+
+      const now = Date.now();
+      const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
+        studentData.categoryPointsByPeriod,
+        description,
+        points,
+        now
+      );
+      const updatedStudentForBadges: Student = {
+        ...studentData,
+        categoryPoints: categoryPointsUpdate,
+        categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+      };
+      const newBadges = evaluateBadges(updatedStudentForBadges, allBadges, allCategories);
+      const earnedBadges = [...(studentData.earnedBadges || [])];
+      for (const b of newBadges) {
+        earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
+        const badgeInfo = allBadges.find(x => x.id === b.badgeId);
+        const badgeActivityRef = doc(collection(studentDoc.ref, 'activities'));
+        batch.set(badgeActivityRef, {
+          desc: `Badge earned: ${badgeInfo?.name || 'Unknown'}`,
+          amount: 0,
+          date: b.earnedAt,
+        });
+      }
 
       // Evaluate achievements
       const updatedStudentForEval: Student = {
@@ -644,7 +788,9 @@ export const awardPointsToMultipleStudents = async (
         points: newPoints + bonusTotal,
         lifetimePoints: newLifetimePoints + bonusTotal,
         categoryPoints: categoryPointsUpdate,
-        earnedAchievements
+        categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+        earnedAchievements,
+        earnedBadges
       });
 
       const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
@@ -823,7 +969,9 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       lifetimePoints: 0,
       classId: classObj?.id || '',
       categoryPoints: {},
+      categoryPointsByPeriod: {},
       earnedAchievements: [],
+      earnedBadges: [],
     };
 
     studentsToCreate.push(newStudent);
@@ -905,6 +1053,59 @@ export const deleteAchievement = async (firestore: Firestore, schoolId: string, 
       'permission-error',
       new FirestorePermissionError({
         path: achievementDocRef.path,
+        operation: 'delete',
+      })
+    );
+    throw error;
+  }
+};
+
+// --- Badge (category-based) Mutations ---
+export const addBadge = async (firestore: Firestore, schoolId: string, badgeData: Omit<Badge, 'id'>) => {
+  const newId = `badge_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const newBadge: Badge = { ...badgeData, id: newId, enabled: badgeData.enabled ?? true };
+  const badgeDocRef = doc(firestore, 'schools', schoolId, 'badges', newBadge.id);
+  try {
+    await setDoc(badgeDocRef, removeUndefined(newBadge));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: badgeDocRef.path,
+        operation: 'create',
+        requestResourceData: newBadge,
+      })
+    );
+    throw error;
+  }
+};
+
+export const updateBadge = async (firestore: Firestore, schoolId: string, badge: Badge) => {
+  const badgeDocRef = doc(firestore, 'schools', schoolId, 'badges', badge.id);
+  try {
+    await updateDoc(badgeDocRef, removeUndefined({ ...badge }));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: badgeDocRef.path,
+        operation: 'update',
+        requestResourceData: badge,
+      })
+    );
+    throw error;
+  }
+};
+
+export const deleteBadge = async (firestore: Firestore, schoolId: string, badgeId: string) => {
+  const badgeDocRef = doc(firestore, 'schools', schoolId, 'badges', badgeId);
+  try {
+    await deleteDoc(badgeDocRef);
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: badgeDocRef.path,
         operation: 'delete',
       })
     );

@@ -165,7 +165,7 @@
     width: 2.5in;
     page-break-inside: avoid;
     box-sizing: border-box;
-    font-family: 'PT Sans', sans-serif;
+    font-family: 'Ubuntu', sans-serif;
     background: #fff !important;
     overflow: hidden;
     display: flex;
@@ -196,7 +196,7 @@
     font-size: 22pt;
     font-weight: 900;
     line-height: 1;
-    font-family: 'Playfair Display', serif;
+    font-family: 'Ubuntu', sans-serif;
     color: #000;
   }
 
@@ -225,39 +225,102 @@
 
   .print-id-card {
     border: 1px dotted #999;
-    padding: 0.1in;
+    padding: 0.12in 0.14in;
     text-align: center;
     height: 2in;
     width: 3.75in;
     page-break-inside: avoid;
-    font-family: 'PT Sans', sans-serif;
+    font-family: 'Ubuntu', sans-serif;
     background: #fff;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-radius: 0.08in;
+    box-shadow: 0 0 0 0.03in rgba(0,0,0,0.03);
+  }
+
+  .print-id-header {
+    font-family: 'Ubuntu', sans-serif;
   }
 
   .print-id-name {
     font-size: 14pt;
     font-weight: bold;
-    font-family: 'Playfair Display', serif;
-    margin-bottom: 0.05in;
+    font-family: 'Ubuntu', sans-serif;
+    margin: 0.06in 0 0.02in;
   }
 
   .print-id-class {
-    font-size: 10pt;
-    color: #666;
-    font-weight: bold;
-    margin-bottom: 0.1in;
+    font-size: 9pt;
+    color: #555;
+    font-weight: 600;
+    margin-bottom: 0.08in;
+  }
+
+  .print-id-main {
+    display: flex;
+    align-items: center;
+    gap: 0.12in;
+    padding: 0.04in 0.02in 0.06in;
+  }
+
+  .print-id-avatar {
+    width: 0.7in;
+    height: 0.7in;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.26in;
+    color: #4b5563;
+    flex-shrink: 0;
+  }
+
+  .print-id-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .print-id-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.02in;
+  }
+
+  .print-id-name {
+    font-weight: 800;
+    font-size: 12pt;
+    letter-spacing: 0.03em;
+  }
+
+  .print-id-class {
+    font-size: 9pt;
+    color: #4b5563;
+    font-weight: 600;
+  }
+
+  .print-id-meta {
+    font-size: 8pt;
+    color: #6b7280;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .print-id-barcode-container {
     width: 100%;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-end;
     flex-grow: 1;
+    padding-top: 0.06in;
+    border-top: 1px solid #eee;
   }
 
   .print-id-card .font-barcode {

@@ -62,7 +62,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 if (cleanId === 'schoolabc') {
                     toast({ title: `Resetting ${cleanId}...`, description: "Updating to latest sample data." });
                 }
-                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons", "achievements"];
+                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
                 const BATCH_LIMIT = 499;
 
                 for (const sub of SUBCOLLECTIONS) {
@@ -156,7 +156,9 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                         points: item.points || 0,
                         lifetimePoints: item.lifetimePoints || item.points || 0,
                         categoryPoints: item.categoryPoints || {},
+                        categoryPointsByPeriod: item.categoryPointsByPeriod || {},
                         earnedAchievements: item.earnedAchievements || [],
+                        earnedBadges: item.earnedBadges || [],
                     };
                     allOps.push({ ref: itemRef, data: studentData });
                 } else {
@@ -174,8 +176,6 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
         const firstBatch = writeBatch(firestore);
         firstBatch.set(schoolDocRef, finalSchoolDocData);
-        const adminRoleRef = doc(firestore, 'schools', cleanId, 'roles_admin', auth.currentUser.uid);
-        firstBatch.set(adminRoleRef, { role: 'admin' });
         await firstBatch.commit();
 
         const BATCH_LIMIT = 499;
@@ -290,8 +290,6 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
             await createBackupFn({ schoolId, type: 'pre-delete' });
             playSound('swoosh');
             toast({ title: "Final Backup Created", description: `A full backup for ${schoolId} has been saved before deletion.` });
-            const adminRoleRef = doc(firestore, 'schools', schoolId, 'roles_admin', auth.currentUser.uid);
-            await setDoc(adminRoleRef, { role: 'admin' });
             await deleteDoc(doc(firestore, 'schools', schoolId));
             playSound('success');
             toast({ title: `School "${schoolId}" deleted!` });

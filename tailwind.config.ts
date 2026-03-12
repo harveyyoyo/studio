@@ -10,9 +10,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['Playfair Display', 'serif'],
+        sans: ['Ubuntu', 'sans-serif'],
+        body: ['Ubuntu', 'sans-serif'],
+        headline: ['Ubuntu', 'sans-serif'],
         code: ['Source Code Pro', 'monospace'],
+        school: ['Ubuntu', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

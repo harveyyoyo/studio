@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem, Achievement } from '@/lib/types';
+import type { Student, Prize, HistoryItem } from '@/lib/types';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
@@ -66,6 +66,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BadgeShowcase } from '@/components/BadgeShowcase';
+import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
   const firestore = useFirestore();
@@ -163,28 +165,25 @@ function StudentDashboardInner({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId, isKioskLocked } = useAppContext();
+  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
   const { toast } = useToast();
+  const { settings } = useSettings();
+  const isGraphic = settings.graphicMode === 'graphics';
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
-
-  const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
-  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
 
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
 
   const [couponCode, setCouponCode] = useState('');
-  const [logoutTimer, setLogoutTimer] = useState(10);
-  const [animatedValue, setAnimatedValue] = useState<number | null>(null);
+  const [logoutTimer, setLogoutTimer] = useState(15);
+  const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const animationKey = useRef(0);
   const playSound = useArcadeSound();
-
-  const { settings } = useSettings();
-  const isGraphic = settings.graphicMode === 'graphics';
 
   const [showRedeem, setShowRedeem] = useState(true);
 
@@ -207,7 +206,7 @@ function StudentDashboardInner({
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
-      setLogoutTimer(10);
+      setLogoutTimer(15);
     }
   }, [isKioskLocked]);
 
@@ -224,6 +223,19 @@ function StudentDashboardInner({
     return () => clearTimeout(timerId);
   }, [logoutTimer, onDone, isKioskLocked]);
 
+  // Also reset auto‑logout timer when there is general user activity (mouse / keyboard / touch).
+  useEffect(() => {
+    if (isKioskLocked) return;
+    const handleActivity = () => {
+      resetTimer();
+    };
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'mousedown', 'keydown', 'touchstart'];
+    events.forEach((ev) => window.addEventListener(ev, handleActivity));
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, handleActivity));
+    };
+  }, [resetTimer, isKioskLocked]);
+
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
     const code = (codeToRedeem || couponCode).toUpperCase();
@@ -235,15 +247,77 @@ function StudentDashboardInner({
     if (result.success) {
       playSound('redeem');
       toast({ title: 'Coupon Redeemed!', description: `You gained ${result.value} points.` });
+      if (result.bonusTotal && result.bonusTotal > 0) {
+        toast({ title: 'Bonus points!', description: `You earned ${result.bonusTotal} bonus points from milestones.` });
+      }
       animationKey.current += 1;
-      setAnimatedValue(result.value || null);
-      setTimeout(() => { setAnimatedValue(null); setShowRedeem(false); }, 1500);
+      setFlyPointsValue(result.value || null);
+      setTimeout(() => { setFlyPointsValue(null); setShowRedeem(false); }, 1500);
     } else {
       playSound('error');
       toast({ variant: 'destructive', title: 'Redemption Failed', description: result.message });
     }
     setCouponCode('');
   }, [couponCode, resetTimer, redeemCoupon, student, toast, playSound]);
+
+  // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
+  useEffect(() => {
+    if (!student || !schoolId) return;
+    try {
+      const key = `arcade:lastSeenCelebrations:${schoolId}:${student.id}`;
+      const prev = JSON.parse(localStorage.getItem(key) || '{}') as { badgeAt?: number; bonusAt?: number };
+
+      const latestBadgeAt = Math.max(0, ...(student.earnedBadges || []).map((e) => e.earnedAt || 0));
+      const latestBonusAt = Math.max(
+        0,
+        ...(student.earnedAchievements || [])
+          .map((e) => {
+            const ach = (achievements || []).find((a) => a.id === e.achievementId);
+            const isBonus = (ach?.bonusPoints ?? 0) > 0;
+            return isBonus ? (e.earnedAt || 0) : 0;
+          })
+      );
+
+      const newBadge = latestBadgeAt > (prev.badgeAt || 0);
+      const newBonus = latestBonusAt > (prev.bonusAt || 0);
+
+      if (newBadge || newBonus) {
+        playSound('success');
+        const parts: string[] = [];
+        if (newBadge) parts.push('a new badge');
+        if (newBonus) parts.push('new bonus points');
+        setCelebrationMessage(`You earned ${parts.join(' and ')}!`);
+        setTimeout(() => setCelebrationMessage(null), 2200);
+      }
+
+      localStorage.setItem(key, JSON.stringify({ badgeAt: latestBadgeAt, bonusAt: latestBonusAt }));
+    } catch {
+      // ignore storage / JSON errors
+    }
+  }, [student?.id, schoolId, achievements, toast, playSound]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const headerBadges = useMemo(() => {
+    if (!student?.earnedBadges?.length || !badges?.length) return [];
+    const defsById = new Map<string, typeof badges[number]>();
+    for (const e of student.earnedBadges) {
+      const def = badges.find(b => b.id === e.badgeId);
+      if (def && def.enabled !== false && !defsById.has(def.id)) {
+        defsById.set(def.id, def);
+      }
+    }
+    return Array.from(defsById.values()).slice(0, 3);
+  }, [student?.earnedBadges, badges]);
+
+  const totalUniqueBadges = useMemo(() => {
+    if (!student?.earnedBadges?.length || !badges?.length) return 0;
+    const ids = new Set(
+      student.earnedBadges
+        .map(e => badges.find(b => b.id === e.badgeId))
+        .filter((b): b is typeof badges[number] => !!b && b.enabled !== false)
+        .map(b => b.id)
+    );
+    return ids.size;
+  }, [student?.earnedBadges, badges]);
 
   if (studentLoading || !student || !schoolId) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
@@ -262,12 +336,29 @@ function StudentDashboardInner({
           '--theme-primary': student.theme.primary,
           '--theme-card': student.theme.cardBackground,
           '--theme-accent': student.theme.accent,
-          backgroundColor: 'var(--theme-bg)',
+          ...(student.theme.backgroundStyle ? { background: student.theme.backgroundStyle } : { backgroundColor: 'var(--theme-bg)' }),
           color: 'var(--theme-text)',
           fontFamily: student.theme.fontFamily || 'inherit',
         } as React.CSSProperties : undefined}
       >
         {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
+
+        {celebrationMessage && (
+          <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
+            <div className="pointer-events-auto bg-black/70 text-white px-8 py-5 rounded-3xl shadow-2xl border border-white/20 flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-300">
+              <span className="text-3xl font-black tracking-widest uppercase">Yay!</span>
+              <span className="text-sm font-medium text-center max-w-xs">{celebrationMessage}</span>
+            </div>
+          </div>
+        )}
+
+        {flyPointsValue !== null && (
+          <div key={animationKey.current} className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+            <div className="animate-fly-up text-4xl md:text-6xl font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]">
+              +{flyPointsValue} PTS
+            </div>
+          </div>
+        )}
 
         {/* Graphic Elements */}
         {isGraphic && !student.theme && (
@@ -284,10 +375,45 @@ function StudentDashboardInner({
           <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="space-y-1 text-center md:text-left">
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Welcome back,</p>
-              <h2 className="text-3xl md:text-5xl font-black flex items-center gap-3 mt-1">
-                {student.theme?.emoji && <span className="text-5xl md:text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>}
-                {getStudentNickname(student)} {student.lastName}
-              </h2>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
+                  {student.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
+                  )}
+                </div>
+                <div className="flex flex-col items-start gap-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl md:text-4xl font-black">
+                      {getStudentNickname(student)} {student.lastName}
+                    </h2>
+                    {student.theme?.emoji && <span className="text-4xl md:text-5xl drop-shadow-md leading-none">{student.theme.emoji}</span>}
+                  </div>
+                  {settings.enableBadges && headerBadges.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                      {headerBadges.map((b) => (
+                        <div
+                          key={b.id}
+                          className="w-7 h-7 rounded-full border border-white/40 bg-white/10 flex items-center justify-center shadow-sm"
+                        >
+                          <DynamicIcon
+                            name={b.icon}
+                            className="w-4 h-4"
+                            style={b.accentColor ? { color: b.accentColor } : undefined}
+                          />
+                        </div>
+                      ))}
+                      {totalUniqueBadges > headerBadges.length && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
+                          +{totalUniqueBadges - headerBadges.length} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="text-center md:text-right">
               <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Current Balance</p>
@@ -376,12 +502,6 @@ function StudentDashboardInner({
                   )}
                 </Tabs>
 
-                {animatedValue !== null && (
-                  <div key={animationKey.current} className="mt-6 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border-2 border-emerald-200 dark:border-emerald-800 animate-bounce-short flex items-center justify-center gap-3 shadow-lg shadow-emerald-200/20">
-                    <Star className="w-6 h-6 fill-emerald-400 text-emerald-500" />
-                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{animatedValue} PTS</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -430,6 +550,19 @@ function StudentDashboardInner({
                 </div>
               </CardContent>
             </Card>
+
+            <BadgeShowcase
+              student={student}
+              achievements={achievements || []}
+              enableAchievements={settings.enableAchievements}
+              theme={student.theme}
+            />
+            <EarnedBadgesShowcase
+              student={student}
+              badges={badges || []}
+              enableBadges={settings.enableBadges}
+              theme={student.theme}
+            />
           </div>
 
           {/* Right Section: Activity */}

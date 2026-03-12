@@ -2,8 +2,9 @@
 import { useEffect, useState, useRef, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useFunctions } from '@/firebase';
+import { collection, doc, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
@@ -14,12 +15,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
 import { PrizeModal } from '@/components/PrizeModal';
-import { AchievementModal } from '@/components/AchievementModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -61,6 +61,10 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Helper } from '@/components/ui/helper';
 import { CategoryModal } from '@/components/CategoryModal';
 import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
+import { AchievementModal } from '@/components/AchievementModal';
+import { BadgeModal } from '@/components/BadgeModal';
+import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge } from '@/lib/db';
+import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
 import { Wand2 } from 'lucide-react';
 
 function AdminDashboardSkeleton() {
@@ -105,95 +109,22 @@ function AdminDashboardSkeleton() {
   );
 }
 
-function AwardPointsDialog({ student, isOpen, onOpenChange, onAward }: {
-  student: Student | null;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAward: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
-}) {
-  const [points, setPoints] = useState('10');
-  const [description, setDescription] = useState('');
-  const { toast } = useToast();
-  const playSound = useArcadeSound();
-
-  useEffect(() => {
-    if (isOpen) {
-      setPoints('10');
-      setDescription('');
-    }
-  }, [isOpen]);
-
-  if (!student) return null;
-
-  const handleAward = async () => {
-    const pointsValue = parseInt(points);
-    if (!description.trim()) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Description is required' });
-      return;
-    }
-    if (isNaN(pointsValue) || pointsValue <= 0) {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Points must be a positive number' });
-      return;
-    }
-
-    const result = await onAward(student.id, pointsValue, description);
-
-    if (result.success) {
-      playSound('success');
-      let toastDescription = `Awarded ${pointsValue} points to ${student.firstName}.`;
-      if (result.bonusTotal && result.bonusTotal > 0) {
-        toastDescription += ` They also earned ${result.bonusTotal} bonus points from achievements!`;
-      }
-      toast({ title: 'Points Awarded!', description: toastDescription });
-      onOpenChange(false);
-    } else {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Award Points to {student.firstName} {student.lastName}</DialogTitle>
-          <DialogDescription>Manually grant points for a specific reason.</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-1">
-            <Label htmlFor="award-points">Points to Award</Label>
-            <Input id="award-points" type="number" value={points} onChange={e => setPoints(e.target.value)} autoFocus />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="award-desc">Reason / Description</Label>
-            <Input id="award-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., 'Classroom leadership'" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleAward}>Award Points</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-
 function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
     addClass, deleteClass, deleteCategory, addCategory,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, updateTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
-    deleteAchievement, awardPoints, updateStudent,
+    updateStudent,
+    achievements, achievementsLoading,
+    badges, badgesLoading,
   } = useAppContext();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const studentCsvInputRef = useRef<HTMLInputElement>(null);
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
 
   // Data fetching hooks
   const studentsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'students') : null, [firestore, schoolId]);
@@ -217,8 +148,8 @@ function AdminDashboardInner() {
   const backupsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
   const { data: backups, isLoading: backupsLoading, error: backupsError } = useCollection<BackupInfo>(backupsQuery);
 
-  const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
-  const { data: achievements, isLoading: achievementsLoading, error: achievementsError } = useCollection<Achievement>(achievementsQuery);
+  const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
+  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -235,19 +166,31 @@ function AdminDashboardInner() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
-  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
-  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
-  const [awardingStudent, setAwardingStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [studentFilterClass, setStudentFilterClass] = useState<string>('all');
   const [themeStudent, setThemeStudent] = useState<Student | null>(null);
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
+  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
+  const [achievementToDelete, setAchievementToDelete] = useState<Achievement | null>(null);
+  const [isAddSampleBadgesOpen, setIsAddSampleBadgesOpen] = useState(false);
+  const [isAddingSamples, setIsAddingSamples] = useState(false);
+  const [isCategoryBadgeModalOpen, setIsCategoryBadgeModalOpen] = useState(false);
+  const [editingCategoryBadge, setEditingCategoryBadge] = useState<Badge | null>(null);
+  const [categoryBadgeToDelete, setCategoryBadgeToDelete] = useState<Badge | null>(null);
+  const [isAddSampleCategoryBadgesOpen, setIsAddSampleCategoryBadgesOpen] = useState(false);
+  const [isAddingSampleCategoryBadges, setIsAddingSampleCategoryBadges] = useState(false);
+  const [badgeEarnersFor, setBadgeEarnersFor] = useState<Badge | null>(null);
+  const [badgeTogglingId, setBadgeTogglingId] = useState<string | null>(null);
+  const [badgesStudent, setBadgesStudent] = useState<Student | null>(null);
 
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
 
-  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading || achievementsLoading;
+  const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
 
   const collectionErrors = [
     { name: 'Students', error: studentsError },
@@ -257,7 +200,6 @@ function AdminDashboardInner() {
     { name: 'Prizes', error: prizesError },
     { name: 'Coupons', error: couponsError },
     { name: 'Backups', error: backupsError },
-    { name: 'Achievements', error: achievementsError },
   ].filter(c => c.error);
 
   const getClassName = (classId: string) => {
@@ -360,11 +302,6 @@ function AdminDashboardInner() {
     setIsPrizeModalOpen(true);
   };
 
-  const handleOpenAchievementModal = (achievement: Achievement | null) => {
-    setEditingAchievement(achievement);
-    setIsAchievementModalOpen(true);
-  };
-
   const handleOpenActivityModal = (student: Student) => {
     setActivityStudent(student);
   };
@@ -386,6 +323,119 @@ function AdminDashboardInner() {
   const handleDownloadBackup = async (backupId: string) => {
     if (!schoolId) return;
     await devDownloadBackup(schoolId, backupId);
+  };
+
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!schoolId) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Cannot upload logo',
+        description: 'No school selected. Refresh the page and log in again.',
+      });
+      e.target.value = '';
+      return;
+    }
+    if (!functions) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Cannot upload logo',
+        description: 'Server connection is not available. Refresh the page and try again.',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+
+    if (!allowedTypes.includes(file.type)) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Unsupported file type',
+        description: 'Please use PNG, JPG, or WebP. Your file appears to be a different format.',
+      });
+      e.target.value = '';
+      return;
+    }
+    if (file.size > maxSizeBytes) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Logo must be under 2MB. Try compressing or resizing the image.',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsLogoUploading(true);
+      toast({ title: 'Uploading logo…', description: 'Please wait.' });
+
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64 || '');
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const uploadLogo = httpsCallable<{ schoolId: string; imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadSchoolLogo');
+      const res = await uploadLogo({
+        schoolId,
+        imageBase64,
+        contentType: file.type,
+      });
+
+      const data = res.data;
+      if (!data?.logoUrl) {
+        throw new Error('No logo URL returned');
+      }
+
+      setLogoPreviewUrl(data.logoUrl);
+      playSound('success');
+      toast({ title: 'Logo updated!', description: 'Your school logo will now appear next to the name.' });
+    } catch (error: unknown) {
+      console.error('Logo upload failed', error);
+      playSound('error');
+      const err = error as { code?: string; message?: string; details?: unknown };
+      const code = err?.code ?? '';
+      const message = String(err?.message ?? '');
+      let description = message;
+      if (!description && err?.details) {
+        try {
+          description = typeof err.details === 'string' ? err.details : JSON.stringify(err.details);
+        } catch {
+          // ignore
+        }
+      }
+      if (code === 'functions/unauthenticated') {
+        description = 'You must be logged in as an admin. Please sign in again.';
+      } else if (code === 'functions/permission-denied') {
+        description = 'You need admin access to update the school logo.';
+      } else if (code === 'functions/invalid-argument') {
+        description = message || 'Invalid image. Use PNG, JPG, or WebP under 2MB.';
+      } else if (!message || message === 'undefined') {
+        description = 'Could not save the logo. Try again or use a smaller image.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Logo upload failed',
+        description,
+      });
+    } finally {
+      setIsLogoUploading(false);
+      e.target.value = '';
+    }
   };
 
   const onStudentCsvFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -427,7 +477,8 @@ function AdminDashboardInner() {
             Manage students, classes, prizes, and system settings.
           </p>
         </Helper>
-        <Tabs defaultValue="students" className="space-y-6">
+
+        <Tabs key={`${String(settings.enableAchievements)}:${String(settings.enableBadges)}`} defaultValue="students" className="space-y-6">
           <div className="flex overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl inline-flex w-max border shadow-sm sm:mx-auto">
               {settings.enableAdminAnalytics && (
@@ -435,6 +486,9 @@ function AdminDashboardInner() {
                   <LayoutDashboard className="w-4 h-4" /> Stats
                 </TabsTrigger>
               )}
+              <TabsTrigger value="branding" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <UploadCloud className="w-4 h-4" /> Branding
+              </TabsTrigger>
               <TabsTrigger value="students" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Users className="w-4 h-4" /> Students
               </TabsTrigger>
@@ -450,14 +504,19 @@ function AdminDashboardInner() {
               <TabsTrigger value="prizes" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Gift className="w-4 h-4" /> Prizes
               </TabsTrigger>
-              {settings.enableAchievements && (
-                <TabsTrigger value="achievements" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                  <Trophy className="w-4 h-4" /> Achievements
-                </TabsTrigger>
-              )}
               <TabsTrigger value="coupons" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Ticket className="w-4 h-4" /> Coupons
               </TabsTrigger>
+              {settings.enableAchievements && (
+                <TabsTrigger value="bonuspoints" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Trophy className="w-4 h-4" /> Bonus Points
+                </TabsTrigger>
+              )}
+              {settings.enableBadges && (
+                <TabsTrigger value="category-badges" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Award className="w-4 h-4" /> Badges
+                </TabsTrigger>
+              )}
               <TabsTrigger value="backups" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Database className="w-4 h-4" /> Backups
               </TabsTrigger>
@@ -504,6 +563,50 @@ function AdminDashboardInner() {
               </Card>
             </TabsContent>
           )}
+
+          <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-destructive shadow-md">
+              <CardHeader className="py-6">
+                <Helper content="Upload your school logo to show it next to the school name across the app.">
+                  <CardTitle className="flex items-center gap-2">
+                    <UploadCloud className="w-5 h-5 text-primary" /> School Logo
+                  </CardTitle>
+                </Helper>
+                <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 2MB.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-lg shadow-primary/30">
+                    {(logoPreviewUrl ?? schoolData?.logoUrl) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className="h-full w-full object-cover" />
+                    ) : (
+                      <span>No logo</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current</span>
+                </div>
+                <div className="space-y-2 flex-1 max-w-sm">
+                  <Label htmlFor="school-logo">Upload new logo</Label>
+                  <Input
+                    id="school-logo"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleLogoUpload}
+                    disabled={!schoolId || isLogoUploading}
+                  />
+                  {isLogoUploading && (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Square image recommended, at least 128×128px.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
@@ -624,7 +727,7 @@ function AdminDashboardInner() {
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md overflow-hidden">
               <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
-                <Helper content="Manage your enrollments, view student activity, award points, and print ID cards.">
+                <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
                   <CardTitle className="text-2xl flex items-center gap-2">
                     <Users className="text-destructive w-6 h-6" /> Students
                   </CardTitle>
@@ -672,7 +775,7 @@ function AdminDashboardInner() {
                     <Input placeholder="Search students by name or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
                     <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
                   </div>
-                  <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center">
                     <Select value={studentFilterClass} onValueChange={setStudentFilterClass}>
                       <SelectTrigger className="w-[180px] rounded-xl h-11">
                         <SelectValue placeholder="All Classes" />
@@ -695,42 +798,12 @@ function AdminDashboardInner() {
                         }}
                       />
                     </div>
-                    {selectionMode && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-11 px-4 rounded-xl font-bold"
-                        onClick={() => {
-                          const currentFilteredIds = students?.filter(s => {
-                            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
-                            const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
-                              (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
-                            const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
-                            return matchesSearch && matchesClass;
-                          }).map(s => s.id) || [];
-
-                          if (selectedStudentIds.size === currentFilteredIds.length && currentFilteredIds.length > 0) {
-                            setSelectedStudentIds(new Set());
-                          } else {
-                            setSelectedStudentIds(new Set(currentFilteredIds));
-                          }
-                        }}
-                      >
-                        {selectedStudentIds.size > 0 && selectedStudentIds.size === (students?.filter(s => {
-                          const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
-                          const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
-                            (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
-                          const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
-                          return matchesSearch && matchesClass;
-                        }).length || 0) ? "Deselect All" : "Select All"}
-                      </Button>
-                    )}
                   </div>
                 </div>
                 <ScrollArea className="h-[500px]">
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
                     {students?.filter(s => {
-                      const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+                      const computedName = `${s.firstName} ${s.lastName}`.toLowerCase();
                       const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                         (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                       const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
@@ -753,11 +826,16 @@ function AdminDashboardInner() {
                               className="mr-2"
                             />
                           )}
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0">
-                            {(getStudentNickname(s)[0] || '')}{(s.lastName[0] || '')}
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
+                            {s.photoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} className="h-full w-full object-cover" />
+                            ) : (
+                              <span>{(s.firstName[0] || '')}{(s.lastName[0] || '')}</span>
+                            )}
                           </div>
                           <div>
-                            <p className="font-bold text-lg">{s.lastName}, {getStudentNickname(s)}</p>
+                            <p className="font-bold text-lg">{s.lastName}, {s.firstName}</p>
                             <p className="text-xs text-muted-foreground font-medium mt-0.5">{getClassName(s.classId || '')} | ID: <span className="font-code">{s.nfcId || '---'}</span></p>
                             <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
                           </div>
@@ -766,7 +844,18 @@ function AdminDashboardInner() {
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setThemeStudent(s)} title="Generate AI Theme"><Wand2 className="w-4 h-4 text-purple-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setStudentsToPrint({ students: [s], classes: classes || [] })} title="Print ID Card"><Printer className="w-4 h-4 text-orange-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setAwardingStudent(s)}><Award className="w-4 h-4 text-green-500" /></Button>
+                          {settings.enableBadges && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={cn("h-9 w-9 rounded-full", (!s.earnedBadges || s.earnedBadges.length === 0) && "opacity-40")}
+                              disabled={!s.earnedBadges || s.earnedBadges.length === 0}
+                              onClick={() => setBadgesStudent(s)}
+                              title="View badges for this student"
+                            >
+                              <Award className={cn("w-4 h-4", (!s.earnedBadges || s.earnedBadges.length === 0) ? "text-muted-foreground" : "text-amber-500")} />
+                            </Button>
+                          )}
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
@@ -821,55 +910,6 @@ function AdminDashboardInner() {
             </Card>
           </TabsContent>
 
-          {settings.enableAchievements && (
-            <TabsContent value="achievements" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Card className="border-t-4 border-destructive shadow-md">
-                <CardHeader className="flex flex-row justify-between items-center py-6">
-                  <div>
-                    <Helper content="Create and manage badges that students can earn by reaching specific milestones, like earning a certain number of points.">
-                      <CardTitle className="flex items-center gap-2">
-                        <Trophy className="text-destructive w-5 h-5" /> Achievements
-                      </CardTitle>
-                    </Helper>
-                    <CardDescription>Badges for student milestones.</CardDescription>
-                  </div>
-                  <Button onClick={() => handleOpenAchievementModal(null)} className="rounded-xl">
-                    <Plus className="mr-2 h-4 w-4" /> Add Achievement
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                    {(achievements || []).sort((a, b) => a.name.localeCompare(b.name)).map(ach => (
-                      <li key={ach.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
-                        <div className="flex items-center gap-4 flex-grow">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-100 dark:bg-amber-900/20 dark:border-amber-900/40 flex-shrink-0">
-                            <DynamicIcon name={ach.icon} className="w-5 h-5 text-amber-600" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-base leading-none mb-1">{ach.name}</p>
-                            <p className="text-[10px] text-muted-foreground line-clamp-1">{ach.description}</p>
-                            <p className="text-[10px] font-bold text-amber-600 mt-1 uppercase tracking-tighter">
-                              {ach.criteria.type}: {ach.criteria.threshold} {ach.bonusPoints ? `• +${ach.bonusPoints} pts` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1 self-end sm:self-center">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenAchievementModal(ach)}><Edit className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deleteAchievement(ach.id)}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                      </li>
-                    ))}
-                    {(!achievements || achievements.length === 0) && (
-                      <div className="text-center py-8 opacity-40">
-                        <Trophy className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                        <p className="text-sm font-medium">No achievements created yet.</p>
-                      </div>
-                    )}
-                  </ul>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
 
           <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
@@ -929,6 +969,193 @@ function AdminDashboardInner() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {settings.enableAchievements && (
+          <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-destructive shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings → Features → Recognition.">
+                    <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5 text-destructive" /> Bonus Points</CardTitle>
+                  </Helper>
+                  <CardDescription>Create milestones that award extra points when students reach point thresholds.</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
+                    {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
+                    Add sample milestones
+                  </Button>
+                  <Button onClick={() => { setEditingAchievement(null); setIsBadgeModalOpen(true); }} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add milestone</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {achievementsLoading ? (
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {[1, 2, 3].map(i => (
+                      <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
+                        <Skeleton className="h-10 w-48" />
+                        <Skeleton className="h-8 w-20" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {(achievements || []).map((ach) => (
+                      <li key={ach.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-amber-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
+                            style={{ borderColor: ach.accentColor || undefined, backgroundColor: ach.accentColor ? `${ach.accentColor}20` : undefined }}
+                          >
+                            <DynamicIcon name={ach.icon} className="w-5 h-5" style={ach.accentColor ? { color: ach.accentColor } : undefined} />
+                          </div>
+                          <div>
+                            <p className="font-bold">{ach.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {ach.criteria.type === 'points' && `Current points ≥ ${ach.criteria.threshold}`}
+                              {ach.criteria.type === 'lifetimePoints' && `Lifetime points ≥ ${ach.criteria.threshold}`}
+                              {ach.criteria.type === 'coupons' && `Category threshold ${ach.criteria.threshold}`}
+                              {ach.criteria.type === 'manual' && 'Manual award only'}
+                              {ach.tier && ` · ${ach.tier}`}
+                              {(ach.bonusPoints ?? 0) > 0 && ` · +${ach.bonusPoints} bonus pts`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50"
+                            onClick={() => setAchievementToDelete(ach)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                    {(!achievements || achievements.length === 0) && (
+                      <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No milestones yet. Add one to get started.</p>
+                    )}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
+
+          {settings.enableBadges && (
+          <TabsContent value="category-badges" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Card className="border-t-4 border-destructive shadow-md">
+              <CardHeader className="flex flex-row justify-between items-center py-6">
+                <div>
+                  <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge this month).">
+                    <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-destructive" /> Badges</CardTitle>
+                  </Helper>
+                  <CardDescription>Category-based badges. Enable in Settings → Features → Recognition → Badges.</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => { setEditingCategoryBadge(null); setIsCategoryBadgeModalOpen(true); }} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add badge</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddSampleCategoryBadgesOpen(true)}
+                    className="rounded-xl"
+                    disabled={isAddingSampleCategoryBadges || !categories?.length}
+                  >
+                    {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Award className="mr-2 h-4 w-4" />}
+                    Add sample badges
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {badgesLoading ? (
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {[1, 2, 3].map(i => (
+                      <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
+                        <Skeleton className="h-10 w-48" />
+                        <Skeleton className="h-8 w-20" />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {(badges || []).map((b) => {
+                      const cat = categories?.find(c => c.id === b.categoryId);
+                      const periodLabel = b.period === 'month' ? 'This month' : b.period === 'semester' ? 'This semester' : b.period === 'year' ? 'This year' : 'All time';
+                      const isToggling = badgeTogglingId === b.id;
+                      const earnersCount = (students || []).filter(s => s.earnedBadges?.some(e => e.badgeId === b.id)).length;
+                      return (
+                        <li key={b.id} className={cn("flex justify-between items-center p-4 rounded-2xl border transition-colors", b.enabled === false ? "bg-muted/30 opacity-75" : "bg-secondary/20 hover:border-amber-200")}>
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
+                              style={{ borderColor: b.accentColor || undefined, backgroundColor: b.accentColor ? `${b.accentColor}20` : undefined }}
+                            >
+                              <DynamicIcon name={b.icon} className="w-5 h-5" style={b.accentColor ? { color: b.accentColor } : undefined} />
+                            </div>
+                            <div>
+                              <p className="font-bold">{b.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {cat?.name ?? 'Unknown'} · {b.pointsRequired} pts · {periodLabel}
+                                {b.tier && ` · ${b.tier}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">Enabled</span>
+                              {isToggling ? (
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                              ) : (
+                                <Switch
+                                  checked={b.enabled !== false}
+                                  onCheckedChange={async (checked) => {
+                                    if (!firestore || !schoolId) return;
+                                    setBadgeTogglingId(b.id);
+                                    try {
+                                      await updateBadge(firestore, schoolId, { ...b, enabled: checked });
+                                      toast({ title: checked ? 'Badge enabled' : 'Badge disabled' });
+                                    } catch (e: any) {
+                                      toast({ variant: 'destructive', title: 'Update failed', description: e?.message });
+                                    } finally {
+                                      setBadgeTogglingId(null);
+                                    }
+                                  }}
+                                  className="scale-90"
+                                />
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1 text-muted-foreground"
+                              onClick={() => setBadgeEarnersFor(b)}
+                              title="Who earned this badge"
+                            >
+                              <Users className="h-4 w-4" />
+                              {earnersCount}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCategoryBadge(b); setIsCategoryBadgeModalOpen(true); }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => setCategoryBadgeToDelete(b)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {(!badges || badges.length === 0) && (
+                      <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No badges yet. Add one (e.g. Good Behavior badge for 50 points this month).</p>
+                    )}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          )}
 
           <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
@@ -1105,18 +1332,69 @@ function AdminDashboardInner() {
           setIsOpen={() => setActivityStudent(null)}
           student={activityStudent}
         />
-        <AchievementModal
-          isOpen={isAchievementModalOpen}
-          setIsOpen={setIsAchievementModalOpen}
-          achievement={editingAchievement}
-          categories={categories || []}
-        />
-        <AwardPointsDialog
-          isOpen={!!awardingStudent}
-          onOpenChange={() => setAwardingStudent(null)}
-          student={awardingStudent}
-          onAward={awardPoints}
-        />
+        {settings.enableBadges && (
+          <Dialog open={!!badgesStudent} onOpenChange={(open) => !open && setBadgesStudent(null)}>
+            <DialogContent className="sm:max-w-lg rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-500" />
+                  {badgesStudent
+                    ? <>Badges for {badgesStudent.firstName} {badgesStudent.lastName}</>
+                    : 'Badges'}
+                </DialogTitle>
+                <DialogDescription>
+                  Earned category badges for this student. Badges are awarded automatically when they hit the thresholds.
+                </DialogDescription>
+              </DialogHeader>
+              {badgesStudent && (() => {
+                const earned = (badgesStudent.earnedBadges || [])
+                  .map((e) => {
+                    const def = badges.find((b) => b.id === e.badgeId);
+                    return def && def.enabled !== false ? { ...def, periodKey: e.periodKey, earnedAt: e.earnedAt } : null;
+                  })
+                  .filter(Boolean) as (Badge & { periodKey: string; earnedAt: number })[];
+                earned.sort((a, b) => b.earnedAt - a.earnedAt);
+                return (
+                  <div className="max-h-[320px] overflow-y-auto space-y-2 pr-1">
+                    {earned.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-4 text-center">
+                        This student has not earned any badges yet.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {earned.map((b) => (
+                          <li key={`${b.id}-${b.periodKey}-${b.earnedAt}`} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center border-2 bg-primary/5"
+                                style={b.accentColor ? { borderColor: b.accentColor, backgroundColor: `${b.accentColor}20` } : undefined}
+                              >
+                                <DynamicIcon name={b.icon} className="w-4 h-4" style={b.accentColor ? { color: b.accentColor } : undefined} />
+                              </div>
+                              <div>
+                                <p className="font-semibold leading-tight">{b.name}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {b.period === 'month' ? 'Monthly' : b.period === 'semester' ? 'Semester' : b.period === 'year' ? 'Yearly' : 'All time'} ·{' '}
+                                  {new Date(b.earnedAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                              {b.tier || ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })()}
+              <DialogFooter>
+                <Button variant="secondary" onClick={() => setBadgesStudent(null)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
         {themeStudent && (
           <ThemeGeneratorModal
             isOpen={!!themeStudent}
@@ -1136,6 +1414,204 @@ function AdminDashboardInner() {
             }}
           />
         )}
+        <AchievementModal
+          isOpen={isBadgeModalOpen}
+          setIsOpen={setIsBadgeModalOpen}
+          achievement={editingAchievement}
+          categories={categories || []}
+          onSave={async (data) => {
+            if (!firestore || !schoolId) return;
+            if (editingAchievement && 'id' in data) {
+              await updateAchievement(firestore, schoolId, data as Achievement);
+            } else {
+              await addAchievement(firestore, schoolId, data as Omit<Achievement, 'id'>);
+            }
+            setEditingAchievement(null);
+          }}
+        />
+        <BadgeModal
+          isOpen={isCategoryBadgeModalOpen}
+          setIsOpen={setIsCategoryBadgeModalOpen}
+          badge={editingCategoryBadge}
+          categories={categories || []}
+          onSave={async (data) => {
+            if (!firestore || !schoolId) return;
+            if (editingCategoryBadge && 'id' in data) {
+              await updateBadge(firestore, schoolId, data as Badge);
+            } else {
+              await addBadge(firestore, schoolId, data as Omit<Badge, 'id'>);
+            }
+            setEditingCategoryBadge(null);
+          }}
+        />
+        <AlertDialog open={!!categoryBadgeToDelete} onOpenChange={(open) => !open && setCategoryBadgeToDelete(null)}>
+          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete badge &quot;{categoryBadgeToDelete?.name}&quot;?</AlertDialogTitle>
+              <AlertDialogDescription>Students will no longer earn this badge. Already earned badges are not removed.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCategoryBadgeToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={async () => {
+                  if (categoryBadgeToDelete && firestore && schoolId) {
+                    await deleteBadge(firestore, schoolId, categoryBadgeToDelete.id);
+                    setCategoryBadgeToDelete(null);
+                    playSound('success');
+                    toast({ title: 'Badge deleted' });
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Dialog open={!!badgeEarnersFor} onOpenChange={(open) => !open && setBadgeEarnersFor(null)}>
+          <DialogContent className="sm:max-w-lg rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {badgeEarnersFor && (
+                  <>
+                    <Award className="h-5 w-5" style={badgeEarnersFor.accentColor ? { color: badgeEarnersFor.accentColor } : undefined} />
+                    Who earned &quot;{badgeEarnersFor.name}&quot;
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Students who have earned this badge (by period). Same student may appear multiple times if they earned it in different periods.
+              </DialogDescription>
+            </DialogHeader>
+            {badgeEarnersFor && (() => {
+              const entries = (students || []).flatMap((s) =>
+                (s.earnedBadges || [])
+                  .filter((e) => e.badgeId === badgeEarnersFor.id)
+                  .map((e) => ({ student: s, periodKey: e.periodKey, earnedAt: e.earnedAt }))
+              );
+              entries.sort((a, b) => b.earnedAt - a.earnedAt);
+              return (
+                <div className="max-h-[320px] overflow-y-auto space-y-1 pr-1">
+                  {entries.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">No one has earned this badge yet.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {entries.map((entry, i) => (
+                        <li key={`${entry.student.id}-${entry.periodKey}-${entry.earnedAt}`} className="flex justify-between items-center py-2 px-3 rounded-lg bg-muted/50 text-sm">
+                          <span className="font-medium">{getStudentNickname(entry.student)} {entry.student.lastName}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {entry.periodKey} · {new Date(entry.earnedAt).toLocaleDateString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setBadgeEarnersFor(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <AlertDialog open={!!achievementToDelete} onOpenChange={(open) => !open && setAchievementToDelete(null)}>
+          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete milestone &quot;{achievementToDelete?.name}&quot;?</AlertDialogTitle>
+              <AlertDialogDescription>Students will no longer earn bonus points from this milestone. Existing bonus points already awarded are not removed.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setAchievementToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={async () => {
+                  if (achievementToDelete && firestore && schoolId) {
+                    await deleteAchievement(firestore, schoolId, achievementToDelete.id);
+                    setAchievementToDelete(null);
+                    playSound('success');
+                    toast({ title: 'Milestone deleted' });
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={isAddSampleBadgesOpen} onOpenChange={setIsAddSampleBadgesOpen}>
+          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add sample milestones?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will add {SAMPLE_BADGES.length} ready-made bonus point milestones (Early Bird, Century, Rising Star, etc.) with point thresholds and bonus points. You can edit or delete them anytime.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsAddSampleBadgesOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={async () => {
+                  if (!firestore || !schoolId) return;
+                  setIsAddingSamples(true);
+                  try {
+                    for (const badge of SAMPLE_BADGES) {
+                      await addAchievement(firestore, schoolId, badge);
+                    }
+                    playSound('success');
+                    toast({ title: 'Sample milestones added', description: `${SAMPLE_BADGES.length} milestones were created.` });
+                    setIsAddSampleBadgesOpen(false);
+                  } catch (e: any) {
+                    playSound('error');
+                    toast({ variant: 'destructive', title: 'Failed to add milestones', description: e?.message || 'Please try again.' });
+                  } finally {
+                    setIsAddingSamples(false);
+                  }
+                }}
+              >
+                Add {SAMPLE_BADGES.length} milestones
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={isAddSampleCategoryBadgesOpen} onOpenChange={setIsAddSampleCategoryBadgesOpen}>
+          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add sample badges?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {categories?.length
+                  ? `This will add 4 category-based badges (Monthly Star, Monthly Champion, Semester Standout, Yearly Excellence) for the category "${categories[0].name}". You can edit or delete them anytime.`
+                  : 'Create at least one category in the Categories tab first, then add sample badges.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsAddSampleCategoryBadgesOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={!categories?.length || isAddingSampleCategoryBadges}
+                onClick={async () => {
+                  if (!firestore || !schoolId || !categories?.length) return;
+                  const categoryId = categories[0].id;
+                  const samples = getSampleCategoryBadges(categoryId);
+                  setIsAddingSampleCategoryBadges(true);
+                  try {
+                    for (const b of samples) {
+                      await addBadge(firestore, schoolId, b);
+                    }
+                    playSound('success');
+                    toast({ title: 'Sample badges added', description: `${samples.length} badges were created for ${categories[0].name}.` });
+                    setIsAddSampleCategoryBadgesOpen(false);
+                  } catch (e: any) {
+                    playSound('error');
+                    toast({ variant: 'destructive', title: 'Failed to add badges', description: e?.message || 'Please try again.' });
+                  } finally {
+                    setIsAddingSampleCategoryBadges(false);
+                  }
+                }}
+              >
+                {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Add 4 badges
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
           <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>

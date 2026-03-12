@@ -240,15 +240,22 @@ function PrizeDashboard({
                     '--theme-primary': student.theme.primary || 'hsl(var(--primary))',
                     '--theme-card': student.theme.cardBackground || 'hsl(var(--card))',
                     '--theme-accent': student.theme.accent || 'hsl(var(--accent))',
-                    backgroundColor: 'var(--theme-bg)',
+                    background: student.theme.backgroundStyle || `radial-gradient(circle at top left, ${student.theme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${student.theme.accent || 'hsl(var(--accent))'}22 0, ${student.theme.background || 'transparent'} 55%)`,
                     color: 'var(--theme-text)',
                     fontFamily: student.theme.fontFamily || 'inherit',
                 } as React.CSSProperties : {}}
             >
                 {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
 
-                {/* Noise overlay */}
+                {/* Noise and theme emoji overlay */}
                 <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+                {student.theme?.emoji && (
+                    <div className="pointer-events-none fixed inset-0 flex items-center justify-center z-0 opacity-5">
+                        <span className="text-[220px] leading-none">
+                            {student.theme.emoji}
+                        </span>
+                    </div>
+                )}
 
                 <main className="relative z-10 w-full max-w-full px-8">
                     <Card
@@ -281,7 +288,7 @@ function PrizeDashboard({
                                         borderColor: 'hsl(var(--primary) / 0.2)'
                                     }}
                                 >
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{getStudentNickname(student)} {student.lastName}</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{getStudentNickname(student)}</p>
                                     <p className="text-4xl font-black tracking-tighter" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span></p>
                                 </div>
                             </div>
@@ -335,15 +342,16 @@ function PrizeDashboard({
                                                     )}
 
                                                     <div className={cn(
-                                                        "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500",
-                                                        canAfford ? "group-hover:scale-110 group-hover:rotate-6" : "",
-                                                        isHovered && canAfford ? "grayscale-0" : "grayscale"
+                                                        "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 bg-gradient-to-br",
+                                                        canAfford ? "group-hover:scale-110 group-hover:rotate-6" : ""
                                                     )}
                                                         style={student.theme ? {
                                                             backgroundColor: canAfford ? 'var(--theme-bg)' : 'transparent',
                                                             color: canAfford ? 'var(--theme-primary)' : 'var(--theme-text)'
                                                         } : {
-                                                            backgroundColor: canAfford ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--muted) / 0.5)',
+                                                            backgroundImage: canAfford
+                                                                ? 'linear-gradient(135deg, hsl(var(--primary) / 0.2), hsl(var(--chart-3) / 0.3))'
+                                                                : 'linear-gradient(135deg, hsl(var(--muted) / 0.6), hsl(var(--muted) / 0.8))',
                                                             color: canAfford ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'
                                                         }}
                                                     >
@@ -351,7 +359,18 @@ function PrizeDashboard({
                                                     </div>
 
                                                     <div className="mb-6">
-                                                        <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1">{prize.name}</h3>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <h3 className="font-black text-xl text-foreground tracking-tight line-clamp-1 cursor-help">
+                                                                    {prize.name}
+                                                                </h3>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" align="center">
+                                                                <p className="max-w-xs break-words text-sm font-semibold">
+                                                                    {prize.name}
+                                                                </p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                         <div className="mt-3 flex items-center justify-center gap-2">
                                                             <Badge
                                                                 className="font-black text-base px-4 py-1 rounded-xl text-white"

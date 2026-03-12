@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { Functions } from 'firebase/functions';
+import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
@@ -13,6 +14,7 @@ interface FirebaseProviderProps {
   firestore: Firestore;
   auth: Auth;
   functions: Functions;
+  storage: FirebaseStorage;
 }
 
 // Internal state for user authentication
@@ -29,6 +31,7 @@ export interface FirebaseContextState {
   firestore: Firestore | null;
   auth: Auth | null; // The Auth service instance
   functions: Functions | null;
+  storage: FirebaseStorage | null;
   // User authentication state
   user: User | null;
   isUserLoading: boolean; // True during initial auth check
@@ -41,6 +44,7 @@ export interface FirebaseServicesAndUser {
   firestore: Firestore;
   auth: Auth;
   functions: Functions;
+  storage: FirebaseStorage;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -62,6 +66,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
   functions,
+  storage,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
@@ -80,6 +85,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
+        console.log("FirebaseProvider: onAuthStateChanged fired", firebaseUser ? "User found" : "No user");
         if (firebaseUser) {
           // A user is found (from cache or new anonymous session)
           setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
@@ -90,6 +96,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             // First time running, no cached user. Try to sign in anonymously.
             // isUserLoading remains true until the listener fires again.
             isInitialCheck = false;
+            console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
             signInAnonymously(auth).catch((error) => {
               // This is a critical failure.
               console.error("FirebaseProvider: Anonymous sign-in failed:", error);
@@ -106,17 +113,33 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe();
+
+    // Fail-safe timeout: Force isUserLoading to false if Firebase takes too long (> 10s)
+    const timeoutId = setTimeout(() => {
+      setUserAuthState(prev => {
+        if (prev.isUserLoading) {
+          console.warn("FirebaseProvider: Auth initialization timed out after 10s. Forcing Loading=false.");
+          return { ...prev, isUserLoading: false };
+        }
+        return prev;
+      });
+    }, 10000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, [auth]);
 
   const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth && functions);
+    const servicesAvailable = !!(firebaseApp && firestore && auth && functions && storage);
     return {
       areServicesAvailable: servicesAvailable,
       firebaseApp: servicesAvailable ? firebaseApp : null,
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
       functions: servicesAvailable ? functions : null,
+      storage: servicesAvailable ? storage : null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
@@ -147,6 +170,7 @@ export const useFirebase = () => {
     firestore: context.firestore,
     auth: context.auth,
     functions: context.functions,
+    storage: context.storage!,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
@@ -173,19 +197,24 @@ export const useFunctions = (): Functions => {
   return functions;
 }
 
-type MemoFirebase <T> = T & {__memo?: boolean};
+export const useStorage = (): FirebaseStorage => {
+  const { storage } = useFirebase();
+  return storage;
+}
+
+type MemoFirebase<T> = T & { __memo?: boolean };
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoized = useMemo(factory, deps);
-  
-  if(typeof memoized !== 'object' || memoized === null) return memoized;
+
+  if (typeof memoized !== 'object' || memoized === null) return memoized;
   (memoized as MemoFirebase<T>).__memo = true;
-  
+
   return memoized;
 }
 
-export const useUser = (): UserHookResult => { 
-  const { user, isUserLoading, userError } = useFirebase(); 
+export const useUser = (): UserHookResult => {
+  const { user, isUserLoading, userError } = useFirebase();
   return { user, isUserLoading, userError };
 };

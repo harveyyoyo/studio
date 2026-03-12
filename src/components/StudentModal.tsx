@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,13 @@ import {
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Class, Teacher } from '@/lib/types';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFunctions } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
+import { httpsCallable } from 'firebase/functions';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ interface StudentModalProps {
 export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses, allTeachers }: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -46,6 +48,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [nfcId, setNfcId] = useState('');
   const [classId, setClassId] = useState('none');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -74,6 +77,80 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       }
     }
   }, [student, isOpen]);
+
+  const handlePhotoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!student?.id || !schoolId) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Save the student first, then upload a photo.' });
+      e.target.value = '';
+      return;
+    }
+    if (!functions) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Server connection not found.' });
+      e.target.value = '';
+      return;
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const maxSizeBytes = 2 * 1024 * 1024;
+    if (!allowedTypes.includes(file.type)) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Unsupported file type', description: 'Use PNG, JPG, or WebP.' });
+      e.target.value = '';
+      return;
+    }
+    if (file.size > maxSizeBytes) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'File too large', description: 'Photo must be under 2MB.' });
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsPhotoUploading(true);
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64 || '');
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const uploadStudentPhoto = httpsCallable<
+        { schoolId: string; studentId: string; imageBase64: string; contentType: string },
+        { photoUrl: string }
+      >(functions, 'uploadStudentPhoto');
+
+      const res = await uploadStudentPhoto({
+        schoolId,
+        studentId: student.id,
+        imageBase64,
+        contentType: file.type,
+      });
+
+      if (!res.data?.photoUrl) throw new Error('No photo URL returned');
+      await updateStudent({ ...student, photoUrl: res.data.photoUrl });
+      playSound('success');
+      toast({ title: 'Profile photo updated!' });
+    } catch (err: any) {
+      console.error('Student photo upload failed', err);
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Photo upload failed',
+        description: String(err?.message ?? 'Could not upload student photo.'),
+      });
+    } finally {
+      setIsPhotoUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSave = async () => {
     if (!firstName || !lastName) {
@@ -150,6 +227,30 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {isEditing && (
+            <div className="space-y-2">
+              <Label>Profile Photo</Label>
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                  {student?.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={student.photoUrl} alt="Student profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handlePhotoUpload}
+                    disabled={isPhotoUploading}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP under 2MB.</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="firstName">First Name</Label>

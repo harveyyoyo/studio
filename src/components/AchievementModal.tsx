@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Achievement, Category } from '@/lib/types';
 import DynamicIcon from './DynamicIcon';
@@ -25,10 +24,11 @@ interface AchievementModalProps {
     setIsOpen: (isOpen: boolean) => void;
     achievement: Achievement | null;
     categories: Category[];
+    /** Called with achievement data on save. Admin should call addAchievement/updateAchievement and close modal. */
+    onSave?: (data: Omit<Achievement, 'id'> | Achievement) => Promise<void>;
 }
 
-export function AchievementModal({ isOpen, setIsOpen, achievement, categories }: AchievementModalProps) {
-    const { addAchievement, updateAchievement } = useAppContext();
+export function AchievementModal({ isOpen, setIsOpen, achievement, categories, onSave }: AchievementModalProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [icon, setIcon] = useState('Trophy');
@@ -36,6 +36,8 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
     const [threshold, setThreshold] = useState('100');
     const [categoryId, setCategoryId] = useState<string>('');
     const [bonusPoints, setBonusPoints] = useState('0');
+    const [tier, setTier] = useState<Achievement['tier'] | ''>('');
+    const [accentColor, setAccentColor] = useState('');
     const { toast } = useToast();
     const playSound = useArcadeSound();
 
@@ -51,6 +53,8 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                 setThreshold(achievement.criteria.threshold.toString());
                 setCategoryId(achievement.criteria.categoryId || '');
                 setBonusPoints((achievement.bonusPoints || 0).toString());
+                setTier(achievement.tier || '');
+                setAccentColor(achievement.accentColor || '');
             } else { // Create mode
                 setName('');
                 setDescription('');
@@ -59,6 +63,8 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                 setThreshold('100');
                 setCategoryId('');
                 setBonusPoints('0');
+                setTier('');
+                setAccentColor('');
             }
         }
     }, [achievement, isOpen]);
@@ -79,7 +85,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
             return;
         }
 
-        const data: Omit<Achievement, 'id'> = {
+        const baseData = {
             name,
             description,
             icon,
@@ -89,32 +95,38 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                 categoryId: type === 'points' && categoryId ? categoryId : undefined,
             },
             bonusPoints: isNaN(bonusPointsValue) ? 0 : bonusPointsValue,
+            tier: tier || undefined,
+            accentColor: accentColor.trim() || undefined,
         };
 
-        try {
-            if (isEditing && achievement) {
-                await updateAchievement({ ...data, id: achievement.id });
+        if (onSave) {
+            try {
+                if (isEditing && achievement) {
+                    await onSave({ ...baseData, id: achievement.id } as Achievement);
+                } else {
+                    await onSave(baseData as Omit<Achievement, 'id'>);
+                }
                 playSound('success');
-                toast({ title: 'Achievement updated!' });
-            } else {
-                await addAchievement(data);
-                playSound('success');
-                toast({ title: 'Achievement added!' });
+                toast({ title: 'Milestone saved', description: isEditing ? 'Bonus milestone updated.' : 'Bonus milestone created.' });
+                setIsOpen(false);
+            } catch (e: any) {
+                playSound('error');
+                toast({ variant: 'destructive', title: 'Save failed', description: e?.message || 'Could not save badge.' });
             }
-            setIsOpen(false);
-        } catch (err: any) {
-            playSound('error');
-            toast({ variant: 'destructive', title: 'Error saving achievement', description: err.message });
+            return;
         }
+
+        playSound('error');
+        toast({ variant: 'destructive', title: 'Cannot save', description: 'No save handler provided.' });
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{isEditing ? 'Edit Achievement' : 'New Achievement'}</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Edit bonus milestone' : 'New bonus milestone'}</DialogTitle>
                     <DialogDescription>
-                        Define how students unlock this achievement and what reward they get.
+                        Define when students earn extra bonus points (e.g. at 100 or 500 points).
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -139,6 +151,42 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                         <div className="space-y-1">
                             <Label htmlFor="ach-bonus">Bonus Points</Label>
                             <Input id="ach-bonus" type="number" value={bonusPoints} onChange={e => setBonusPoints(e.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label>Tier</Label>
+                            <Select value={tier || 'none'} onValueChange={v => setTier(v === 'none' ? '' : (v as Achievement['tier']))}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Optional" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    <SelectItem value="bronze">Bronze</SelectItem>
+                                    <SelectItem value="silver">Silver</SelectItem>
+                                    <SelectItem value="gold">Gold</SelectItem>
+                                    <SelectItem value="platinum">Platinum</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="ach-accent">Accent color</Label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="ach-accent"
+                                    type="color"
+                                    value={accentColor && /^#[0-9A-Fa-f]{6}$/.test(accentColor) ? accentColor : '#0ea5e9'}
+                                    onChange={e => setAccentColor(e.target.value)}
+                                    className="w-10 h-10 rounded border border-input cursor-pointer"
+                                />
+                                <Input
+                                    value={accentColor}
+                                    onChange={e => setAccentColor(e.target.value)}
+                                    placeholder="#0ea5e9"
+                                    className="font-mono text-sm"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -190,7 +238,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories }:
                 </div>
                 <DialogFooter>
                     <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Cancel</Button>
-                    <Button onClick={handleSave}>Save Achievement</Button>
+                    <Button onClick={handleSave}>Save milestone</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -14,6 +14,21 @@ function requireAuth(context) {
         throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
     }
 }
+async function requireSchoolAdmin(schoolId, context) {
+    var _a;
+    requireAuth(context);
+    requireString(schoolId, "schoolId");
+    const db = admin.firestore();
+    const roleSnap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("roles_admin")
+        .doc(context.auth.uid)
+        .get();
+    if (!roleSnap.exists || ((_a = roleSnap.data()) === null || _a === void 0 ? void 0 : _a.role) !== "admin") {
+        throw new functions.https.HttpsError("permission-denied", "Admin privileges required for this school.");
+    }
+}
 function requireString(value, name) {
     if (typeof value !== "string" || value.length === 0) {
         throw new functions.https.HttpsError("invalid-argument", `A valid ${name} is required.`);
@@ -197,8 +212,7 @@ async function pruneOldBackups(schoolId) {
 exports.createBackupTrigger = functions
     .runWith({ timeoutSeconds: 300, memory: "512MB" })
     .https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
+    await requireSchoolAdmin(data.schoolId, context);
     const type = data.type || "manual";
     const result = await performFullBackup(data.schoolId, type);
     if (!result.success) {
@@ -213,6 +227,9 @@ exports.backupAllSchools = functions
     .runWith({ timeoutSeconds: 540, memory: "512MB" })
     .https.onCall(async (_data, context) => {
     requireAuth(context);
+    // This operation is intentionally disabled by default because it can exfiltrate
+    // data across all schools via Admin SDK. Re-enable only with an explicit allowlist.
+    throw new functions.https.HttpsError("permission-denied", "backupAllSchools is disabled.");
     const schoolsSnap = await admin.firestore().collection("schools").get();
     const results = [];
     for (const schoolDoc of schoolsSnap.docs) {
@@ -233,8 +250,7 @@ exports.backupAllSchools = functions
 exports.restoreFromFullBackup = functions
     .runWith({ timeoutSeconds: 540, memory: "512MB" })
     .https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
+    await requireSchoolAdmin(data.schoolId, context);
     requireString(data.backupId, "backupId");
     const { schoolId, backupId } = data;
     const db = admin.firestore();
@@ -268,8 +284,7 @@ exports.restoreFromFullBackup = functions
 exports.downloadFullBackup = functions
     .runWith({ timeoutSeconds: 120, memory: "512MB" })
     .https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
+    await requireSchoolAdmin(data.schoolId, context);
     requireString(data.backupId, "backupId");
     const db = admin.firestore();
     const backupDoc = await db
@@ -291,8 +306,7 @@ exports.downloadFullBackup = functions
 // Callable: Verify backup integrity (SHA-256)
 // ========================================================================
 exports.verifyBackupIntegrity = functions.https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
+    await requireSchoolAdmin(data.schoolId, context);
     requireString(data.backupId, "backupId");
     const db = admin.firestore();
     const backupDoc = await db
@@ -359,8 +373,9 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     if (typeof data.passcode !== "string" || data.passcode.length === 0) {
         throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
+    const schoolId = String(data.schoolId).trim().toLowerCase();
     const db = admin.firestore();
-    const schoolDoc = await db.collection("schools").doc(data.schoolId).get();
+    const schoolDoc = await db.collection("schools").doc(schoolId).get();
     if (!schoolDoc.exists) {
         throw new functions.https.HttpsError("not-found", "School not found.");
     }
@@ -368,10 +383,129 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     if (schoolData.passcode !== data.passcode) {
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
-    // Provision admin role using the Admin SDK
-    const adminRoleRef = db.collection("schools").doc(data.schoolId).collection("roles_admin").doc(context.auth.uid);
+    // Provision admin role using the Admin SDK (path must match client: schools/{schoolId}/roles_admin/{uid})
+    const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(context.auth.uid);
     await adminRoleRef.set({ role: 'admin' });
     return { success: true };
+});
+// ========================================================================
+// Callable: Upload school logo (server-side to avoid client Storage hangs)
+// ========================================================================
+const LOGO_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+const STUDENT_PHOTO_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
+    try {
+        requireAuth(context);
+        requireString(data.schoolId, "schoolId");
+        const schoolId = String(data.schoolId).trim().toLowerCase();
+        await requireSchoolAdmin(schoolId, context);
+        if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
+        }
+        const contentType = typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
+        if (!LOGO_ALLOWED_TYPES.includes(contentType)) {
+            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, or image/webp.");
+        }
+        let buffer;
+        try {
+            buffer = Buffer.from(data.imageBase64, "base64");
+        }
+        catch (_a) {
+            throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
+        }
+        if (buffer.length > LOGO_MAX_BYTES) {
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+        }
+        const bucket = admin.storage().bucket();
+        const path = `school-logos/${schoolId}`;
+        const file = bucket.file(path);
+        const downloadToken = crypto.randomUUID();
+        await file.save(buffer, {
+            metadata: {
+                contentType,
+                metadata: {
+                    firebaseStorageDownloadTokens: downloadToken,
+                },
+            },
+            validation: false,
+        });
+        // Use Firebase Storage download-token URL (does not require URL signing).
+        // https://firebase.google.com/docs/storage/web/download-files#download_data_via_url
+        const encodedPath = encodeURIComponent(path);
+        const logoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+        try {
+            const db = admin.firestore();
+            await db.collection("schools").doc(schoolId).update({ logoUrl });
+        }
+        catch (e) {
+            console.error("uploadSchoolLogo: firestore update failed", e);
+            throw new functions.https.HttpsError("internal", "Logo uploaded, but failed to save the logo URL to the school record.");
+        }
+        return { logoUrl };
+    }
+    catch (e) {
+        // Preserve explicit HttpsErrors so the client gets a useful code/message.
+        if (e instanceof functions.https.HttpsError)
+            throw e;
+        console.error("uploadSchoolLogo: unexpected error", e);
+        throw new functions.https.HttpsError("internal", "Unexpected error while uploading logo.", { originalMessage: String((e === null || e === void 0 ? void 0 : e.message) || e) });
+    }
+});
+// ========================================================================
+// Callable: Upload student profile photo (admin only)
+// ========================================================================
+exports.uploadStudentPhoto = functions.https.onCall(async (data, context) => {
+    try {
+        requireAuth(context);
+        requireString(data.schoolId, "schoolId");
+        requireString(data.studentId, "studentId");
+        const schoolId = String(data.schoolId).trim().toLowerCase();
+        const studentId = String(data.studentId).trim();
+        await requireSchoolAdmin(schoolId, context);
+        if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
+        }
+        const contentType = typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
+        if (!STUDENT_PHOTO_ALLOWED_TYPES.includes(contentType)) {
+            throw new functions.https.HttpsError("invalid-argument", "contentType must be image/png, image/jpeg, or image/webp.");
+        }
+        let buffer;
+        try {
+            buffer = Buffer.from(data.imageBase64, "base64");
+        }
+        catch (_a) {
+            throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
+        }
+        if (buffer.length > STUDENT_PHOTO_MAX_BYTES) {
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+        }
+        const bucket = admin.storage().bucket();
+        const path = `student-photos/${schoolId}/${studentId}`;
+        const file = bucket.file(path);
+        const downloadToken = crypto.randomUUID();
+        await file.save(buffer, {
+            metadata: {
+                contentType,
+                metadata: {
+                    firebaseStorageDownloadTokens: downloadToken,
+                },
+            },
+            validation: false,
+        });
+        const encodedPath = encodeURIComponent(path);
+        const photoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+        const db = admin.firestore();
+        await db.collection("schools").doc(schoolId).collection("students").doc(studentId).update({ photoUrl });
+        return { photoUrl };
+    }
+    catch (e) {
+        if (e instanceof functions.https.HttpsError)
+            throw e;
+        console.error("uploadStudentPhoto: unexpected error", e);
+        throw new functions.https.HttpsError("internal", "Unexpected error while uploading student photo.", { originalMessage: String((e === null || e === void 0 ? void 0 : e.message) || e) });
+    }
 });
 // ========================================================================
 // Callable: Verify teacher username and passcode
@@ -412,12 +546,7 @@ exports.verifyTeacherPasscode = functions.https.onCall(async (data, context) => 
 // ========================================================================
 exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();
@@ -450,12 +579,7 @@ exports.migrateStudentsToSubcollection = functions.https.onCall(async (data, con
 });
 exports.migrateClassesToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();
@@ -488,12 +612,7 @@ exports.migrateClassesToSubcollection = functions.https.onCall(async (data, cont
 });
 exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();
@@ -526,12 +645,7 @@ exports.migrateTeachersToSubcollection = functions.https.onCall(async (data, con
 });
 exports.migratePrizesToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();
@@ -564,12 +678,7 @@ exports.migratePrizesToSubcollection = functions.https.onCall(async (data, conte
 });
 exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();
@@ -602,12 +711,7 @@ exports.migrateCouponsToSubcollection = functions.https.onCall(async (data, cont
 });
 exports.migrateCategoriesToSubcollection = functions.https.onCall(async (data, context) => {
     const schoolId = data.schoolId;
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-    if (typeof schoolId !== "string" || schoolId.length === 0) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a valid schoolId.");
-    }
+    await requireSchoolAdmin(schoolId, context);
     const schoolDocRef = admin.firestore().collection("schools").doc(schoolId);
     try {
         const schoolSnap = await schoolDocRef.get();

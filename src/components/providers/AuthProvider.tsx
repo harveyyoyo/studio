@@ -57,41 +57,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         setIsMounted(true);
+        console.log("AuthProvider: Mounted");
     }, []);
 
     useEffect(() => {
-        if (!isMounted || isUserLoading) {
+        console.log("AuthProvider: Hydration Check", { isMounted, isUserLoading });
+        if (!isMounted || isUserLoading || !firestore || !auth) {
             return;
         }
 
         const restore = async () => {
+            console.log("AuthProvider: Restoring session...");
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
             const savedName = localStorage.getItem('userName');
 
+            console.log("AuthProvider: LocalStorage State", { savedState, savedSchoolId, savedName });
+
             if (savedState && savedSchoolId) {
-                setLoginState(savedState);
                 setSchoolId(savedSchoolId);
                 setUserName(savedName);
-                if (auth.currentUser) setUserId(auth.currentUser.uid);
+                if (auth.currentUser) {
+                    setUserId(auth.currentUser.uid);
+                    console.log("AuthProvider: User ID set from current user", auth.currentUser.uid);
+                }
 
                 // Legacy "school" state means admin under the new system
                 if (savedState === 'admin' || savedState === 'school') {
-                    setIsAdmin(true);
-                    setLoginState('admin'); // auto migrate
+                    setLoginState('admin');
+                    if (auth.currentUser) {
+                        try {
+                            const adminRoleRef = doc(firestore, 'schools', savedSchoolId, 'roles_admin', auth.currentUser.uid);
+                            const adminDoc = await getDocFromServer(adminRoleRef);
+                            if (adminDoc.exists() && adminDoc.data().role === 'admin') {
+                                setIsAdmin(true);
+                                setIsTeacher(false);
+                            } else {
+                                setIsAdmin(false);
+                                setIsTeacher(false);
+                                setLoginState('student');
+                                localStorage.setItem('loginState', 'student');
+                            }
+                        } catch {
+                            setIsAdmin(false);
+                            setIsTeacher(false);
+                            setLoginState('student');
+                            localStorage.setItem('loginState', 'student');
+                        }
+                    } else {
+                        setIsAdmin(false);
+                        setIsTeacher(false);
+                        setLoginState('student');
+                        localStorage.setItem('loginState', 'student');
+                    }
                 } else if (savedState === 'teacher') {
-                    setIsTeacher(true);
+                    setLoginState('teacher');
+                    if (auth.currentUser) {
+                        try {
+                            const teacherRoleRef = doc(firestore, 'schools', savedSchoolId, 'roles_teacher', auth.currentUser.uid);
+                            const roleDoc = await getDocFromServer(teacherRoleRef);
+                            if (roleDoc.exists() && roleDoc.data().role === 'teacher') {
+                                setIsTeacher(true);
+                                setIsAdmin(false);
+                            } else {
+                                setIsTeacher(false);
+                                setIsAdmin(false);
+                                setLoginState('student');
+                                localStorage.setItem('loginState', 'student');
+                            }
+                        } catch {
+                            setIsTeacher(false);
+                            setIsAdmin(false);
+                            setLoginState('student');
+                            localStorage.setItem('loginState', 'student');
+                        }
+                    } else {
+                        setIsTeacher(false);
+                        setIsAdmin(false);
+                        setLoginState('student');
+                        localStorage.setItem('loginState', 'student');
+                    }
+                } else {
+                    setLoginState(savedState);
+                    setIsAdmin(false);
+                    setIsTeacher(false);
                 }
             } else if (savedState) {
                 setLoginState(savedState);
                 if (savedState === 'developer') setIsAdmin(true);
+                else setIsAdmin(false);
             }
 
+            console.log("AuthProvider: Initialization Complete");
             setIsInitialized(true);
         };
 
         restore();
-    }, [isMounted, isUserLoading]);
+    }, [isMounted, isUserLoading, firestore, auth]);
 
     useEffect(() => {
         // This effect is not necessary anymore as the Cloud Function will handle role provisioning on login.
@@ -198,11 +260,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setLoginState('admin'); // normalize to admin
                     setIsAdmin(true);
                     setIsTeacher(false);
-                    setUserName('Administrator');
+                    setUserName('Admin');
                     setUserId(auth.currentUser.uid);
                     localStorage.setItem('loginState', 'admin');
                     localStorage.setItem('schoolId', lowerSchoolId);
-                    localStorage.setItem('userName', 'Administrator');
+                    localStorage.setItem('userName', 'Admin');
                     return true;
                 } catch (e) {
                     console.error("Admin login error", e);

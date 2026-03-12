@@ -16,6 +16,7 @@ interface Settings {
     darkMode: boolean;
     // Engagement
     enableAchievements: boolean;
+    enableBadges: boolean;
     enableLevels: boolean;
     enableStreaks: boolean;
     enableChallenges: boolean;
@@ -44,16 +45,6 @@ interface Settings {
     enableParentView: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
-    // Badges
-    enableStudentBadges: boolean;
-    badgeCategory: string;
-    badgeBronzeThreshold: number;
-    badgeSilverThreshold: number;
-    badgeGoldThreshold: number;
-    enableCategoryBadges: boolean;
-    categoryBronzeThreshold: number;
-    categorySilverThreshold: number;
-    categoryGoldThreshold: number;
     // Guidance
     enableHelperMode: boolean;
     // Workflow
@@ -83,6 +74,7 @@ const defaultSettings: Settings = {
     language: 'English',
     darkMode: false,
     enableAchievements: false,
+    enableBadges: false,
     enableLevels: false,
     enableStreaks: false,
     enableChallenges: false,
@@ -106,15 +98,6 @@ const defaultSettings: Settings = {
     enableParentView: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
-    enableStudentBadges: false,
-    badgeCategory: 'all',
-    badgeBronzeThreshold: 100,
-    badgeSilverThreshold: 500,
-    badgeGoldThreshold: 1000,
-    enableCategoryBadges: false,
-    categoryBronzeThreshold: 50,
-    categorySilverThreshold: 200,
-    categoryGoldThreshold: 500,
     enableHelperMode: true,
     enableTeacherBudgets: false,
     legacyMode: false,

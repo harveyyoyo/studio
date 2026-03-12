@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, Achievement, HistoryItem } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
@@ -17,7 +17,6 @@ import {
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
   deleteStudent as dbDeleteStudent, addClass as dbAddClass,
   deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
-  addAchievement as dbAddAchievement, updateAchievement as dbUpdateAchievement, deleteAchievement as dbDeleteAchievement,
   awardPointsToStudent as dbAwardPointsToStudent,
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
   deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
@@ -26,7 +25,7 @@ import {
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
-import { SettingsProvider } from './providers/SettingsProvider';
+import { SettingsProvider, useSettings } from './providers/SettingsProvider';
 
 // Re-export types from AuthProvider for backward compatibility
 export type { SyncStatus, LoginState } from './providers/AuthProvider';
@@ -65,7 +64,7 @@ interface AppContextType {
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number }>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }>;
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
@@ -74,14 +73,13 @@ interface AppContextType {
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
   uploadStudents: (csvContent: string, currentStudents: Student[], allClasses: Class[]) => Promise<{ success: number; failed: number; errors: string[] }>;
-  addAchievement: (achievement: Omit<Achievement, 'id'>) => Promise<void>;
-  updateAchievement: (achievement: Achievement) => Promise<void>;
-  deleteAchievement: (achievementId: string) => Promise<void>;
   togglePrizeFulfillment: (studentId: string, activityId: string, fulfilled: boolean) => Promise<void>;
-  achievements: Achievement[];
-  achievementsLoading: boolean;
   categories: Category[];
   categoriesLoading: boolean;
+  achievements: Achievement[];
+  achievementsLoading: boolean;
+  badges: Badge[];
+  badgesLoading: boolean;
   // Backup/School management
   createSchool: (schoolId: string, name?: string, passcode?: string) => Promise<{ passcode: string; cleanId: string } | null>;
   deleteSchool: (schoolId: string) => Promise<void>;
@@ -106,14 +104,29 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const backupCtx = useBackup();
   const { firestore } = useFirebase();
   const schoolId = authCtx.schoolId;
+  const canReadCategories = authCtx.isAdmin;
 
-  const achievementsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'achievements') : null, [firestore, schoolId]);
-  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
-
-  const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
+  const categoriesQuery = useMemoFirebase(
+    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'categories') : null),
+    [firestore, schoolId, canReadCategories]
+  );
   const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
-  // CRUD wrappers — delegate straight to db.ts
+  const achievementsQuery = useMemoFirebase(
+    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'achievements') : null),
+    [firestore, schoolId, canReadCategories]
+  );
+  const { data: achievements, isLoading: achievementsLoading } = useCollection<Achievement>(achievementsQuery);
+
+  const badgesQuery = useMemoFirebase(
+    () => (schoolId && canReadCategories ? collection(firestore, 'schools', schoolId, 'badges') : null),
+    [firestore, schoolId, canReadCategories]
+  );
+  const { data: badges, isLoading: badgesLoading } = useCollection<Badge>(badgesQuery);
+
+  const { settings } = useSettings();
+
+  // CRUD wrappers — delegate straight to db.ts — delegate straight to db.ts
   const addStudent_ = useCallback((s: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddStudent(firestore, schoolId, s);
@@ -176,18 +189,24 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
 
   const redeemCoupon_ = useCallback(async (studentId: string, code: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
-    return dbRedeemCoupon(firestore, schoolId, studentId, code, achievements || [], categories || []);
-  }, [firestore, schoolId, achievements, categories]);
+    const allAchievements = settings.enableAchievements ? (achievements || []) : [];
+    const allBadges = settings.enableBadges ? (badges || []) : [];
+    return dbRedeemCoupon(firestore, schoolId, studentId, code, allAchievements, categories || [], allBadges);
+  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
   const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
-    return dbAwardPointsToStudent(firestore, schoolId, studentId, points, description, achievements || [], categories || []);
-  }, [firestore, schoolId, achievements, categories]);
+    const allAchievements = settings.enableAchievements ? (achievements || []) : [];
+    const allBadges = settings.enableBadges ? (badges || []) : [];
+    return dbAwardPointsToStudent(firestore, schoolId, studentId, points, description, allAchievements, categories || [], allBadges);
+  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
   const awardPointsToMultipleStudents_ = useCallback(async (studentIds: string[], points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
-    return dbAwardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, achievements || [], categories || []);
-  }, [firestore, schoolId, achievements, categories]);
+    const allAchievements = settings.enableAchievements ? (achievements || []) : [];
+    const allBadges = settings.enableBadges ? (badges || []) : [];
+    return dbAwardPointsToMultipleStudents(firestore, schoolId, studentIds, points, description, allAchievements, categories || [], allBadges);
+  }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
   const deductPointsFromMultipleStudents_ = useCallback(async (studentIds: string[], points: number, reason: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
@@ -219,21 +238,6 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbUploadStudents(firestore, schoolId, csv, curr, classes);
   }, [firestore, schoolId]);
 
-  const addAchievement_ = useCallback((a: Omit<Achievement, 'id'>) => {
-    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbAddAchievement(firestore, schoolId, a);
-  }, [firestore, schoolId]);
-
-  const updateAchievement_ = useCallback((a: Achievement) => {
-    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbUpdateAchievement(firestore, schoolId, a);
-  }, [firestore, schoolId]);
-
-  const deleteAchievement_ = useCallback((id: string) => {
-    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
-    return dbDeleteAchievement(firestore, schoolId, id);
-  }, [firestore, schoolId]);
-
   const togglePrizeFulfillment_ = useCallback(async (studentId: string, activityId: string, fulfilled: boolean) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbTogglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled);
@@ -257,12 +261,13 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemPrize: redeemPrize_,
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
-    addAchievement: addAchievement_, updateAchievement: updateAchievement_, deleteAchievement: deleteAchievement_,
     togglePrizeFulfillment: togglePrizeFulfillment_,
-    achievements: achievements || [],
-    achievementsLoading,
     categories: categories || [],
     categoriesLoading,
+    achievements: achievements || [],
+    achievementsLoading,
+    badges: badges || [],
+    badgesLoading,
     // Backup
     ...backupCtx,
   }), [
@@ -273,10 +278,10 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemCoupon_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
-    addAchievement_, updateAchievement_, deleteAchievement_,
     togglePrizeFulfillment_,
-    achievements, achievementsLoading,
     categories, categoriesLoading,
+    achievements, achievementsLoading,
+    badges, badgesLoading,
   ]);
 
   return (

@@ -100,7 +100,16 @@ export default function LoginPage() {
 
   // Prevent hydration mismatch and wait for auth to be ready
   if (!mounted || !isInitialized || isUserLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">Loading...</div>;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
+        <div className="animate-pulse mb-4 text-primary font-bold text-xl uppercase tracking-tighter">
+          Loading levelUp EDU...
+        </div>
+        <p className="text-xs text-muted-foreground opacity-60">
+          Preparing your school reward experience
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -143,14 +152,16 @@ export default function LoginPage() {
               side="bottom"
               className="justify-center"
             >
-              <div className="flex flex-col items-center">
-                <Logo className="h-20 w-auto mb-4" />
-                <h1 className="text-3xl font-bold font-headline text-foreground">
-                  levelUp EDU
-                </h1>
-                <p className="text-base text-muted-foreground">
-                  School Reward System
-                </p>
+              <div className="flex items-center justify-center gap-4">
+                <Logo className="h-16 w-auto" />
+                <div className="text-left">
+                  <h1 className="text-3xl font-bold font-headline text-foreground">
+                    levelUp EDU
+                  </h1>
+                  <p className="text-base text-muted-foreground">
+                    School Reward System
+                  </p>
+                </div>
               </div>
             </Helper>
           </div>

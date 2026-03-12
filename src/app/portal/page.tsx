@@ -88,8 +88,18 @@ export default function PortalPage() {
             )}
 
             <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10 text-center">
-                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm">Get Started</h2>
+                <motion.div
+                    initial={{ opacity: 0, y: 48, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                    className="mb-16 mt-4 text-center"
+                >
+                    <h2
+                        className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
+                        style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)' }}
+                    >
+                        DASHBOARD
+                    </h2>
                 </motion.div>
 
                 <div className="flex flex-col gap-4">

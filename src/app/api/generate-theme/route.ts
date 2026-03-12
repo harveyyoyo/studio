@@ -13,20 +13,26 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
 
-        const systemInstruction = `You are an expert UI/UX designer. Your task is to generate a beautiful, modern color palette and typography choice for a student web portal based on the user's prompt.
-You MUST reply with a JSON object. Ensure that there is an excellent contrast ratio between the text and background colors so the app remains highly readable and accessible. Avoid muddy, generic colors - use premium, modern hues.
-CRITICAL: The 'primary' and 'accent' colors MUST have high contrast against the 'background' color, as they are used for important UI elements like balances and icons.
-You must also include a single cohesive 'emoji' that accurately represents the theme, and a 'fontFamily' choosing an appropriate Google Font that fits the theme's vibe (e.g. "Comic Neue", "Creepster", "Press Start 2P", "Space Mono", "Bangers", "Pacifico").
+        const systemInstruction = `You are an expert UI/UX designer with a bold, creative vision. Your task is to generate a distinctive, memorable theme (color palette + typography + background) for a student web portal based on the user's prompt.
+
+DESIGN PHILOSOPHY:
+- Be creative and adventurous: avoid generic "safe" choices. Surprise the user with unexpected but cohesive combinations.
+- Fonts: Choose Google Fonts that have strong personality and match the theme's vibe. Favor distinctive display, slab, rounded, or thematic fonts (e.g. "Bangers", "Creepster", "Lobster", "Righteous", "Orbitron", "Permanent Marker", "Rye", "Monoton", "Bungee", "Archivo Black", "Abril Fatface", "Playfair Display", "Oswald", "Anton", "Rubik Mono One", "Fugaz One", "Luckiest Guy", "Staatliches", "Bebas Neue", "Alfa Slab One"). Avoid bland system-like fonts unless the prompt explicitly asks for minimalism.
+- Background: Prefer a patterned or multi-color background when it fits the prompt. Use CSS that can be set as the \`background\` property: linear-gradient, radial-gradient, or repeating patterns (e.g. repeating-linear-gradient, subtle stripes/dots). If a solid color fits better, use \`background\` only and leave \`backgroundStyle\` null.
+- Ensure excellent contrast between text and background for accessibility. Primary and accent colors must stand out clearly on the background.
+
+You MUST reply with a JSON object.
 
 Required schema:
 {
-  "background": "A hex color for the main page background",
-  "text": "A hex color for the main text on the background (ensure high contrast)",
-  "primary": "A hex color for primary buttons and main accents (ensure high contrast against background)",
-  "cardBackground": "A hex color for content cards that sit on the background",
-  "accent": "A secondary accent color for borders or secondary icons (ensure high contrast against background)",
-  "emoji": "A single representative emoji (e.g. 🚀, 🌊, 🎨)",
-  "fontFamily": "The exact name of a Google Font (e.g. 'Fredoka One')"
+  "background": "A hex color: the main page background (used as fallback or base for gradients)",
+  "text": "A hex color for main text (high contrast on background)",
+  "primary": "A hex color for primary buttons and accents (high contrast)",
+  "cardBackground": "A hex color for content cards",
+  "accent": "A hex color for secondary accents (high contrast)",
+  "emoji": "A single emoji that represents the theme (e.g. 🚀, 🌊, 🎨, 🐉)",
+  "fontFamily": "Exact name of a Google Font with strong character (see examples above)",
+  "backgroundStyle": "Optional. When set: a full CSS background value for a gradient or pattern, e.g. linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) or radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0f3460 100%) or repeating-linear-gradient(45deg, #0f0f23 0px, #1a1a3e 4px). Omit or set to null for a solid background (then only background is used). Output as a JSON string; escape any double-quotes inside the CSS with a backslash."
 }`;
 
         let responseText = '';

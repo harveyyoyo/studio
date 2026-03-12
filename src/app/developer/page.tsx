@@ -1,12 +1,12 @@
 
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useFirebase, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Helper } from '@/components/ui/helper';
-
+import { httpsCallable } from 'firebase/functions';
 
 interface SchoolInfo {
   id: string;
@@ -152,6 +152,7 @@ export default function DeveloperPage() {
     devVerifyBackup, devMigrateSchoolData
   } = useAppContext();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const { auth } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
@@ -175,6 +176,10 @@ export default function DeveloperPage() {
   const [latestBackup, setLatestBackup] = useState<{ id: string } | null>(null);
   const [isFindingBackup, setIsFindingBackup] = useState(false);
 
+  const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [isAppLogoUploading, setIsAppLogoUploading] = useState(false);
+  const appLogoInputRef = useRef<HTMLInputElement | null>(null);
+
   const schoolsQuery = useMemoFirebase(() => (loginState === 'developer' && !isUserLoading) ? collection(firestore, 'schools') : null, [loginState, firestore, isUserLoading]);
   const { data: allSchools, isLoading: schoolsLoading } = useCollection<SchoolInfo>(schoolsQuery);
 
@@ -184,17 +189,8 @@ export default function DeveloperPage() {
     }
   }, [isInitialized, loginState, router]);
 
-  // Ensure the developer has admin access to every school (needed for Firestore rules)
-  useEffect(() => {
-    if (loginState !== 'developer' || !firestore || !allSchools || schoolsLoading) return;
-    const user = auth?.currentUser;
-    if (!user) return;
-
-    allSchools.forEach((school) => {
-      const adminRoleRef = doc(firestore, 'schools', school.id, 'roles_admin', user.uid);
-      setDoc(adminRoleRef, { role: 'admin' }).catch(() => { });
-    });
-  }, [loginState, firestore, allSchools, schoolsLoading, auth]);
+  // Note: Admin roles are provisioned by backend-only code (Cloud Functions / Admin SDK).
+  // We intentionally do not write to roles collections from the client.
 
   // Automatically creates or resets the sample schools on developer login
   useEffect(() => {
@@ -211,6 +207,130 @@ export default function DeveloperPage() {
     createOrResetSampleSchool('yeshiva');
     createOrResetSampleSchool('schoolabc');
   }, [loginState, firestore, createSchool]);
+
+  // Load current app-wide logo (stored in special school doc "__app_logo__")
+  useEffect(() => {
+    if (!firestore) return;
+    const load = async () => {
+      try {
+        const ref = doc(firestore, 'schools', '__app_logo__');
+        const snap = await getDoc(ref);
+        const data = snap.data() as { logoUrl?: string } | undefined;
+        if (data?.logoUrl) {
+          setAppLogoUrl(data.logoUrl);
+        }
+      } catch (e) {
+        console.error('Failed to load app logo', e);
+      }
+    };
+    load();
+  }, [firestore]);
+
+  const handleAppLogoUploadClick = () => {
+    appLogoInputRef.current?.click();
+  };
+
+  const handleAppLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!functions || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot upload app logo',
+        description: 'Cloud Functions are not available. Refresh and try again.',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+
+    if (!allowedTypes.includes(file.type)) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Unsupported file type',
+        description: 'Please use PNG, JPG, or WebP.',
+      });
+      e.target.value = '';
+      return;
+    }
+    if (file.size > maxSizeBytes) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Logo must be under 2MB.',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      setIsAppLogoUploading(true);
+      toast({ title: 'Uploading app logo…', description: 'Please wait.' });
+
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.includes(',') ? result.split(',')[1] : result;
+          resolve(base64 || '');
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+
+      const uploadLogo = httpsCallable<{ schoolId: string; imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadSchoolLogo');
+      const res = await uploadLogo({
+        schoolId: '__app_logo__',
+        imageBase64,
+        contentType: file.type,
+      });
+
+      const data = res.data;
+      if (!data?.logoUrl) {
+        throw new Error('No logo URL returned');
+      }
+
+      setAppLogoUrl(data.logoUrl);
+      playSound('success');
+      toast({ title: 'App logo updated!', description: 'This logo can be used across the app shell.' });
+    } catch (error: unknown) {
+      console.error('App logo upload failed', error);
+      playSound('error');
+      const err = error as { code?: string; message?: string; details?: unknown };
+      const code = err?.code ?? '';
+      const message = String(err?.message ?? '');
+      let description = message;
+      if (!description && err?.details) {
+        try {
+          description = typeof err.details === 'string' ? err.details : JSON.stringify(err.details);
+        } catch {
+          // ignore
+        }
+      }
+      if (code === 'functions/unauthenticated') {
+        description = 'You must be logged in as a developer. Please sign in again.';
+      } else if (code === 'functions/permission-denied') {
+        description = 'You need developer access to update the app logo.';
+      } else if (code === 'functions/invalid-argument') {
+        description = message || 'Invalid image. Use PNG, JPG, or WebP under 2MB.';
+      } else if (!message || message === 'undefined') {
+        description = 'Could not save the logo. Try again or use a smaller image.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'App logo upload failed',
+        description,
+      });
+    } finally {
+      setIsAppLogoUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const handleFindLatestBackup = async () => {
     if (!firestore || !orphanSchoolId) return;
@@ -390,6 +510,46 @@ export default function DeveloperPage() {
               <p className="text-slate-400 text-sm">Manage all school databases.</p>
             </div>
           </Helper>
+        </Card>
+
+        <Card className="border shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <Helper content="Upload a global logo for the arcade app itself. This can be used in marketing pages, headers, and the portal shell.">
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-slate-600" /> App Logo
+                </CardTitle>
+              </Helper>
+              <CardDescription>Developer-level branding for the overall app (not per-school).</CardDescription>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                {appLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={appLogoUrl} alt="App logo" className="h-full w-full object-cover" />
+                ) : (
+                  <span>App</span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-1 rounded-full"
+                onClick={handleAppLogoUploadClick}
+                disabled={isAppLogoUploading}
+              >
+                {isAppLogoUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                Upload Logo
+              </Button>
+              <input
+                ref={appLogoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+                onChange={handleAppLogoUpload}
+              />
+            </div>
+          </CardHeader>
         </Card>
 
         <Alert variant="destructive" className="border-2">

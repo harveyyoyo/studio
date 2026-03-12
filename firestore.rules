@@ -54,6 +54,12 @@ service cloud.firestore {
         allow write: if isAdmin(schoolId);
       }
 
+      match /badges/{badgeId} {
+        // Read: any authenticated user (so teachers/students can load badge definitions and earned badges).
+        allow read: if request.auth != null;
+        allow write: if isAdmin(schoolId);
+      }
+
       match /prizes/{prizeId} {
         allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
@@ -65,15 +71,15 @@ service cloud.firestore {
       }
       
       match /roles_admin/{uid} {
-        // Any authenticated user can create/write their own role document.
-        // This is necessary for the login flow to provision admin status.
-        allow write: if isAuth() && request.auth.uid == uid;
+        // Admin roles are provisioned ONLY by trusted backend code (Admin SDK).
+        // Clients may read their own role doc to confirm access after login.
         allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
       }
 
       match /roles_teacher/{uid} {
-        allow write: if isAuth() && request.auth.uid == uid;
         allow read: if isAuth() && request.auth.uid == uid;
+        allow write: if false;
       }
 
       // Passcode stored here; never readable by clients.

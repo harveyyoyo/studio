@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 export default function PublicSchoolPage() {
     const { schoolId } = useParams<{ schoolId: string }>();
     const router = useRouter();
-    const { login, loginState, isInitialized, isUserLoading } = useAppContext();
+    const { login, isInitialized, isUserLoading } = useAppContext();
     const { firestore } = useFirebase();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
@@ -22,12 +22,6 @@ export default function PublicSchoolPage() {
 
     useEffect(() => {
         if (!isInitialized || isUserLoading) return;
-
-        // If they are already logged in to this exact school as a student or higher, send them to portal
-        if (loginState !== 'loggedOut') {
-            router.replace('/portal');
-            return;
-        }
 
         if (!firestore || !schoolId) return;
 
@@ -54,7 +48,7 @@ export default function PublicSchoolPage() {
             }
         })();
         return () => { cancelled = true; };
-    }, [isInitialized, isUserLoading, firestore, schoolId, loginState, router, login]);
+    }, [isInitialized, isUserLoading, firestore, schoolId, router, login]);
 
     if (loading || !isInitialized || isUserLoading) {
         return (

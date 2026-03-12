@@ -46,7 +46,7 @@ export default function Header() {
     return doc(firestore, 'schools', schoolId);
   }, [firestore, schoolId]);
 
-  const { data: schoolData } = useDoc<{ name: string }>(schoolDocRef);
+  const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
   const schoolName = schoolData?.name || schoolId;
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
@@ -69,7 +69,7 @@ export default function Header() {
       ...(isAdmin ? [{ id: 'admin', href: '/admin', icon: UserCog, label: 'Admin', color: 'destructive' }] : []),
       { id: 'print', href: '/teacher', icon: Printer, label: 'Teacher', color: 'chart-2' },
       { id: 'redeem', href: '/student', icon: GraduationCap, label: 'Student', color: 'chart-1' },
-      { id: 'prize', href: '/prize', icon: ShoppingBag, label: 'Shop', color: 'chart-3' },
+      { id: 'prize', href: '/prize', icon: Gift, label: 'Shop', color: 'chart-3' },
       { id: 'fame', href: '/halloffame', icon: Trophy, label: 'Fame', color: 'chart-5' },
     ].sort((a, b) => {
       const order = ['admin', 'print', 'redeem', 'prize', 'fame'];
@@ -100,9 +100,17 @@ export default function Header() {
               <Home className="h-5 w-5" />
             </Link>
           </div>
-          <div className="text-center">
+          <div className="flex items-center justify-center">
             {schoolId && (
-              <Link href="/portal" className="font-black text-2xl text-primary truncate no-underline">{schoolName}</Link>
+              <Link href="/portal" className="flex items-center gap-2 font-school font-black text-3xl text-primary truncate no-underline max-w-full">
+                {schoolData?.logoUrl && (
+                  <span className="inline-flex h-8 w-8 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={schoolData.logoUrl} alt="School logo" className="h-full w-full object-cover" />
+                  </span>
+                )}
+                <span className="truncate">{schoolName}</span>
+              </Link>
             )}
           </div>
           <div className="flex items-center justify-end gap-2">
@@ -110,7 +118,7 @@ export default function Header() {
           </div>
         </header>
 
-        {loginState === 'school' && !isKioskLocked && (
+        {loginState !== 'loggedOut' && loginState !== 'developer' && !isKioskLocked && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
             settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
           )}>
@@ -155,7 +163,17 @@ export default function Header() {
         {/* Center: School Name */}
         {schoolId && (
           <Link href="/portal" className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
-            <span className="text-4xl font-black uppercase tracking-wider text-primary drop-shadow-md font-body">{schoolName}</span>
+            <span className="inline-flex items-center gap-3">
+              {schoolData?.logoUrl && (
+                <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={schoolData.logoUrl} alt="School logo" className="h-full w-full object-cover" />
+                </span>
+              )}
+              <span className="text-5xl font-school font-black tracking-tight text-primary drop-shadow-md whitespace-nowrap">
+                {schoolName}
+              </span>
+            </span>
           </Link>
         )}
 

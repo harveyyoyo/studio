@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
+import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -34,6 +35,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BadgeShowcase } from '@/components/BadgeShowcase';
+import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
@@ -135,7 +138,11 @@ function StudentHomeDashboardInner({
 }) {
     const firestore = useFirestore();
     const { settings } = useSettings();
+    const { achievements, badges } = useAppContext();
     const isGraphic = settings.graphicMode === 'graphics';
+    const { toast } = useToast();
+    const playSound = useArcadeSound();
+    const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
 
     const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
     const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
@@ -146,35 +153,46 @@ function StudentHomeDashboardInner({
     const categoriesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null, [firestore, schoolId]);
     const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
-    const pointsToCompare = (!settings.badgeCategory || settings.badgeCategory.toLowerCase() === 'all')
-        ? student?.points || 0
-        : (student?.categoryPoints?.[settings.badgeCategory] || 0);
-
-    const earnedBadges: string[] = [];
-    if (settings.enableStudentBadges && student) {
-        if (pointsToCompare >= settings.badgeBronzeThreshold) earnedBadges.push('bronze');
-        if (pointsToCompare >= settings.badgeSilverThreshold) earnedBadges.push('silver');
-        if (pointsToCompare >= settings.badgeGoldThreshold) earnedBadges.push('gold');
-    }
-
-    // Determine earned category badges
-    const earnedCategoryBadges: { categoryName: string, level: 'bronze' | 'silver' | 'gold', color?: string }[] = [];
-    if (settings.enableCategoryBadges && student && categories) {
-        for (const cat of categories) {
-            const catPoints = student.categoryPoints?.[cat.name] || 0;
-            if (catPoints >= settings.categoryGoldThreshold) {
-                earnedCategoryBadges.push({ categoryName: cat.name, level: 'gold', color: cat.color });
-            } else if (catPoints >= settings.categorySilverThreshold) {
-                earnedCategoryBadges.push({ categoryName: cat.name, level: 'silver', color: cat.color });
-            } else if (catPoints >= settings.categoryBronzeThreshold) {
-                earnedCategoryBadges.push({ categoryName: cat.name, level: 'bronze', color: cat.color });
-            }
-        }
-    }
-
     if (studentLoading || !student || !schoolId) {
         return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
     }
+
+    // Celebrate on login if new badges / bonus milestones were earned since last time this student opened the portal.
+    useEffect(() => {
+        if (!student || !schoolId) return;
+        try {
+            const key = `arcade:lastSeenCelebrations:${schoolId}:${student.id}`;
+            const prev = JSON.parse(localStorage.getItem(key) || '{}') as { badgeAt?: number; bonusAt?: number };
+
+            const latestBadgeAt = Math.max(0, ...(student.earnedBadges || []).map((e) => e.earnedAt || 0));
+            const latestBonusAt = Math.max(
+                0,
+                ...(student.earnedAchievements || [])
+                    .map((e) => {
+                        const ach = (achievements || []).find((a) => a.id === e.achievementId);
+                        const isBonus = (ach?.bonusPoints ?? 0) > 0;
+                        return isBonus ? (e.earnedAt || 0) : 0;
+                    })
+            );
+
+            const newBadge = latestBadgeAt > (prev.badgeAt || 0);
+            const newBonus = latestBonusAt > (prev.bonusAt || 0);
+
+            if (newBadge || newBonus) {
+                playSound('success');
+                const parts: string[] = [];
+                if (newBadge) parts.push('a new badge');
+                if (newBonus) parts.push('new bonus points');
+                setCelebrationMessage(`You earned ${parts.join(' and ')}!`);
+                setTimeout(() => setCelebrationMessage(null), 2200);
+            }
+
+            localStorage.setItem(key, JSON.stringify({ badgeAt: latestBadgeAt, bonusAt: latestBonusAt }));
+        } catch {
+            // ignore storage / JSON errors
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [student?.id, schoolId]);
 
     const themeFont = student.theme?.fontFamily;
 
@@ -186,6 +204,14 @@ function StudentHomeDashboardInner({
             )}
             style={themeFont ? { fontFamily: `"${themeFont}", sans-serif` } : undefined}
         >
+            {celebrationMessage && (
+                <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
+                    <div className="pointer-events-auto bg-black/70 text-white px-8 py-5 rounded-3xl shadow-2xl border border-white/20 flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-300">
+                        <span className="text-3xl font-black tracking-widest uppercase">Yay!</span>
+                        <span className="text-sm font-medium text-center max-w-xs">{celebrationMessage}</span>
+                    </div>
+                </div>
+            )}
             {/* Dynamic Font Loader */}
             {themeFont && (
                 <style dangerouslySetInnerHTML={{
@@ -198,12 +224,39 @@ function StudentHomeDashboardInner({
                 </div>
             )}
 
+            {/* Theme background orbs and emoji watermark when a custom theme is set */}
+            {student.theme && (
+                <>
+                    <div
+                        className="absolute -top-32 -left-16 w-64 h-64 rounded-full blur-3xl opacity-40 pointer-events-none z-0"
+                        style={{
+                            background: `radial-gradient(circle at center, ${student.theme.primary || '#0ea5e9'} 0%, transparent 60%)`,
+                        }}
+                    />
+                    <div
+                        className="absolute top-40 -right-24 w-72 h-72 rounded-full blur-3xl opacity-30 pointer-events-none z-0"
+                        style={{
+                            background: `radial-gradient(circle at center, ${student.theme.accent || '#22c55e'} 0%, transparent 60%)`,
+                        }}
+                    />
+                    {student.theme.emoji && (
+                        <div className="absolute inset-x-0 -bottom-10 flex justify-center pointer-events-none z-0 opacity-10">
+                            <span className="text-[160px] leading-none">
+                                {student.theme.emoji}
+                            </span>
+                        </div>
+                    )}
+                </>
+            )}
+
             {/* Hero Welcome Section */}
             <Card className={cn("overflow-hidden shadow-xl border-t-8 border-chart-1", isGraphic ? 'bg-gradient-to-br from-indigo-100/50 to-indigo-50/30 dark:from-indigo-950/40 dark:to-slate-900/40' : 'bg-card dark:bg-slate-800')}>
                 <CardContent className="p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="space-y-1 text-center md:text-left">
-                        <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
-                        <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white">{getStudentNickname(student)} {student.lastName}</h2>
+            <div className="space-y-1 text-center md:text-left">
+                        <p className="text-sm md:text-base font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
+                        <h2 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-white">
+                            {getStudentNickname(student)} {student.lastName}
+                        </h2>
                     </div>
                     <div className="text-center md:text-right">
                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Current Balance</p>
@@ -219,42 +272,6 @@ function StudentHomeDashboardInner({
                             </motion.span>
                             <span className="text-xl md:text-2xl font-bold text-muted-foreground uppercase tracking-widest">pts</span>
                         </div>
-
-                        {settings.enableStudentBadges && earnedBadges.length > 0 && (
-                            <div className="flex items-center justify-center md:justify-end gap-2 mt-4">
-                                {earnedBadges.includes('bronze') && (
-                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 font-black tracking-widest text-[10px] uppercase shadow-sm">
-                                        <Award className="w-3.5 h-3.5 mr-1" /> Bronze
-                                    </Badge>
-                                )}
-                                {earnedBadges.includes('silver') && (
-                                    <Badge variant="outline" className="bg-slate-200 text-slate-800 border-slate-400 font-black tracking-widest text-[10px] uppercase shadow-sm">
-                                        <Award className="w-3.5 h-3.5 mr-1" /> Silver
-                                    </Badge>
-                                )}
-                                {earnedBadges.includes('gold') && (
-                                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-400 font-black tracking-widest text-[10px] uppercase shadow-sm">
-                                        <Award className="w-3.5 h-3.5 mr-1" /> Gold
-                                    </Badge>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Category Badges Render */}
-                        {settings.enableCategoryBadges && earnedCategoryBadges.length > 0 && (
-                            <div className="flex flex-wrap items-center justify-center md:justify-end gap-2 mt-2">
-                                {earnedCategoryBadges.map((badge, idx) => (
-                                    <Badge key={idx} variant="outline" className={cn(
-                                        "font-black tracking-widest text-[9px] uppercase shadow-sm",
-                                        badge.level === 'gold' && "bg-yellow-100 text-yellow-800 border-yellow-400",
-                                        badge.level === 'silver' && "bg-slate-200 text-slate-800 border-slate-400",
-                                        badge.level === 'bronze' && "bg-orange-100 text-orange-800 border-orange-300"
-                                    )}>
-                                        <Award className="w-3 h-3 mr-1" /> {badge.categoryName} {badge.level}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -301,6 +318,19 @@ function StudentHomeDashboardInner({
                             </div>
                         </CardContent>
                     </Card>
+
+                    <BadgeShowcase
+                        student={student}
+                        achievements={achievements || []}
+                        enableAchievements={settings.enableAchievements}
+                        theme={student.theme}
+                    />
+                    <EarnedBadgesShowcase
+                        student={student}
+                        badges={badges || []}
+                        enableBadges={settings.enableBadges}
+                        theme={student.theme}
+                    />
                 </div>
 
                 {/* Right Section: Activity */}

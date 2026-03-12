@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wand2, Loader2, Sparkles } from 'lucide-react';
+import { Wand2, Loader2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn, getContrastColor } from '@/lib/utils';
@@ -87,13 +87,62 @@ export function ThemeGeneratorModal({
         }
     };
 
+    const updateTheme = (partial: Partial<StudentTheme>) => {
+        setPreviewTheme(prev => (prev ? { ...prev, ...partial } : prev));
+    };
+
+    const generateWithAI = async (kind: 'emoji' | 'font') => {
+        if (!prompt.trim()) {
+            toast({
+                title: 'Prompt required',
+                description: 'Enter a prompt first so AI knows what style to match.',
+                variant: 'destructive',
+            });
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const response = await fetch('/api/generate-theme', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, model }),
+            });
+            if (!response.ok) throw new Error('Failed to generate theme');
+            const generated: StudentTheme = await response.json();
+            setPreviewTheme(prev => {
+                if (!prev) return generated;
+                if (kind === 'emoji') {
+                    return { ...prev, emoji: generated.emoji || prev.emoji };
+                }
+                if (kind === 'font') {
+                    return { ...prev, fontFamily: generated.fontFamily || prev.fontFamily };
+                }
+                return prev;
+            });
+            toast({
+                title: 'AI suggestion applied',
+                description: kind === 'emoji' ? 'Updated the icon to match your prompt.' : 'Updated the font to match your prompt.',
+            });
+        } catch (error) {
+            console.error('Error generating theme for fine‑tune:', error);
+            toast({
+                title: 'Error',
+                description: 'There was a problem asking AI for a suggestion. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[820px] max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Generate Theme for {studentName}</DialogTitle>
                     <DialogDescription>
-                        Describe a theme and let AI generate a custom color palette.
+                        Describe a theme and let AI generate a custom look. Themes can include gradients/patterns, and even “animated vibe” ideas (moving colors or playful motion like an emoji popping in/out).
+                        After generating, you can also fine‑tune specific parts like the emoji and colors.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -146,14 +195,16 @@ export function ThemeGeneratorModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Live Preview</Label>
+                        <div className="flex items-center justify-between gap-2">
+                            <Label>Live Preview</Label>
+                        </div>
                         <div
                             className={cn(
-                                "w-full h-48 rounded-xl border border-border shadow-inner p-4 flex flex-col gap-4 overflow-hidden relative transition-colors duration-500",
+                                "w-full h-64 md:h-72 rounded-2xl border border-border shadow-inner p-5 flex flex-col gap-4 overflow-hidden relative transition-colors duration-500",
                                 !previewTheme && "bg-muted flex items-center justify-center text-muted-foreground"
                             )}
                             style={previewTheme ? {
-                                backgroundColor: previewTheme.background,
+                                background: previewTheme.backgroundStyle || previewTheme.background,
                                 color: previewTheme.text,
                                 fontFamily: previewTheme.fontFamily || 'inherit',
                             } : undefined}
@@ -201,40 +252,118 @@ export function ThemeGeneratorModal({
                                             </div>
                                         </div>
                                     </div>
+
+                                    <div className="mt-3 flex flex-col md:flex-row gap-3 text-xs">
+                                        <div
+                                            className="flex-1 rounded-lg p-3 border border-black/5 flex items-center justify-between"
+                                            style={{ backgroundColor: previewTheme.cardBackground }}
+                                        >
+                                            <span className="font-semibold opacity-80">Badges</span>
+                                            <div className="flex gap-1.5">
+                                                <span
+                                                    className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] items-center justify-center"
+                                                    style={{ backgroundColor: previewTheme.primary, color: getContrastColor(previewTheme.primary) === 'black' ? '#000' : '#fff' }}
+                                                >
+                                                    ⭐ Helper
+                                                </span>
+                                                <span
+                                                    className="inline-flex h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] items-center justify-center"
+                                                    style={{ backgroundColor: previewTheme.accent, color: getContrastColor(previewTheme.accent) === 'black' ? '#000' : '#fff' }}
+                                                >
+                                                    📚 Reader
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className="w-full md:w-[42%] rounded-lg p-3 border border-black/5"
+                                            style={{ backgroundColor: previewTheme.cardBackground }}
+                                        >
+                                            <div className="text-[10px] uppercase tracking-[0.22em] opacity-70 mb-1">Activity</div>
+                                            <div className="font-medium">Redeemed coupon · +25 pts</div>
+                                        </div>
+                                    </div>
                                 </>
                             )}
                         </div>
                     </div>
 
                     {previewTheme && (
-                        <div className="grid grid-cols-6 gap-2 mt-2 text-center text-[10px] uppercase font-bold text-muted-foreground">
-                            {previewTheme.emoji && (
-                                <div className="flex flex-col items-center justify-end">
-                                    <div className="text-3xl mb-1 flex items-center justify-center bg-muted/20 w-full h-8 rounded-md border border-border">
-                                        {previewTheme.emoji}
+                        <div className="mt-4 space-y-3">
+                            <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground">
+                                Fine‑tune
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label htmlFor="theme-emoji">Emoji (optional)</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="theme-emoji"
+                                            value={previewTheme.emoji || ''}
+                                            onChange={(e) => updateTheme({ emoji: e.target.value })}
+                                            placeholder="e.g. ⭐"
+                                            className="font-mono"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="shrink-0"
+                                            disabled={isGenerating}
+                                            onClick={() => generateWithAI('emoji')}
+                                            title="Ask AI for an emoji"
+                                        >
+                                            <Wand2 className="w-4 h-4" />
+                                        </Button>
                                     </div>
-                                    Icon
                                 </div>
-                            )}
-                            <div>
-                                <div className="w-full h-8 rounded-md mb-1 border border-border" style={{ backgroundColor: previewTheme.background }} title={`Background: ${previewTheme.background}`} />
-                                BG
+                                <div className="space-y-1">
+                                    <Label htmlFor="theme-font">Font (optional)</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="theme-font"
+                                            value={previewTheme.fontFamily || ''}
+                                            onChange={(e) => updateTheme({ fontFamily: e.target.value || undefined })}
+                                            placeholder="e.g. Orbitron"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="shrink-0"
+                                            disabled={isGenerating}
+                                            onClick={() => generateWithAI('font')}
+                                            title="Ask AI for a font"
+                                        >
+                                            <Wand2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="w-full h-8 rounded-md mb-1 border border-border" style={{ backgroundColor: previewTheme.text }} title={`Text: ${previewTheme.text}`} />
-                                Text
-                            </div>
-                            <div>
-                                <div className="w-full h-8 rounded-md mb-1 border border-border" style={{ backgroundColor: previewTheme.primary }} title={`Primary: ${previewTheme.primary}`} />
-                                Primary
-                            </div>
-                            <div>
-                                <div className="w-full h-8 rounded-md mb-1 border border-border" style={{ backgroundColor: previewTheme.cardBackground }} title={`Card BG: ${previewTheme.cardBackground}`} />
-                                Card
-                            </div>
-                            <div>
-                                <div className="w-full h-8 rounded-md mb-1 border border-border" style={{ backgroundColor: previewTheme.accent, borderColor: previewTheme.accent }} title={`Accent: ${previewTheme.accent}`} />
-                                Accent
+                            <div className="grid grid-cols-5 gap-2">
+                                {[
+                                    { key: 'background', label: 'BG' },
+                                    { key: 'text', label: 'Text' },
+                                    { key: 'primary', label: 'Primary' },
+                                    { key: 'cardBackground', label: 'Card' },
+                                    { key: 'accent', label: 'Accent' },
+                                ].map(({ key, label }) => {
+                                    const value = (previewTheme as any)[key] as string | undefined;
+                                    return (
+                                        <label key={key} className="flex flex-col items-center gap-1 text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
+                                            <span
+                                                className="w-9 h-9 rounded-xl border border-border shadow-sm"
+                                                style={{ backgroundColor: value || '#000000' }}
+                                            />
+                                            <span>{label}</span>
+                                            <input
+                                                type="color"
+                                                className="sr-only"
+                                                value={value || '#000000'}
+                                                onChange={(e) => updateTheme({ [key]: e.target.value } as any)}
+                                            />
+                                        </label>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
