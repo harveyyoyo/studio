@@ -6,7 +6,6 @@ import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
-import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

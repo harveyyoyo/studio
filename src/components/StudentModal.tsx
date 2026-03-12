@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Class, Teacher } from '@/lib/types';
+import type { Student, Class, Teacher, StudentTheme } from '@/lib/types';
 import { useFirestore, useFunctions } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -26,6 +26,8 @@ import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
+import { ThemeGeneratorModal } from './ThemeGeneratorModal';
+import { Wand2 } from 'lucide-react';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -49,6 +51,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [classId, setClassId] = useState('none');
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<string[]>([]);
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
+  const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -65,6 +69,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
         setSelectedTeacherIds(student.teacherIds || []);
+        setTheme(student.theme);
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -74,6 +79,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         setNfcId(Math.floor(10000000 + Math.random() * 90000000).toString());
         setClassId('none');
         setSelectedTeacherIds([]);
+        setTheme(undefined);
       }
     }
   }, [student, isOpen]);
@@ -198,6 +204,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         classId: finalClassId,
         nfcId,
         teacherIds: selectedTeacherIds,
+        theme,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -212,6 +219,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         points: parseInt(points) || 0,
         classId: finalClassId,
         teacherIds: selectedTeacherIds,
+        ...(theme ? { theme } : {}),
       };
       await addStudent(newStudent);
       playSound('success');
@@ -285,9 +293,35 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
               <SelectTrigger id="class"><SelectValue placeholder="Select a class..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
-                {allClasses?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {allClasses
+                  ?.slice()
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Student Theme (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Use AI to generate a personalized look for this student&apos;s portal and ID card.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setIsThemeModalOpen(true)}
+              >
+                <Wand2 className="w-4 h-4 mr-1 text-purple-500" />
+                {theme ? 'Edit Theme' : 'Generate Theme'}
+              </Button>
+              {theme && (
+                <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Theme set
+                </span>
+              )}
+            </div>
           </div>
           <div className="space-y-1">
             <Label>Assign to Teacher(s)</Label>
@@ -318,6 +352,18 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           <Button type="submit" onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
+      {isThemeModalOpen && (
+        <ThemeGeneratorModal
+          isOpen={isThemeModalOpen}
+          onOpenChange={setIsThemeModalOpen}
+          studentName={firstName || 'Student'}
+          currentTheme={theme}
+          onSave={(newTheme) => {
+            setTheme(newTheme);
+            setIsThemeModalOpen(false);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

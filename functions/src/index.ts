@@ -593,6 +593,86 @@ exports.uploadSchoolLogo = functions.https.onCall(
 );
 
 // ========================================================================
+// Callable: Upload app-wide logo (for all schools)
+// ========================================================================
+
+exports.uploadAppLogo = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    try {
+      requireAuth(context);
+
+      if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
+      }
+      const contentType =
+        typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
+      if (!LOGO_ALLOWED_TYPES.includes(contentType)) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "contentType must be image/png, image/jpeg, or image/webp."
+        );
+      }
+
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(data.imageBase64, "base64");
+      } catch {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
+      }
+      if (buffer.length > LOGO_MAX_BYTES) {
+        throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+      }
+
+      const bucket = admin.storage().bucket();
+      const path = `app-branding/app-logo`;
+      const file = bucket.file(path);
+
+      const downloadToken = crypto.randomUUID();
+      await file.save(buffer, {
+        metadata: {
+          contentType,
+          metadata: {
+            firebaseStorageDownloadTokens: downloadToken,
+          },
+        },
+        validation: false,
+      });
+
+      const encodedPath = encodeURIComponent(path);
+      const logoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+
+      try {
+        const db = admin.firestore();
+        await db.collection("appConfig").doc("global").set(
+          {
+            appLogoUrl: logoUrl,
+            updatedAt: Date.now(),
+            updatedBy: context.auth!.uid,
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.error("uploadAppLogo: firestore update failed", e);
+        throw new functions.https.HttpsError(
+          "internal",
+          "Logo uploaded, but failed to save the logo URL to app configuration."
+        );
+      }
+
+      return { logoUrl };
+    } catch (e: any) {
+      if (e instanceof functions.https.HttpsError) throw e;
+      console.error("uploadAppLogo: unexpected error", e);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Unexpected error while uploading app logo.",
+        { originalMessage: String(e?.message || e) }
+      );
+    }
+  }
+);
+
+// ========================================================================
 // Callable: Upload student profile photo (admin only)
 // ========================================================================
 

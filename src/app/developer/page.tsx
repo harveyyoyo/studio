@@ -283,9 +283,8 @@ export default function DeveloperPage() {
         reader.readAsDataURL(file);
       });
 
-      const uploadLogo = httpsCallable<{ schoolId: string; imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadSchoolLogo');
+      const uploadLogo = httpsCallable<{ imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadAppLogo');
       const res = await uploadLogo({
-        schoolId: '__app_logo__',
         imageBase64,
         contentType: file.type,
       });

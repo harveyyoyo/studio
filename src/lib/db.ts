@@ -1067,6 +1067,48 @@ export const addBadge = async (firestore: Firestore, schoolId: string, badgeData
   const badgeDocRef = doc(firestore, 'schools', schoolId, 'badges', newBadge.id);
   try {
     await setDoc(badgeDocRef, removeUndefined(newBadge));
+
+    // After creating a new badge, retro-apply it to all students who already qualify.
+    const studentsSnap = await getDocs(collection(firestore, 'schools', schoolId, 'students'));
+    if (!studentsSnap.empty) {
+      const categoriesSnap = await getDocs(collection(firestore, 'schools', schoolId, 'categories'));
+      const categories = categoriesSnap.docs.map(d => d.data() as Category);
+
+      const BATCH_LIMIT = 450;
+      let batch = writeBatch(firestore);
+      let writeCount = 0;
+
+      for (const studentDoc of studentsSnap.docs) {
+        const studentData = studentDoc.data() as Student;
+        const newEarned = evaluateBadges(studentData, [newBadge], categories);
+        if (!newEarned.length) continue;
+
+        const earnedBadges = [...(studentData.earnedBadges || [])];
+        for (const b of newEarned) {
+          earnedBadges.push({ badgeId: b.badgeId, periodKey: b.periodKey, earnedAt: b.earnedAt });
+          const badgeActivityRef = doc(collection(studentDoc.ref, 'activities'));
+          batch.set(badgeActivityRef, {
+            desc: `Badge earned: ${newBadge.name}`,
+            amount: 0,
+            date: b.earnedAt,
+          });
+          writeCount += 2;
+        }
+
+        batch.update(studentDoc.ref, { earnedBadges });
+        writeCount += 1;
+
+        if (writeCount >= BATCH_LIMIT) {
+          await batch.commit();
+          batch = writeBatch(firestore);
+          writeCount = 0;
+        }
+      }
+
+      if (writeCount > 0) {
+        await batch.commit();
+      }
+    }
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -1107,6 +1149,44 @@ export const deleteBadge = async (firestore: Firestore, schoolId: string, badgeI
       new FirestorePermissionError({
         path: badgeDocRef.path,
         operation: 'delete',
+      })
+    );
+    throw error;
+  }
+};
+
+export const purgeStudentProgress = async (firestore: Firestore, schoolId: string, studentId: string) => {
+  const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+  try {
+    await runTransaction(firestore, async (transaction) => {
+      const studentDoc = await transaction.get(studentRef);
+      if (!studentDoc.exists()) {
+        throw new Error("Student not found");
+      }
+
+      transaction.update(studentRef, {
+        points: 0,
+        lifetimePoints: 0,
+        categoryPoints: {},
+        categoryPointsByPeriod: {},
+        earnedAchievements: [],
+        earnedBadges: [],
+      });
+
+      const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+      transaction.set(activityRef, {
+        desc: 'Progress purged by admin',
+        amount: 0,
+        date: Date.now(),
+      } as HistoryItem);
+    });
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: studentRef.path,
+        operation: 'update',
+        requestResourceData: { studentId, action: 'purgeProgress' },
       })
     );
     throw error;

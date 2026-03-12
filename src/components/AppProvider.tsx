@@ -21,6 +21,7 @@ import {
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
   deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
   togglePrizeFulfillment as dbTogglePrizeFulfillment,
+  purgeStudentProgress as dbPurgeStudentProgress,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -90,6 +91,7 @@ interface AppContextType {
   devBackupAllSchools: () => Promise<void>;
   devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
   devMigrateSchoolData: (schoolId: string) => Promise<void>;
+  purgeStudentProgress: (studentId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -243,6 +245,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbTogglePrizeFulfillment(firestore, schoolId, studentId, activityId, fulfilled);
   }, [firestore, schoolId]);
 
+  const purgeStudentProgress_ = useCallback(async (studentId: string) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbPurgeStudentProgress(firestore, schoolId, studentId);
+  }, [firestore, schoolId]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
@@ -270,6 +277,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     badgesLoading,
     // Backup
     ...backupCtx,
+    purgeStudentProgress: purgeStudentProgress_,
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
@@ -279,6 +287,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
     uploadStudents_,
     togglePrizeFulfillment_,
+    purgeStudentProgress_,
     categories, categoriesLoading,
     achievements, achievementsLoading,
     badges, badgesLoading,

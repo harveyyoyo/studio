@@ -330,7 +330,7 @@ function StudentDashboardInner({
           `mt-12 space-y-6 relative max-w-full mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
           settings.displayMode === 'app' && 'pb-24'
         )}
-        style={student.theme ? {
+        style={student.theme ? ({
           '--theme-bg': student.theme.background,
           '--theme-text': student.theme.text,
           '--theme-primary': student.theme.primary,
@@ -339,7 +339,7 @@ function StudentDashboardInner({
           ...(student.theme.backgroundStyle ? { background: student.theme.backgroundStyle } : { backgroundColor: 'var(--theme-bg)' }),
           color: 'var(--theme-text)',
           fontFamily: student.theme.fontFamily || 'inherit',
-        } as React.CSSProperties : undefined}
+        } as unknown as React.CSSProperties) : undefined}
       >
         {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
 

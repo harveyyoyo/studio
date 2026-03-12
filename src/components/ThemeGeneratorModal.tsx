@@ -365,6 +365,19 @@ export function ThemeGeneratorModal({
                                     );
                                 })}
                             </div>
+                            <div className="space-y-1 pt-1">
+                                <Label htmlFor="theme-background-style">Advanced background (optional)</Label>
+                                <Input
+                                    id="theme-background-style"
+                                    value={previewTheme.backgroundStyle || ''}
+                                    onChange={(e) => updateTheme({ backgroundStyle: e.target.value || null })}
+                                    placeholder="e.g. linear-gradient(135deg, #0ea5e9, #22c55e)"
+                                    className="font-mono text-xs"
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                    When set, this full CSS value overrides the solid background color.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>

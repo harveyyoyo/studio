@@ -8,7 +8,7 @@ import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity
+  User, Ticket, Upload, Download, Activity, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -118,6 +118,7 @@ function AdminDashboardInner() {
     updateStudent,
     achievements, achievementsLoading,
     badges, badgesLoading,
+    purgeStudentProgress,
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -185,6 +186,9 @@ function AdminDashboardInner() {
   const [badgeEarnersFor, setBadgeEarnersFor] = useState<Badge | null>(null);
   const [badgeTogglingId, setBadgeTogglingId] = useState<string | null>(null);
   const [badgesStudent, setBadgesStudent] = useState<Student | null>(null);
+  const [studentToPurge, setStudentToPurge] = useState<Student | null>(null);
+  const [isPurgingStudent, setIsPurgingStudent] = useState(false);
+  const [showPurgeFlash, setShowPurgeFlash] = useState(false);
 
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
@@ -524,7 +528,7 @@ function AdminDashboardInner() {
           </div>
 
           {settings.enableAdminAnalytics && (
-            <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
               <Card className="border-t-4 border-destructive shadow-md">
                 <CardHeader className="py-6">
                   <CardTitle className="text-2xl flex items-center gap-2">
@@ -559,6 +563,29 @@ function AdminDashboardInner() {
                       </CardContent>
                     </Card>
                   </div>
+                </CardContent>
+              </Card>
+              <Card className="border-t-4 border-destructive shadow-md">
+                <CardHeader>
+                  <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
+                    <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5 text-destructive" /> System Stats</CardTitle>
+                  </Helper>
+                  <CardDescription>Overview of your school data at a glance.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
+                  {[
+                    { label: 'Students', val: students?.length || 0 },
+                    { label: 'Classes', val: classes?.length || 0 },
+                    { label: 'Teachers', val: teachers?.length || 0 },
+                    { label: 'Coupons', val: coupons?.length || 0 },
+                    { label: 'Used', val: usedCouponsCount },
+                    { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-secondary/30 border p-6 rounded-2xl">
+                      <p className="text-3xl font-bold font-code">{stat.val}</p>
+                      <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter opacity-70 mt-1">{stat.label}</p>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -857,6 +884,15 @@ function AdminDashboardInner() {
                             </Button>
                           )}
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-full text-amber-600 hover:bg-amber-50"
+                            title="Purge points & badges"
+                            onClick={() => setStudentToPurge(s)}
+                          >
+                            <Zap className="w-4 h-4" />
+                          </Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
                       </li>
@@ -1156,32 +1192,6 @@ function AdminDashboardInner() {
             </Card>
           </TabsContent>
           )}
-
-          <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader>
-                <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
-                  <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5 text-destructive" /> System Stats</CardTitle>
-                </Helper>
-                <CardDescription>Overview of your school data at a glance.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
-                {[
-                  { label: 'Students', val: students?.length || 0 },
-                  { label: 'Classes', val: classes?.length || 0 },
-                  { label: 'Teachers', val: teachers?.length || 0 },
-                  { label: 'Coupons', val: coupons?.length || 0 },
-                  { label: 'Used', val: usedCouponsCount },
-                  { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
-                ].map((stat, i) => (
-                  <div key={i} className="bg-secondary/30 border p-6 rounded-2xl">
-                    <p className="text-3xl font-bold font-code">{stat.val}</p>
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter opacity-70 mt-1">{stat.label}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
@@ -1538,6 +1548,47 @@ function AdminDashboardInner() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <AlertDialog open={!!studentToPurge} onOpenChange={(open) => !open && !isPurgingStudent && setStudentToPurge(null)}>
+          <AlertDialogContent className="rounded-3xl border-2">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Purge points & badges for&nbsp;
+                {studentToPurge ? `${getStudentNickname(studentToPurge)} ${studentToPurge.lastName}?` : 'this student?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will reset their current points, lifetime points, category totals, achievements, and badges to zero. Activity history stays for audit.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPurgingStudent} onClick={() => setStudentToPurge(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-amber-600 hover:bg-amber-700"
+                disabled={isPurgingStudent}
+                onClick={async () => {
+                  if (!studentToPurge) return;
+                  try {
+                    setIsPurgingStudent(true);
+                    setShowPurgeFlash(true);
+                    await purgeStudentProgress(studentToPurge.id);
+                    playSound('success');
+                    toast({ title: 'Student purged', description: 'Points and badges have been reset.' });
+                    setTimeout(() => setShowPurgeFlash(false), 600);
+                    setStudentToPurge(null);
+                  } catch (e: any) {
+                    setShowPurgeFlash(false);
+                    playSound('error');
+                    toast({ variant: 'destructive', title: 'Purge failed', description: e?.message || 'Please try again.' });
+                  } finally {
+                    setIsPurgingStudent(false);
+                  }
+                }}
+              >
+                {isPurgingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Yes, purge now
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={isAddSampleBadgesOpen} onOpenChange={setIsAddSampleBadgesOpen}>
           <AlertDialogContent className="rounded-3xl border-2">
             <AlertDialogHeader>
@@ -1640,6 +1691,14 @@ function AdminDashboardInner() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {showPurgeFlash && (
+          <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/90 animate-pulse" />
+            <div className="relative z-10 px-10 py-6 rounded-full border-4 border-amber-500 bg-white shadow-2xl text-amber-700 text-xl font-black tracking-[0.3em] uppercase">
+              Purged
+            </div>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );

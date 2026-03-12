@@ -47,3 +47,11 @@ Once you've logged into a school, you can choose from several portals:
     *   View a leaderboard of the top all-time point earners in the school.
 
 That's it! It's designed to be simple and intuitive. Enjoy building a positive and rewarding environment at your school!
+
+## License
+
+This project and its source code are proprietary.
+
+Copyright (c) 2026 [Your Name or Organization].  
+All rights reserved. See the `LICENSE` file for details.
+

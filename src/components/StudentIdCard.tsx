@@ -3,11 +3,30 @@
 import type { Student } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
 
-export function StudentIdCard({ student, schoolId, className, isColorEnabled }: { student: Student, schoolId: string | null, className: string, isColorEnabled: boolean }) {
+export function StudentIdCard({
+  student,
+  schoolId,
+  className,
+  isColorEnabled,
+}: {
+  student: Student;
+  schoolId: string | null;
+  className: string;
+  isColorEnabled: boolean;
+}) {
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : 'School Reward System';
+  const theme = student.theme;
+
+  const cardStyle = theme
+    ? {
+        background: theme.backgroundStyle || theme.background,
+        color: theme.text,
+        borderColor: theme.primary,
+      }
+    : undefined;
 
   return (
-    <div className={cn("print-id-card", isColorEnabled && "is-colored")}>
+    <div className={cn("print-id-card", isColorEnabled && "is-colored")} style={cardStyle}>
       <div className="print-id-header">{schoolName}</div>
       <div className="print-id-main">
         <div className="print-id-avatar">
@@ -25,7 +44,9 @@ export function StudentIdCard({ student, schoolId, className, isColorEnabled }: 
         </div>
       </div>
       <div className="print-id-barcode-container">
-        <div className="font-barcode">*{student.nfcId}*</div>
+        <div className="font-barcode text-[10px] tracking-[0.18em] leading-none overflow-hidden">
+          *{student.nfcId}*
+        </div>
       </div>
     </div>
   );
