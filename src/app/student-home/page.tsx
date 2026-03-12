@@ -194,6 +194,7 @@ function StudentHomeDashboardInner({
     }, [student?.id, schoolId]);
 
     const themeFont = student.theme?.fontFamily;
+    const fontScale = student.theme?.fontScale ?? 1;
 
     return (
         <div
@@ -201,7 +202,10 @@ function StudentHomeDashboardInner({
                 `space-y-6 relative max-w-5xl mx-auto px-4 py-8 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
                 settings.displayMode === 'app' && 'pb-24'
             )}
-            style={themeFont ? { fontFamily: `"${themeFont}", sans-serif` } : undefined}
+            style={{
+                ...(themeFont ? { fontFamily: `"${themeFont}", sans-serif` } : {}),
+                ...(fontScale !== 1 ? { fontSize: `${fontScale}em` } : {}),
+            }}
         >
             {celebrationMessage && (
                 <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">

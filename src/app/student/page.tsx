@@ -323,6 +323,8 @@ function StudentDashboardInner({
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
   }
 
+  const fontScale = student.theme?.fontScale ?? 1;
+
   return (
     <TooltipProvider>
       <div
@@ -339,6 +341,7 @@ function StudentDashboardInner({
           ...(student.theme.backgroundStyle ? { background: student.theme.backgroundStyle } : { backgroundColor: 'var(--theme-bg)' }),
           color: 'var(--theme-text)',
           fontFamily: student.theme.fontFamily || 'inherit',
+          fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
         } as unknown as React.CSSProperties) : undefined}
       >
         {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}

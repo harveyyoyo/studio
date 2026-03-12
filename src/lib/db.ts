@@ -466,6 +466,22 @@ export const addCoupons = async (firestore: Firestore, schoolId: string, newCoup
   }
 };
 
+export const deleteCoupon = async (firestore: Firestore, schoolId: string, couponId: string) => {
+  const couponDocRef = doc(firestore, 'schools', schoolId, 'coupons', couponId);
+  try {
+    await deleteDoc(couponDocRef);
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: couponDocRef.path,
+        operation: 'delete',
+      })
+    );
+    throw error;
+  }
+};
+
 export const redeemCoupon = async (
   firestore: Firestore,
   schoolId: string,
@@ -484,6 +500,10 @@ export const redeemCoupon = async (
       if (!couponDoc.exists()) throw new Error('Coupon code not found.');
 
       const coupon = couponDoc.data() as Coupon;
+      const nowTs = Date.now();
+      if (coupon.expiresAt && nowTs > coupon.expiresAt) {
+        throw new Error('This coupon has expired.');
+      }
       if (coupon.used) throw new Error('This coupon has already been used.');
 
       const studentDoc = await transaction.get(studentRef);

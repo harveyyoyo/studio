@@ -11,7 +11,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
-  addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon,
+  addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon, deleteCoupon as dbDeleteCoupon,
   redeemPrize as dbRedeemPrize, addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
@@ -66,6 +66,7 @@ interface AppContextType {
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
   redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }>;
+  deleteCoupon: (couponId: string) => Promise<void>;
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
@@ -196,6 +197,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbRedeemCoupon(firestore, schoolId, studentId, code, allAchievements, categories || [], allBadges);
   }, [firestore, schoolId, categories, achievements, badges, settings.enableAchievements, settings.enableBadges]);
 
+  const deleteCoupon_ = useCallback((couponId: string) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbDeleteCoupon(firestore, schoolId, couponId);
+  }, [firestore, schoolId]);
+
   const awardPoints_ = useCallback(async (studentId: string, points: number, description: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.' };
     const allAchievements = settings.enableAchievements ? (achievements || []) : [];
@@ -262,7 +268,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addClass: addClass_, deleteClass: deleteClass_,
     addTeacher: addTeacher_, updateTeacher: updateTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
-    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, awardPoints: awardPoints_,
+    addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, deleteCoupon: deleteCoupon_, awardPoints: awardPoints_,
     awardPointsToMultipleStudents: awardPointsToMultipleStudents_,
     deductPointsFromMultipleStudents: deductPointsFromMultipleStudents_,
     redeemPrize: redeemPrize_,

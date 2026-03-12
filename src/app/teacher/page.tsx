@@ -401,6 +401,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
     // State for coupon printing
     const [printCategoryId, setPrintCategoryId] = useState('');
     const [printValue, setPrintValue] = useState('10');
+    const [printExpiresOn, setPrintExpiresOn] = useState(''); // yyyy-mm-dd
     const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
     const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
     const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
@@ -466,6 +467,13 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         toast({ title: 'Category Added' });
     };
 
+    const computeExpiresAt = () => {
+        if (!printExpiresOn) return undefined;
+        const date = new Date(printExpiresOn + 'T23:59:59');
+        if (Number.isNaN(date.getTime())) return undefined;
+        return date.getTime();
+    };
+
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
         if (!teacherName) {
@@ -508,6 +516,8 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             }
         }
 
+        const expiresAt = computeExpiresAt();
+
         const couponsToCreate: Coupon[] = Array.from({ length: 24 }, () => {
             const code = Math.floor(100000 + Math.random() * 900000).toString();
             return {
@@ -519,6 +529,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                 used: false,
                 createdAt: Date.now(),
                 color: selectedCategory.color,
+                ...(expiresAt ? { expiresAt } : {}),
             };
         });
         await addCoupons(couponsToCreate);
@@ -621,6 +632,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         used: false,
         createdAt: Date.now(),
         color: selectedCategoryForPreview?.color,
+        expiresAt: computeExpiresAt(),
     };
 
     const filteredStudents = (students || []).filter(s => {
@@ -766,6 +778,15 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                             <div className="space-y-2">
                                                 <Label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Point Value</Label>
                                                 <Input type="number" value={printValue} onChange={(e) => setPrintValue(e.target.value)} className={cn("h-14 rounded-xl text-2xl font-black transition-all", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground focus:ring-chart-1/20' : 'bg-slate-50 border-slate-200')} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className={cn("text-[10px] font-black uppercase tracking-widest ml-1", isGraphic ? 'text-muted-foreground' : 'text-slate-500')}>Expiration (optional)</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={printExpiresOn}
+                                                    onChange={(e) => setPrintExpiresOn(e.target.value)}
+                                                    className={cn("h-11 rounded-xl text-xs font-bold tracking-widest", isGraphic ? 'bg-foreground/5 border-white/10 text-foreground' : 'bg-slate-50 border-slate-200')}
+                                                />
                                             </div>
                                         </div>
 

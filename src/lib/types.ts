@@ -38,6 +38,8 @@ export interface StudentTheme {
   fontFamily?: string;
   /** Full CSS background value (gradient or pattern). When set, used instead of solid background. */
   backgroundStyle?: string | null;
+  /** Optional global font scale (1 = default, 1.1 = slightly larger). */
+  fontScale?: number;
 }
 
 export interface Student {
@@ -73,6 +75,8 @@ export interface Coupon {
   usedAt?: number;
   usedBy?: string;
   color?: string;
+  /** When set, the coupon cannot be redeemed after this timestamp (ms since epoch). */
+  expiresAt?: number;
 }
 
 export interface Prize {

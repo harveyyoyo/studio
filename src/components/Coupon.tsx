@@ -48,8 +48,15 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
           </div>
         </div>
       </div>
-      <div className="font-barcode text-[24px] leading-none pt-0.5 text-black tracking-wider">
-        *{coupon.code}*
+      <div className="flex flex-col items-center w-full mt-0.5">
+        <div className="font-barcode text-[20px] leading-none text-black tracking-wider max-w-full overflow-hidden">
+          *{coupon.code}*
+        </div>
+        {coupon.expiresAt && (
+          <div className="text-[7px] mt-0.5 uppercase tracking-[0.18em] opacity-70">
+            Expires {new Date(coupon.expiresAt).toLocaleDateString()}
+          </div>
+        )}
       </div>
     </div>
   );

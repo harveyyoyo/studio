@@ -339,6 +339,25 @@ export function ThemeGeneratorModal({
                                     </div>
                                 </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-3 items-end">
+                                <div className="space-y-1">
+                                    <Label htmlFor="theme-font-scale">Text size</Label>
+                                    <Select
+                                        value={String(previewTheme.fontScale ?? 1)}
+                                        onValueChange={(v) => updateTheme({ fontScale: parseFloat(v) })}
+                                    >
+                                        <SelectTrigger id="theme-font-scale">
+                                            <SelectValue placeholder="Default" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0.9">Smaller</SelectItem>
+                                            <SelectItem value="1">Default</SelectItem>
+                                            <SelectItem value="1.05">+1 step</SelectItem>
+                                            <SelectItem value="1.1">+2 steps</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                             <div className="grid grid-cols-5 gap-2">
                                 {[
                                     { key: 'background', label: 'BG' },
