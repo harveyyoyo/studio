@@ -6,9 +6,10 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge } from '@/lib/types';
+import type { Student, Class, Coupon, Teacher, Prize, Category, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import {
   addCategory as dbAddCategory, deleteCategory as dbDeleteCategory, updateCategory as dbUpdateCategory,
   addCoupons as dbAddCoupons, redeemCoupon as dbRedeemCoupon, deleteCoupon as dbDeleteCoupon,
@@ -22,6 +23,10 @@ import {
   deductPointsFromMultipleStudents as dbDeductPointsFromMultipleStudents,
   togglePrizeFulfillment as dbTogglePrizeFulfillment,
   purgeStudentProgress as dbPurgeStudentProgress,
+  getAttendanceConfig as dbGetAttendanceConfig,
+  setAttendanceConfig as dbSetAttendanceConfig,
+  recordClassSignIn as dbRecordClassSignIn,
+  listAttendanceLog as dbListAttendanceLog,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -93,6 +98,10 @@ interface AppContextType {
   devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
   devMigrateSchoolData: (schoolId: string) => Promise<void>;
   purgeStudentProgress: (studentId: string) => Promise<void>;
+  getAttendanceConfig: () => Promise<AttendanceSettings | null>;
+  setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;
+  recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<{ pointsAwarded: number; onTime: boolean; periodLabel?: string }>;
+  listAttendanceLog: (limitCount?: number) => Promise<AttendanceLogEntry[]>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -105,7 +114,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const authCtx = useAuth();
   const printCtx = usePrint();
   const backupCtx = useBackup();
-  const { firestore } = useFirebase();
+  const { firestore, functions } = useFirebase();
   const schoolId = authCtx.schoolId;
   const canReadCategories = authCtx.isAdmin;
 
@@ -256,6 +265,43 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbPurgeStudentProgress(firestore, schoolId, studentId);
   }, [firestore, schoolId]);
 
+  const getAttendanceConfig_ = useCallback(async () => {
+    if (!firestore || !schoolId) return null;
+    return dbGetAttendanceConfig(firestore, schoolId);
+  }, [firestore, schoolId]);
+
+  const setAttendanceConfig_ = useCallback(async (settings: AttendanceSettings) => {
+    if (!schoolId) return Promise.reject("Not logged into a school.");
+    const setAttendanceConfigFn = httpsCallable<{ schoolId: string; config: AttendanceSettings }, { success: boolean }>(
+      functions,
+      'setAttendanceConfig'
+    );
+    try {
+      await setAttendanceConfigFn({ schoolId, config: settings });
+    } catch (callableErr: unknown) {
+      const code = (callableErr as { code?: string })?.code ?? '';
+      if (code.includes('internal') || code.includes('unavailable') || code.includes('not-found')) {
+        try {
+          await dbSetAttendanceConfig(firestore!, schoolId, settings);
+          return;
+        } catch {
+          /* fallback failed, throw original so user sees callable error message */
+        }
+      }
+      throw callableErr;
+    }
+  }, [functions, firestore, schoolId]);
+
+  const recordClassSignIn_ = useCallback(async (studentId: string, student: Student, config: AttendanceSettings) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbRecordClassSignIn(firestore, schoolId, studentId, student, config);
+  }, [firestore, schoolId]);
+
+  const listAttendanceLog_ = useCallback(async (limitCount?: number) => {
+    if (!firestore || !schoolId) return [];
+    return dbListAttendanceLog(firestore, schoolId, limitCount);
+  }, [firestore, schoolId]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
@@ -284,6 +330,10 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     // Backup
     ...backupCtx,
     purgeStudentProgress: purgeStudentProgress_,
+    getAttendanceConfig: getAttendanceConfig_,
+    setAttendanceConfig: setAttendanceConfig_,
+    recordClassSignIn: recordClassSignIn_,
+    listAttendanceLog: listAttendanceLog_,
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
@@ -294,6 +344,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     uploadStudents_,
     togglePrizeFulfillment_,
     purgeStudentProgress_,
+    getAttendanceConfig_, setAttendanceConfig_, recordClassSignIn_, listAttendanceLog_,
     categories, categoriesLoading,
     achievements, achievementsLoading,
     badges, badgesLoading,

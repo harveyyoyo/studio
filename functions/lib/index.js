@@ -389,6 +389,74 @@ exports.verifySchoolPasscode = functions.https.onCall(async (data, context) => {
     return { success: true };
 });
 // ========================================================================
+// Developer allow-list (appConfig/global.developerUids) for attendance etc.
+// ========================================================================
+const APP_CONFIG_GLOBAL = "global";
+async function isDeveloper(context) {
+    var _a, _b;
+    if (!((_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid))
+        return false;
+    const db = admin.firestore();
+    const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
+    const snap = await globalRef.get();
+    const list = snap.exists ? (_b = snap.data()) === null || _b === void 0 ? void 0 : _b.developerUids : undefined;
+    return Array.isArray(list) && list.includes(context.auth.uid);
+}
+/** Callable: add current user to developer allow-list after verifying dev passcode. */
+exports.addDeveloperMe = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    requireAuth(context);
+    if (typeof data.passcode !== "string" || data.passcode.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "passcode is required.");
+    }
+    const devPasscode = (_a = process.env.DEV_PASSCODE) !== null && _a !== void 0 ? _a : (_b = functions.config().dev) === null || _b === void 0 ? void 0 : _b.passcode;
+    if (!devPasscode || data.passcode !== devPasscode) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid developer passcode.");
+    }
+    const db = admin.firestore();
+    const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
+    await globalRef.set({ developerUids: admin.firestore.FieldValue.arrayUnion(context.auth.uid) }, { merge: true });
+    return { success: true };
+});
+/** Callable: set attendance config (allowed for school admin or developer). */
+exports.setAttendanceConfig = functions.https.onCall(async (data, context) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const db = admin.firestore();
+    let allowed = false;
+    try {
+        await requireSchoolAdmin(schoolId, context);
+        allowed = true;
+    }
+    catch (_a) {
+        if (await isDeveloper(context))
+            allowed = true;
+    }
+    if (!allowed) {
+        throw new functions.https.HttpsError("permission-denied", "Admin privileges for this school or developer access required.");
+    }
+    const config = data.config;
+    if (!config || typeof config !== "object") {
+        throw new functions.https.HttpsError("invalid-argument", "config object is required.");
+    }
+    const payload = {
+        pointsForSignIn: typeof config.pointsForSignIn === "number" ? config.pointsForSignIn : 0,
+        pointsForOnTime: typeof config.pointsForOnTime === "number" ? config.pointsForOnTime : 0,
+        onTimeWindowMinutes: typeof config.onTimeWindowMinutes === "number" ? config.onTimeWindowMinutes : 15,
+        schedule: Array.isArray(config.schedule) ? config.schedule : [],
+    };
+    if (Array.isArray(config.enabledClassIds) && config.enabledClassIds.length > 0) {
+        payload.enabledClassIds = config.enabledClassIds;
+    }
+    if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
+        payload.categoryId = config.categoryId;
+    }
+    const configRef = db.collection("schools").doc(schoolId).collection("attendance").doc("config");
+    await configRef.set(payload);
+    return { success: true };
+});
+// ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
 const LOGO_MAX_BYTES = 2 * 1024 * 1024; // 2MB
@@ -437,7 +505,14 @@ exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
         const logoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
         try {
             const db = admin.firestore();
-            await db.collection("schools").doc(schoolId).update({ logoUrl });
+            await db.collection("schools").doc(schoolId).update({
+                logoUrl,
+                logoHistory: admin.firestore.FieldValue.arrayUnion({
+                    url: logoUrl,
+                    uploadedAt: Date.now(),
+                    uploadedBy: context.auth.uid,
+                }),
+            });
         }
         catch (e) {
             console.error("uploadSchoolLogo: firestore update failed", e);
@@ -495,6 +570,11 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
             const db = admin.firestore();
             await db.collection("appConfig").doc("global").set({
                 appLogoUrl: logoUrl,
+                appLogoHistory: admin.firestore.FieldValue.arrayUnion({
+                    url: logoUrl,
+                    uploadedAt: Date.now(),
+                    uploadedBy: context.auth.uid,
+                }),
                 updatedAt: Date.now(),
                 updatedBy: context.auth.uid,
             }, { merge: true });
@@ -510,6 +590,31 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
             throw e;
         console.error("uploadAppLogo: unexpected error", e);
         throw new functions.https.HttpsError("internal", "Unexpected error while uploading app logo.", { originalMessage: String((e === null || e === void 0 ? void 0 : e.message) || e) });
+    }
+});
+// ========================================================================
+// Callable: Set app logo URL (e.g. restore from history)
+// ========================================================================
+exports.setAppLogoUrl = functions.https.onCall(async (data, context) => {
+    try {
+        requireAuth(context);
+        const url = typeof (data === null || data === void 0 ? void 0 : data.url) === "string" ? data.url.trim() : "";
+        if (!url) {
+            throw new functions.https.HttpsError("invalid-argument", "url is required.");
+        }
+        const db = admin.firestore();
+        await db.collection("appConfig").doc("global").set({
+            appLogoUrl: url,
+            updatedAt: Date.now(),
+            updatedBy: context.auth.uid,
+        }, { merge: true });
+        return { success: true, logoUrl: url };
+    }
+    catch (e) {
+        if (e instanceof functions.https.HttpsError)
+            throw e;
+        console.error("setAppLogoUrl error", e);
+        throw new functions.https.HttpsError("internal", "Failed to set app logo URL.", { originalMessage: String((e === null || e === void 0 ? void 0 : e.message) || e) });
     }
 });
 // ========================================================================

@@ -19,12 +19,12 @@ import {
     Bell, Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Database, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Award
+    Cpu, Award, Clock
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme } from '../providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
-type SettingsView = 'main' | 'advanced' | 'features';
+type SettingsView = 'main' | 'features';
 
 function FeatureRow({ id, label, desc, icon, settings, onToggle, isImplemented = true, isAdmin = true }: {
     id: string; label: string; desc: string; icon: React.ReactNode;
@@ -76,7 +76,7 @@ export function SettingsModal() {
         }
     };
 
-    const viewTitle = view === 'main' ? 'Interface Settings' : view === 'advanced' ? 'Advanced' : 'Features';
+    const viewTitle = view === 'main' ? 'Interface Settings' : 'Features';
 
     return (
         <Dialog onOpenChange={(open) => { if (!open) setView('main'); }}>
@@ -102,7 +102,7 @@ export function SettingsModal() {
                     </DialogHeader>
                 </div>
 
-                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 h-full min-h-[50vh]">
+                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-24">
                     {view === 'main' && (
                         <>
                             {/* Graphic Mode */}
@@ -241,7 +241,7 @@ export function SettingsModal() {
                             <Button
                                 variant="outline"
                                 onClick={() => setView('features')}
-                                className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-2 hover:bg-amber-50 dark:hover:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 mb-3"
+                                className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-2 hover:bg-amber-50 dark:hover:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 mb-4"
                             >
                                 <div className="flex items-center gap-3">
                                     <Zap className="w-5 h-5" />
@@ -250,64 +250,11 @@ export function SettingsModal() {
                                 <ChevronRight className="w-5 h-5 opacity-50" />
                             </Button>
 
-                            {/* Advanced Button */}
-                            <Button
-                                variant="outline"
-                                onClick={() => setView('advanced')}
-                                className="w-full flex justify-between items-center py-6 px-4 rounded-xl border-dashed border-2 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Settings className="w-5 h-5" />
-                                    <span className="font-bold">Advanced</span>
-                                </div>
-                                <ChevronRight className="w-5 h-5 opacity-50" />
-                            </Button>
                         </>
                     )}
 
-                    {view === 'advanced' && (
-                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                            <div className="flex items-center justify-between py-2 px-2">
-                                <div className="flex items-center gap-3">
-                                    {settings.soundEnabled ? <Volume2 className="w-5 h-5 text-slate-500" /> : <VolumeX className="w-5 h-5 text-slate-400" />}
-                                    <div>
-                                        <h4 className="font-medium text-slate-700 dark:text-slate-200 text-sm">Sound Effects</h4>
-                                        <p className="text-xs text-slate-400">UI audio feedback</p>
-                                    </div>
-                                </div>
-                                <Switch
-                                    checked={settings.soundEnabled}
-                                    onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
-                                    className="data-[state=checked]:bg-blue-600"
-                                />
-                            </div>
-
-                            <button className="flex items-center justify-between py-2 px-2 w-full text-left hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <Bell className="w-5 h-5 text-slate-500" />
-                                    <div>
-                                        <h4 className="font-medium text-slate-700 dark:text-slate-200 text-sm">Notifications</h4>
-                                        <p className="text-xs text-slate-400">Manage alerts</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-slate-300" />
-                            </button>
-
-                            <button className="flex items-center justify-between py-2 px-2 w-full text-left hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <Shield className="w-5 h-5 text-slate-500" />
-                                    <div>
-                                        <h4 className="font-medium text-slate-700 dark:text-slate-200 text-sm">Privacy</h4>
-                                        <p className="text-xs text-slate-400">Control data</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-slate-300" />
-                            </button>
-                        </div>
-                    )}
-
                     {view === 'features' && (
-                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 pb-6">
+                        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 pb-24">
 
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Settings className="w-3.5 h-3.5" /> Core Workflow</p>
@@ -363,6 +310,20 @@ export function SettingsModal() {
                                     settings={settings}
                                     onToggle={handleToggle}
                                     isImplemented={false}
+                                    isAdmin={isAdmin}
+                                />
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Clock className="w-3.5 h-3.5" /> Attendance</p>
+                                <FeatureRow
+                                    id="enableClassSignIn"
+                                    label="Class Sign-In"
+                                    desc="Use student kiosk login as class attendance. Optional punctuality points and schedules can be configured in Admin → Attendance."
+                                    icon={<Clock className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
                                     isAdmin={isAdmin}
                                 />
                             </div>

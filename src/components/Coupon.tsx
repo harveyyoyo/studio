@@ -3,11 +3,12 @@
 import type { Coupon } from '@/lib/types';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/app-branding';
 
 export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
   const { settings } = useSettings();
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `levelUp EDU - ${schoolName}` : 'levelUp EDU';
+  const title = schoolName ? `${APP_NAME} - ${schoolName}` : APP_NAME;
 
   const isColored = settings.enableColorPrinting && coupon.color;
 

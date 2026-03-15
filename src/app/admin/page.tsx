@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef, ChangeEvent } from 'react';
+import { useEffect, useState, useRef, useMemo, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useFunctions } from '@/firebase';
@@ -8,14 +8,14 @@ import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap
+  User, Ticket, Upload, Download, Activity, Zap, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceScheduleSlot, AttendanceLogEntry } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -119,6 +119,9 @@ function AdminDashboardInner() {
     achievements, achievementsLoading,
     badges, badgesLoading,
     purgeStudentProgress,
+    getAttendanceConfig,
+    setAttendanceConfig,
+    listAttendanceLog,
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -150,7 +153,29 @@ function AdminDashboardInner() {
   const { data: backups, isLoading: backupsLoading, error: backupsError } = useCollection<BackupInfo>(backupsQuery);
 
   const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
-  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string; logoHistory?: { url?: string; uploadedAt?: number }[] }>(schoolDocRef);
+
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+
+  const previousSchoolLogos = useMemo(() => {
+    const current = (logoPreviewUrl ?? schoolData?.logoUrl)?.trim();
+    const fromHistory = Array.isArray(schoolData?.logoHistory)
+      ? schoolData!.logoHistory!.map((e) => e?.url?.trim()).filter((u): u is string => !!u)
+      : [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    if (current) {
+      seen.add(current);
+      out.push(current);
+    }
+    fromHistory.forEach((u) => {
+      if (!seen.has(u)) {
+        seen.add(u);
+        out.push(u);
+      }
+    });
+    return out;
+  }, [schoolData?.logoUrl, schoolData?.logoHistory, logoPreviewUrl]);
 
   const [newClassName, setNewClassName] = useState('');
   const [newTeacherName, setNewTeacherName] = useState('');
@@ -192,7 +217,80 @@ function AdminDashboardInner() {
 
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+
+  const [attendanceConfig, setAttendanceConfigState] = useState<AttendanceSettings | null>(null);
+  const [attendanceLog, setAttendanceLogState] = useState<AttendanceLogEntry[]>([]);
+  const [attendanceConfigSaving, setAttendanceConfigSaving] = useState(false);
+  const [attendanceLogLoading, setAttendanceLogLoading] = useState(false);
+
+  const defaultAttendanceConfig: AttendanceSettings = {
+    pointsForSignIn: 1,
+    pointsForOnTime: 1,
+    onTimeWindowMinutes: 15,
+    schedule: [],
+  };
+
+  useEffect(() => {
+    if (!settings.enableClassSignIn || !schoolId || !getAttendanceConfig) return;
+    getAttendanceConfig()
+      .then((c) => {
+        setAttendanceConfigState(c ?? defaultAttendanceConfig);
+      })
+      .catch(() => {
+        setAttendanceConfigState(defaultAttendanceConfig);
+      });
+  }, [settings.enableClassSignIn, schoolId, getAttendanceConfig]);
+
+  const loadAttendanceLog = () => {
+    if (!listAttendanceLog) return;
+    setAttendanceLogLoading(true);
+    listAttendanceLog(80)
+      .then(setAttendanceLogState)
+      .catch(() => setAttendanceLogState([]))
+      .finally(() => setAttendanceLogLoading(false));
+  };
+
+  const handleSaveAttendanceConfig = async () => {
+    if (!attendanceConfig || !setAttendanceConfig) return;
+    setAttendanceConfigSaving(true);
+    try {
+      await setAttendanceConfig(attendanceConfig);
+      playSound('success');
+      toast({ title: 'Attendance settings saved.' });
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string };
+      let description = err?.message ?? String(e);
+      if (description === 'internal' || err?.code?.includes('internal')) {
+        description = 'Redeploy Cloud Functions (firebase deploy --only functions). If you sign in as developer, set DEV_PASSCODE in the function config. Check Firebase Console → Functions → Logs for details.';
+      }
+      toast({ variant: 'destructive', title: 'Failed to save', description });
+    } finally {
+      setAttendanceConfigSaving(false);
+    }
+  };
+
+  const addScheduleSlot = () => {
+    setAttendanceConfigState((prev) => ({
+      ...prev!,
+      schedule: [...(prev?.schedule ?? []), { id: `slot_${Date.now()}`, label: `Period ${(prev?.schedule?.length ?? 0) + 1}`, startTime: '08:00', endTime: '08:45' }],
+    }));
+  };
+
+  const updateScheduleSlot = (index: number, field: keyof AttendanceScheduleSlot, value: string) => {
+    setAttendanceConfigState((prev) => {
+      if (!prev?.schedule) return prev;
+      const next = [...prev.schedule];
+      next[index] = { ...next[index], [field]: value };
+      return { ...prev, schedule: next };
+    });
+  };
+
+  const removeScheduleSlot = (index: number) => {
+    setAttendanceConfigState((prev) => ({
+      ...prev!,
+      schedule: prev?.schedule?.filter((_, i) => i !== index) ?? [],
+    }));
+  };
 
   const isDbLoading = studentsLoading || classesLoading || teachersLoading || categoriesLoading || prizesLoading || couponsLoading || backupsLoading;
 
@@ -470,13 +568,13 @@ function AdminDashboardInner() {
   };
 
   const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
-  const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt || 0) - (a.usedAt || 0)) || [];
+  const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
 
   return (
     <TooltipProvider>
-      <div className={cn("space-y-6 max-w-full mx-auto p-4 md:p-8", settings.displayMode === 'app' && 'pb-24')}>
+      <div className={cn("space-y-6 max-w-full mx-auto p-4 md:p-8", settings.displayMode === "app" && "pb-24")}>
         <Helper content="This page is for system administrators. It allows you to manage all school instances, create backups, and perform system-wide operations.">
-          <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Admin</h2>
           <p className="text-muted-foreground">
             Manage students, classes, prizes, and system settings.
           </p>
@@ -493,6 +591,11 @@ function AdminDashboardInner() {
               <TabsTrigger value="branding" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <UploadCloud className="w-4 h-4" /> Branding
               </TabsTrigger>
+              {settings.enableClassSignIn && (
+                <TabsTrigger value="attendance" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Clock className="w-4 h-4" /> Attendance
+                </TabsTrigger>
+              )}
               <TabsTrigger value="students" className="rounded-xl px-3 py-2 font-bold flex items-center gap-1.5 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Users className="w-4 h-4" /> Students
               </TabsTrigger>
@@ -606,14 +709,61 @@ function AdminDashboardInner() {
                   <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-lg shadow-primary/30">
                     {(logoPreviewUrl ?? schoolData?.logoUrl) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className="h-full w-full object-cover" />
+                      <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                     ) : (
                       <span>No logo</span>
                     )}
                   </div>
                   <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current</span>
+                  <div className="mt-2 flex flex-col items-center gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
+                    {previousSchoolLogos.length >= 1 ? (
+                      <div className="flex flex-wrap justify-center gap-2 max-w-[240px]">
+                        {previousSchoolLogos.map((url, idx) => (
+                          <button
+                            key={`${url}-${idx}`}
+                            type="button"
+                            onClick={async () => {
+                              if (!schoolDocRef) return;
+                              try {
+                                await updateDoc(schoolDocRef, { logoUrl: url });
+                                setLogoPreviewUrl(url ?? null);
+                                playSound('success');
+                                toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
+                              } catch (e) {
+                                toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
+                              }
+                            }}
+                            className="h-10 w-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors bg-muted/60 flex-shrink-0"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="Previous logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground text-center max-w-[200px]">Previous logos will appear here after you upload new ones.</p>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-2 flex-1 max-w-sm">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Display</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
+                      className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      Fit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
+                      className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                    >
+                      Fill (crop)
+                    </button>
+                  </div>
                   <Label htmlFor="school-logo">Upload new logo</Label>
                   <Input
                     id="school-logo"
@@ -634,6 +784,192 @@ function AdminDashboardInner() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {settings.enableClassSignIn && (
+            <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+              <Card className="border-t-4 border-primary/50 shadow-md">
+                <CardHeader className="py-6">
+                  <Helper content="When Class Sign-In is on in Settings → Features, student kiosk logins can award points. Choose which classes participate, what rewards they get, what counts as on time, and set your class times.">
+                    <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Attendance & Punctuality</CardTitle>
+                  </Helper>
+                  <CardDescription>Control who gets attendance, what rewards they earn, what &quot;on time&quot; means, and your period schedule.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {attendanceConfig && (
+                    <>
+                      {/* Who gets attendance */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Users className="w-4 h-4" /> Who gets attendance</h4>
+                        <p className="text-sm text-muted-foreground">Only students in the selected classes will earn points when they sign in at the kiosk. Leave &quot;All classes&quot; checked to include everyone.</p>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="att-all-classes"
+                            checked={!attendanceConfig.enabledClassIds || attendanceConfig.enabledClassIds.length === 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: undefined });
+                              else setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: (classes ?? []).map((c) => c.id) });
+                            }}
+                          />
+                          <Label htmlFor="att-all-classes" className="font-semibold cursor-pointer">All classes</Label>
+                        </div>
+                        {(attendanceConfig.enabledClassIds && attendanceConfig.enabledClassIds.length >= 1) ? (
+                          <div className="flex flex-wrap gap-3 pt-2">
+                            {(classes ?? []).map((c) => (
+                              <div key={c.id} className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`att-class-${c.id}`}
+                                  checked={attendanceConfig.enabledClassIds?.includes(c.id) ?? false}
+                                  onCheckedChange={(checked) => {
+                                    const prev = attendanceConfig.enabledClassIds ?? [];
+                                    const next = checked ? [...prev, c.id] : prev.filter((id) => id !== c.id);
+                                    setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: next.length ? next : undefined });
+                                  }}
+                                />
+                                <Label htmlFor={`att-class-${c.id}`} className="cursor-pointer">{c.name}</Label>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        {attendanceConfig.enabledClassIds && attendanceConfig.enabledClassIds.length >= 1
+                          ? <Button type="button" variant="outline" size="sm" onClick={() => setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: undefined })}>Switch to all classes</Button>
+                          : (classes?.length ?? 0) >= 1
+                            ? <Button type="button" variant="outline" size="sm" onClick={() => setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: (classes ?? []).map((c) => c.id) })}>Select specific classes</Button>
+                            : null}
+                      </div>
+
+                      {/* Rewards */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Award className="w-4 h-4" /> Rewards</h4>
+                        <p className="text-sm text-muted-foreground">Points students earn for signing in and (optionally) for being on time.</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div>
+                            <Label>Points per sign-in</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={attendanceConfig.pointsForSignIn}
+                              onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, pointsForSignIn: parseInt(e.target.value, 10) || 0 })}
+                            />
+                            <p className="text-[11px] text-muted-foreground mt-1">Awarded every time they log in at the kiosk.</p>
+                          </div>
+                          <div>
+                            <Label>Bonus points (on time)</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={attendanceConfig.pointsForOnTime}
+                              onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, pointsForOnTime: parseInt(e.target.value, 10) || 0 })}
+                            />
+                            <p className="text-[11px] text-muted-foreground mt-1">Extra when they sign in within the on-time window.</p>
+                          </div>
+                          <div>
+                            <Label>Award to category (optional)</Label>
+                            <Select
+                              value={attendanceConfig.categoryId ?? '__none__'}
+                              onValueChange={(v) => setAttendanceConfigState({ ...attendanceConfig, categoryId: v === '__none__' ? undefined : v })}
+                            >
+                              <SelectTrigger><SelectValue placeholder="General points" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">General points</SelectItem>
+                                {categories?.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-muted-foreground mt-1">Leave as &quot;General&quot; to add to total only.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* What counts as on time */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Zap className="w-4 h-4" /> What counts as on time</h4>
+                        <p className="text-sm text-muted-foreground">A sign-in is &quot;on time&quot; if the student logs in within this many minutes after the period start. After that they still get sign-in points but not the on-time bonus.</p>
+                        <div className="max-w-[200px]">
+                          <Label>On-time window (minutes)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={120}
+                            value={attendanceConfig.onTimeWindowMinutes}
+                            onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, onTimeWindowMinutes: parseInt(e.target.value, 10) || 15 })}
+                          />
+                          <p className="text-[11px] text-muted-foreground mt-1">e.g. 15 = on time if they sign in within 15 min of period start.</p>
+                        </div>
+                      </div>
+
+                      {/* Class times */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Class times (periods)</h4>
+                        <p className="text-sm text-muted-foreground">Define your periods with start and end times (24h format HH:mm). Used to decide which period a sign-in belongs to and whether it was on time.</p>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <Label>Schedule</Label>
+                          <Button type="button" variant="outline" size="sm" onClick={addScheduleSlot}>Add period</Button>
+                        </div>
+                        <div className="space-y-2">
+                          {attendanceConfig.schedule.map((slot, index) => (
+                            <div key={slot.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
+                              <Input className="w-28" placeholder="e.g. Period 1" value={slot.label} onChange={(e) => updateScheduleSlot(index, 'label', e.target.value)} />
+                              <Input className="w-20" placeholder="08:00" value={slot.startTime} onChange={(e) => updateScheduleSlot(index, 'startTime', e.target.value)} />
+                              <span className="text-muted-foreground">–</span>
+                              <Input className="w-20" placeholder="08:45" value={slot.endTime} onChange={(e) => updateScheduleSlot(index, 'endTime', e.target.value)} />
+                              <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => removeScheduleSlot(index)}><Trash2 className="w-4 h-4" /></Button>
+                            </div>
+                          ))}
+                          {(!attendanceConfig.schedule || attendanceConfig.schedule.length === 0) && (
+                            <p className="text-sm text-muted-foreground py-2">No periods yet. Add periods (e.g. Period 1 08:00–08:45) to enable on-time bonus.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <Button onClick={handleSaveAttendanceConfig} disabled={attendanceConfigSaving}>
+                        {attendanceConfigSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Save attendance settings
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="border-t-4 border-primary/30 shadow-md">
+                <CardHeader className="flex flex-row justify-between items-center py-6">
+                  <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" /> Recent sign-ins</CardTitle>
+                  <Button variant="outline" size="sm" onClick={loadAttendanceLog} disabled={attendanceLogLoading}>
+                    {attendanceLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                    Refresh
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[320px] w-full pr-4">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left">
+                          <th className="py-2 font-bold">Student</th>
+                          <th className="py-2 font-bold">Time</th>
+                          <th className="py-2 font-bold">Points</th>
+                          <th className="py-2 font-bold">On time</th>
+                          <th className="py-2 font-bold">Period</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attendanceLog.map((entry) => (
+                          <tr key={entry.id ?? entry.signedInAt} className="border-b border-border/50">
+                            <td className="py-2">{entry.studentName || entry.studentId}</td>
+                            <td className="py-2 text-muted-foreground">{new Date(entry.signedInAt).toLocaleString()}</td>
+                            <td className="py-2">+{entry.pointsAwarded}</td>
+                            <td className="py-2">{entry.onTime ? <CheckCircle className="w-4 h-4 text-green-600 inline" /> : '–'}</td>
+                            <td className="py-2 text-muted-foreground">{entry.periodLabel ?? '–'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {attendanceLog.length === 0 && !attendanceLogLoading && (
+                      <p className="text-center text-muted-foreground py-8">No sign-ins yet, or click Refresh to load. Have students log in at the kiosk to record attendance.</p>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-t-4 border-destructive shadow-md">
@@ -778,14 +1114,14 @@ function AdminDashboardInner() {
                         setStudentsToPrint({ students: filtered, classes: classes || [] });
                       }
                     }}
-                    variant={(selectionMode && selectedStudentIds.size > 0) || studentFilterClass !== 'all' ? "default" : "outline"}
+                    variant={(selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all' ? "default" : "outline"}
                     className={cn(
                       "rounded-xl px-4",
-                      ((selectionMode && selectedStudentIds.size > 0) || studentFilterClass !== 'all') && "bg-orange-500 hover:bg-orange-600 font-bold"
+                      ((selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all') && "bg-orange-500 hover:bg-orange-600 font-bold"
                     )}
                   >
                     <Printer className="mr-2 h-4 w-4" />
-                    {selectionMode && selectedStudentIds.size > 0
+                    {selectionMode && selectedStudentIds.size >= 1
                       ? `Print Selected (${selectedStudentIds.size})`
                       : studentFilterClass !== 'all'
                         ? `Print Class (${students?.filter(s => s.classId === studentFilterClass).length || 0})`
@@ -856,7 +1192,7 @@ function AdminDashboardInner() {
                           <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
                             {s.photoUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} className="h-full w-full object-cover" />
+                              <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                             ) : (
                               <span>{(s.firstName[0] || '')}{(s.lastName[0] || '')}</span>
                             )}
@@ -959,7 +1295,7 @@ function AdminDashboardInner() {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Available Coupons ({availableCoupons.length})</h3>
                   <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
-                    {availableCoupons.length > 0 ? (
+                    {availableCoupons.length >= 1 ? (
                       <ul className="p-3 space-y-2">
                         {availableCoupons.map(coupon => (
                           <li key={coupon.id} className="p-3 bg-card rounded-lg border">
@@ -982,7 +1318,7 @@ function AdminDashboardInner() {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Redeemed Coupons ({redeemedCoupons.length})</h3>
                   <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
-                    {redeemedCoupons.length > 0 ? (
+                    {redeemedCoupons.length >= 1 ? (
                       <ul className="p-3 space-y-2">
                         {redeemedCoupons.map(coupon => (
                           <li key={coupon.id} className="p-3 bg-card rounded-lg border opacity-70">
@@ -1053,7 +1389,7 @@ function AdminDashboardInner() {
                               {ach.criteria.type === 'coupons' && `Category threshold ${ach.criteria.threshold}`}
                               {ach.criteria.type === 'manual' && 'Manual award only'}
                               {ach.tier && ` · ${ach.tier}`}
-                              {(ach.bonusPoints ?? 0) > 0 && ` · +${ach.bonusPoints} bonus pts`}
+                              {(ach.bonusPoints ?? 0) >= 1 && ` · +${ach.bonusPoints} bonus pts`}
                             </p>
                           </div>
                         </div>
@@ -1678,7 +2014,7 @@ function AdminDashboardInner() {
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {uploadReport && uploadReport.errors.length > 0 && (
+            {uploadReport && uploadReport.errors.length >= 1 && (
               <ScrollArea className="h-40 mt-4 rounded-xl border bg-muted/50 p-3">
                 <p className="font-bold text-xs uppercase mb-2 opacity-60">Error Details</p>
                 <ul className="space-y-1 text-xs font-code">
@@ -1703,7 +2039,6 @@ function AdminDashboardInner() {
     </TooltipProvider>
   );
 }
-
 
 function AdminLogin({ onLogin }: { onLogin: (passcode: string) => Promise<boolean> }) {
   const [passcode, setPasscode] = useState('');

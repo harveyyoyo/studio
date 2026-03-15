@@ -13,6 +13,8 @@ import { SettingsModal } from '@/components/ui/SettingsModal';
 import { cn } from '@/lib/utils';
 import { Helper } from '@/components/ui/helper';
 import Logo from '@/components/Logo';
+import { useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function LoginPage() {
   const [schoolId, setSchoolId] = useState('');
@@ -24,6 +26,14 @@ export default function LoginPage() {
   const playSound = useArcadeSound();
   const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
+
+  const firestore = useFirestore();
+  const appConfigDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'appConfig', 'global');
+  }, [firestore]);
+  const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
+  const appLogoUrl = appConfig?.appLogoUrl;
 
   useEffect(() => {
     setMounted(true);
@@ -153,7 +163,14 @@ export default function LoginPage() {
               className="justify-center"
             >
               <div className="flex items-center justify-center gap-4">
-                <Logo className="h-16 w-auto" />
+                {appLogoUrl ? (
+                  <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={appLogoUrl} alt="App logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                  </div>
+                ) : (
+                  <Logo className="h-16 w-auto" />
+                )}
                 <div className="text-left">
                   <h1 className="text-3xl font-bold font-headline text-foreground">
                     levelUp EDU

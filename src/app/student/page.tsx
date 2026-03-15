@@ -165,12 +165,13 @@ function StudentDashboardInner({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges } = useAppContext();
+  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges, getAttendanceConfig, recordClassSignIn } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
   const { toast } = useToast();
   const { settings } = useSettings();
   const isGraphic = settings.graphicMode === 'graphics';
+  const signInRecordedRef = useRef(false);
 
   const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
   const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
@@ -203,6 +204,24 @@ function StudentDashboardInner({
   useEffect(() => {
     setHasCameraPermission(hookHasPermission);
   }, [hookHasPermission]);
+
+  useEffect(() => {
+    if (!settings.enableClassSignIn || !student || signInRecordedRef.current || !getAttendanceConfig || !recordClassSignIn) return;
+    signInRecordedRef.current = true;
+    getAttendanceConfig()
+      .then((config) => {
+        if (!config) return;
+        return recordClassSignIn(student.id, student, config);
+      })
+      .then((result) => {
+        if (result && result.pointsAwarded > 0) {
+          toast({ title: 'Class sign-in recorded', description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.` });
+        }
+      })
+      .catch((err) => {
+        console.error('Attendance sign-in failed', err);
+      });
+  }, [settings.enableClassSignIn, student, getAttendanceConfig, recordClassSignIn, toast]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {
@@ -382,7 +401,7 @@ function StudentDashboardInner({
                 <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
                   {student.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className="h-full w-full object-cover" />
+                    <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                   ) : (
                     <span>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
                   )}

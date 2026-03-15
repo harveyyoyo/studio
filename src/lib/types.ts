@@ -126,6 +126,36 @@ export interface Badge {
   enabled?: boolean;
 }
 
+/** Schedule slot for class sign-in (e.g. Period 1, 2). Times in "HH:mm" 24h format. */
+export interface AttendanceScheduleSlot {
+  id: string;
+  label: string;
+  startTime: string;
+  endTime: string;
+}
+
+/** Per-school attendance (class sign-in) configuration. */
+export interface AttendanceSettings {
+  pointsForSignIn: number;
+  pointsForOnTime: number;
+  onTimeWindowMinutes: number;
+  /** If set and non-empty, only students in these classes get attendance points. Empty = all classes. */
+  enabledClassIds?: string[];
+  categoryId?: string;
+  schedule: AttendanceScheduleSlot[];
+}
+
+/** One sign-in event stored for admin reporting. */
+export interface AttendanceLogEntry {
+  id?: string;
+  studentId: string;
+  studentName?: string;
+  signedInAt: number;
+  pointsAwarded: number;
+  onTime: boolean;
+  periodLabel?: string;
+}
+
 export interface BackupInfo {
   id: string;
   createdAt?: number;

@@ -204,6 +204,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     const data = await res.json();
                     if (data.success) {
+                        try {
+                            const addDeveloperMe = httpsCallable(functions, 'addDeveloperMe');
+                            await addDeveloperMe({ passcode: credentials.passcode });
+                        } catch (e) {
+                            console.warn('addDeveloperMe failed (may affect saving attendance):', e);
+                        }
                         setLoginState('developer');
                         setIsAdmin(true);
                         setUserName('Developer');

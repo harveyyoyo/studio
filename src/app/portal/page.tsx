@@ -98,7 +98,7 @@ export default function PortalPage() {
                         className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
                         style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)' }}
                     >
-                        DASHBOARD
+                        MAIN DASHBOARD
                     </h2>
                 </motion.div>
 

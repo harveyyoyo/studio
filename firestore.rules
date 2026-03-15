@@ -13,6 +13,19 @@ service cloud.firestore {
       // This is a safer check. It ensures roleDocData is not null before trying to access .role
       return isAuth() && roleDocData != null && roleDocData.role == 'admin';
     }
+
+    function isDeveloper() {
+      return isAuth() && exists(/databases/$(database)/documents/appConfig/global)
+        && 'developerUids' in get(/databases/$(database)/documents/appConfig/global).data
+        && request.auth.uid in get(/databases/$(database)/documents/appConfig/global).data.developerUids;
+    }
+
+    // Global app configuration (e.g. app logo, name, tagline)
+    match /appConfig/{docId} {
+      // Public read so login page can show app logo before user signs in.
+      allow read: if true;
+      allow write: if false;
+    }
     
     match /schools/{schoolId} {
       allow read: if isAuth();
@@ -92,6 +105,17 @@ service cloud.firestore {
       match /backups/{backupId} {
         allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
+      }
+
+      match /attendance/{docId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId) || isDeveloper();
+      }
+
+      match /attendanceLog/{entryId} {
+        allow read: if isAdmin(schoolId);
+        allow create: if isAuth();
+        allow update, delete: if isAdmin(schoolId);
       }
     }
   }

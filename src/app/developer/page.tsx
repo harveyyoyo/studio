@@ -31,6 +31,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import type { BackupInfo } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
 import { httpsCallable } from 'firebase/functions';
 
@@ -157,6 +158,7 @@ export default function DeveloperPage() {
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
+  const { settings, updateSettings } = useSettings();
 
   const [isCreateSchoolDialogOpen, setIsCreateSchoolDialogOpen] = useState(false);
   const [newSchoolId, setNewSchoolId] = useState('');
@@ -177,6 +179,7 @@ export default function DeveloperPage() {
   const [isFindingBackup, setIsFindingBackup] = useState(false);
 
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
+  const [appLogoHistory, setAppLogoHistory] = useState<string[]>([]);
   const [isAppLogoUploading, setIsAppLogoUploading] = useState(false);
   const appLogoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -208,23 +211,55 @@ export default function DeveloperPage() {
     createOrResetSampleSchool('schoolabc');
   }, [loginState, firestore, createSchool]);
 
-  // Load current app-wide logo (stored in special school doc "__app_logo__")
+  // Load current app-wide logo and history from global app config
   useEffect(() => {
     if (!firestore) return;
     const load = async () => {
       try {
-        const ref = doc(firestore, 'schools', '__app_logo__');
+        const ref = doc(firestore, 'appConfig', 'global');
         const snap = await getDoc(ref);
-        const data = snap.data() as { logoUrl?: string } | undefined;
-        if (data?.logoUrl) {
-          setAppLogoUrl(data.logoUrl);
+        const data = snap.data() as { appLogoUrl?: string; appLogoHistory?: { url?: string }[] } | undefined;
+        const currentUrl = data?.appLogoUrl?.trim();
+        if (currentUrl) {
+          setAppLogoUrl(currentUrl);
         }
+        const seen = new Set<string>();
+        const urls: string[] = [];
+        if (currentUrl) {
+          seen.add(currentUrl);
+          urls.push(currentUrl);
+        }
+        if (Array.isArray(data?.appLogoHistory)) {
+          data!.appLogoHistory!.forEach((entry) => {
+            const u = entry?.url?.trim();
+            if (u && !seen.has(u)) {
+              seen.add(u);
+              urls.push(u);
+            }
+          });
+        }
+        setAppLogoHistory(urls);
       } catch (e) {
         console.error('Failed to load app logo', e);
       }
     };
     load();
   }, [firestore]);
+
+  const handleSetAppLogoUrl = async (url: string) => {
+    if (!functions) return;
+    try {
+      const setLogo = httpsCallable<{ url: string }, { success: boolean; logoUrl: string }>(functions, 'setAppLogoUrl');
+      await setLogo({ url });
+      setAppLogoUrl(url);
+      playSound('success');
+      toast({ title: 'App logo restored', description: 'Using selected previous logo.' });
+    } catch (e) {
+      console.error('setAppLogoUrl failed', e);
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
+    }
+  };
 
   const handleAppLogoUploadClick = () => {
     appLogoInputRef.current?.click();
@@ -295,6 +330,7 @@ export default function DeveloperPage() {
       }
 
       setAppLogoUrl(data.logoUrl);
+      setAppLogoHistory((prev) => [data.logoUrl, ...prev.filter((url) => url !== data.logoUrl)]);
       playSound('success');
       toast({ title: 'App logo updated!', description: 'This logo can be used across the app shell.' });
     } catch (error: unknown) {
@@ -521,14 +557,51 @@ export default function DeveloperPage() {
               </Helper>
               <CardDescription>Developer-level branding for the overall app (not per-school).</CardDescription>
             </div>
-            <div className="flex flex-col items-center gap-1">
+            <div className="flex flex-col items-center gap-2">
               <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center text-xs font-semibold text-muted-foreground">
                 {appLogoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={appLogoUrl} alt="App logo" className="h-full w-full object-cover" />
+                  <img src={appLogoUrl} alt="Current app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                 ) : (
                   <span>App</span>
                 )}
+              </div>
+              {appLogoHistory.length > 0 && (
+                <div className="flex flex-col items-center gap-1 w-full">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-xs">
+                    {appLogoHistory.map((url, idx) => (
+                      <button
+                        key={`${url}-${idx}`}
+                        type="button"
+                        onClick={() => handleSetAppLogoUrl(url)}
+                        className="h-10 w-10 rounded-xl overflow-hidden border-2 border-border hover:border-primary transition-colors bg-muted/60 flex-shrink-0"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="Previous app logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="space-y-1 w-full">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Display</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Fit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
+                    className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                  >
+                    Fill (crop)
+                  </button>
+                </div>
               </div>
               <Button
                 size="sm"

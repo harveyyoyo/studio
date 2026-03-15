@@ -49,6 +49,14 @@ export default function Header() {
   const { data: schoolData } = useDoc<{ name: string; logoUrl?: string }>(schoolDocRef);
   const schoolName = schoolData?.name || schoolId;
 
+  const appConfigDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'appConfig', 'global');
+  }, [firestore]);
+
+  const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigDocRef);
+  const appLogoUrl = appConfig?.appLogoUrl;
+
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
 
   const handleLogout = () => {
@@ -61,6 +69,8 @@ export default function Header() {
   }
 
   const logoLink = '/';
+  const centerLabel = loginState === 'developer' ? 'Developer' : schoolName;
+  const centerHref = loginState === 'developer' ? '/developer' : '/portal';
 
 
   // --- APP MODE HEADER ---
@@ -101,15 +111,19 @@ export default function Header() {
             </Link>
           </div>
           <div className="flex items-center justify-center">
-            {schoolId && (
-              <Link href="/portal" className="flex items-center gap-2 font-school font-black text-3xl text-primary truncate no-underline max-w-full">
-                {schoolData?.logoUrl && (
+            {(schoolId || loginState === 'developer') && (
+              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl text-primary truncate no-underline max-w-full">
+                {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
                   <span className="inline-flex h-8 w-8 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={schoolData.logoUrl} alt="School logo" className="h-full w-full object-cover" />
+                    <img
+                      src={(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) || ''}
+                      alt="Logo"
+                      className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
+                    />
                   </span>
                 )}
-                <span className="truncate">{schoolName}</span>
+                <span className="truncate">{centerLabel}</span>
               </Link>
             )}
           </div>
@@ -152,7 +166,14 @@ export default function Header() {
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
           <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
-            <Logo className="h-10 w-auto" />
+            {appLogoUrl ? (
+              <span className="inline-flex h-10 w-10 rounded-2xl overflow-hidden bg-muted border border-border/40 shrink-0 shadow-md">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={appLogoUrl} alt="App logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+              </span>
+            ) : (
+              <Logo className="h-10 w-auto" />
+            )}
             <div className="flex flex-col">
               <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
               <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
@@ -160,18 +181,22 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Center: School Name */}
-        {schoolId && (
-          <Link href="/portal" className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
+        {/* Center: School Name / Developer */}
+        {(schoolId || loginState === 'developer') && (
+          <Link href={centerHref} className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
             <span className="inline-flex items-center gap-3">
-              {schoolData?.logoUrl && (
+              {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
                 <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={schoolData.logoUrl} alt="School logo" className="h-full w-full object-cover" />
+                  <img
+                    src={(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) || ''}
+                    alt="Logo"
+                    className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
+                  />
                 </span>
               )}
               <span className="text-5xl font-school font-black tracking-tight text-primary drop-shadow-md whitespace-nowrap">
-                {schoolName}
+                {centerLabel}
               </span>
             </span>
           </Link>

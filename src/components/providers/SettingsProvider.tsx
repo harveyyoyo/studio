@@ -45,11 +45,15 @@ interface Settings {
     enableParentView: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
+    enableClassSignIn: boolean;
     // Guidance
     enableHelperMode: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
     legacyMode: boolean;
+    // Image display: how logos and photos are fitted in their boxes
+    logoDisplayMode: 'contain' | 'cover';
+    photoDisplayMode: 'contain' | 'cover';
 }
 
 interface SettingsContextType {
@@ -98,9 +102,12 @@ const defaultSettings: Settings = {
     enableParentView: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
+    enableClassSignIn: false,
     enableHelperMode: true,
     enableTeacherBudgets: false,
     legacyMode: false,
+    logoDisplayMode: 'contain',
+    photoDisplayMode: 'cover',
 };
 
 export { colorSchemes };

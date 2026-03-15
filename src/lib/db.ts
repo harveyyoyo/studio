@@ -10,9 +10,11 @@ import {
   getDocs,
   query,
   where,
+  orderBy,
+  limit,
   Firestore,
 } from 'firebase/firestore';
-import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Achievement, Badge } from './types';
+import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -1211,4 +1213,152 @@ export const purgeStudentProgress = async (firestore: Firestore, schoolId: strin
     );
     throw error;
   }
+};
+
+// --- Attendance (Class Sign-In) ---
+const ATTENDANCE_CONFIG_ID = 'config';
+
+function parseTimeToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+/** Get current period from schedule and whether sign-in is on time. */
+function getCurrentPeriodAndOnTime(
+  schedule: AttendanceSettings['schedule'],
+  onTimeWindowMinutes: number,
+  now: number
+): { periodLabel?: string; onTime: boolean } {
+  if (!schedule?.length) return { onTime: false };
+  const d = new Date(now);
+  const nowMinutes = d.getHours() * 60 + d.getMinutes();
+  for (const slot of schedule) {
+    const start = parseTimeToMinutes(slot.startTime);
+    const end = parseTimeToMinutes(slot.endTime);
+    if (nowMinutes >= start && nowMinutes <= end) {
+      const onTime = nowMinutes <= start + onTimeWindowMinutes;
+      return { periodLabel: slot.label, onTime };
+    }
+  }
+  return { onTime: false };
+}
+
+export const getAttendanceConfig = async (
+  firestore: Firestore,
+  schoolId: string
+): Promise<AttendanceSettings | null> => {
+  const configRef = doc(firestore, 'schools', schoolId, 'attendance', ATTENDANCE_CONFIG_ID);
+  const snap = await getDoc(configRef);
+  const data = snap.data();
+  if (!data) return null;
+  const enabledClassIds = Array.isArray(data.enabledClassIds) ? data.enabledClassIds : undefined;
+  return {
+    pointsForSignIn: data.pointsForSignIn ?? 0,
+    pointsForOnTime: data.pointsForOnTime ?? 0,
+    onTimeWindowMinutes: data.onTimeWindowMinutes ?? 15,
+    enabledClassIds: enabledClassIds?.length ? enabledClassIds : undefined,
+    categoryId: data.categoryId,
+    schedule: Array.isArray(data.schedule) ? data.schedule : [],
+  };
+};
+
+export const setAttendanceConfig = async (
+  firestore: Firestore,
+  schoolId: string,
+  settings: AttendanceSettings
+): Promise<void> => {
+  const configRef = doc(firestore, 'schools', schoolId, 'attendance', ATTENDANCE_CONFIG_ID);
+  try {
+    await setDoc(configRef, removeUndefined(settings));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: configRef.path,
+        operation: 'write',
+        requestResourceData: settings,
+      })
+    );
+    throw error;
+  }
+};
+
+export const recordClassSignIn = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+  student: Student,
+  config: AttendanceSettings
+): Promise<{ pointsAwarded: number; onTime: boolean; periodLabel?: string }> => {
+  if (config.enabledClassIds && config.enabledClassIds.length > 0) {
+    const studentClassId = student.classId || '';
+    if (!config.enabledClassIds.includes(studentClassId)) {
+      return { pointsAwarded: 0, onTime: false };
+    }
+  }
+
+  const now = Date.now();
+  const { periodLabel, onTime } = getCurrentPeriodAndOnTime(
+    config.schedule,
+    config.onTimeWindowMinutes,
+    now
+  );
+  const pointsAwarded = config.pointsForSignIn + (onTime ? config.pointsForOnTime : 0);
+
+  const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+  const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+  const logRef = doc(collection(firestore, 'schools', schoolId, 'attendanceLog'));
+
+  await runTransaction(firestore, async (transaction) => {
+    const studentSnap = await transaction.get(studentRef);
+    if (!studentSnap.exists()) throw new Error('Student not found');
+    const data = studentSnap.data() as Student;
+    const newPoints = data.points + pointsAwarded;
+    const newLifetime = (data.lifetimePoints ?? 0) + pointsAwarded;
+
+    transaction.update(studentRef, {
+      points: newPoints,
+      lifetimePoints: newLifetime,
+    });
+    const desc = onTime && periodLabel
+      ? `Class sign-in (on time): ${periodLabel}`
+      : periodLabel
+        ? `Class sign-in: ${periodLabel}`
+        : 'Class sign-in';
+    transaction.set(activityRef, { desc, amount: pointsAwarded, date: now } as HistoryItem);
+
+    const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.nickname || studentId;
+    transaction.set(logRef, {
+      studentId,
+      studentName,
+      signedInAt: now,
+      pointsAwarded,
+      onTime,
+      periodLabel: periodLabel ?? null,
+    });
+  });
+
+  return { pointsAwarded, onTime, periodLabel };
+};
+
+export const listAttendanceLog = async (
+  firestore: Firestore,
+  schoolId: string,
+  limitCount: number = 50
+): Promise<AttendanceLogEntry[]> => {
+  const logRef = collection(firestore, 'schools', schoolId, 'attendanceLog');
+  const q = query(logRef, orderBy('signedInAt', 'desc'), limit(limitCount));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      studentId: data.studentId ?? '',
+      studentName: data.studentName,
+      signedInAt: data.signedInAt ?? 0,
+      pointsAwarded: data.pointsAwarded ?? 0,
+      onTime: data.onTime ?? false,
+      periodLabel: data.periodLabel,
+    };
+  });
 };

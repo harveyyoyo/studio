@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { Coupon } from '@/lib/types';
 import { useSettings } from './providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import { APP_NAME } from '@/lib/app-branding';
 
 interface PrintSheetProps {
   coupons: Coupon[];
@@ -18,7 +19,7 @@ export function PrintSheet({ coupons, schoolId }: PrintSheetProps) {
   }
 
   const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : null;
-  const title = schoolName ? `levelUp EDU - ${schoolName}` : 'levelUp EDU';
+  const title = schoolName ? `${APP_NAME} - ${schoolName}` : APP_NAME;
 
   const isColorEnabled = settings.enableColorPrinting;
 

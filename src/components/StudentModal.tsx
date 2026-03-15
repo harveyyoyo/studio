@@ -22,6 +22,7 @@ import type { Student, Class, Teacher, StudentTheme } from '@/lib/types';
 import { useFirestore, useFunctions } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { ScrollArea } from './ui/scroll-area';
 import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
@@ -40,6 +41,7 @@ interface StudentModalProps {
 
 export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClasses, allTeachers }: StudentModalProps) {
   const { addStudent, updateStudent, schoolId } = useAppContext();
+  const { settings } = useSettings();
   const firestore = useFirestore();
   const functions = useFunctions();
   const [firstName, setFirstName] = useState('');
@@ -242,7 +244,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                 <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
                   {student?.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={student.photoUrl} alt="Student profile" className="h-full w-full object-cover" />
+                    <img src={student.photoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
                   ) : (
                     <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
                   )}

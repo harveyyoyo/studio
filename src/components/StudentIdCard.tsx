@@ -2,22 +2,33 @@
 
 import type { Student } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
 
 export function StudentIdCard({
   student,
-  schoolId,
+  schoolName,
+  schoolLogoUrl,
   className,
   isColorEnabled,
+  appLogoUrl,
+  appName,
+  appTagline,
 }: {
   student: Student;
-  schoolId: string | null;
+  schoolName: string;
+  schoolLogoUrl?: string | null;
   className: string;
   isColorEnabled: boolean;
+  appLogoUrl?: string | null;
+  appName?: string;
+  appTagline?: string;
 }) {
-  const schoolName = schoolId ? schoolId.replace(/_/g, ' ') : 'School Reward System';
+  const { settings } = useSettings();
   const theme = student.theme;
+  const themeEmoji = theme?.emoji;
 
-  const cardStyle = theme
+  const cardStyle = theme && isColorEnabled
     ? {
         background: theme.backgroundStyle || theme.background,
         color: theme.text,
@@ -25,26 +36,66 @@ export function StudentIdCard({
       }
     : undefined;
 
+  const headerStyle = theme && isColorEnabled ? { color: theme.text } : undefined;
+  const mainStyle = theme && isColorEnabled ? {} : undefined;
+  const avatarStyle = theme && isColorEnabled
+    ? { borderColor: theme.primary, background: theme.cardBackground || theme.background }
+    : undefined;
+  const nameStyle = theme && isColorEnabled ? { color: theme.text } : undefined;
+  const classStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.9 } : undefined;
+  const metaStyle = theme && isColorEnabled ? { color: theme.text, opacity: 0.8 } : undefined;
+  const barcodeBorderColor = theme && isColorEnabled ? theme.primary : '#e5e7eb';
+
   return (
     <div className={cn("print-id-card", isColorEnabled && "is-colored")} style={cardStyle}>
-      <div className="print-id-header">{schoolName}</div>
-      <div className="print-id-main">
-        <div className="print-id-avatar">
+      {/* App branding: logo + name + tagline */}
+      <div className="print-id-app" style={headerStyle}>
+        {appLogoUrl && (
+          <div className="print-id-app-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={appLogoUrl} alt="" className={settings.logoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'} />
+          </div>
+        )}
+        <div className="print-id-app-text">
+          <span className="print-id-app-name">{appName || APP_NAME}</span>
+          <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>
+        </div>
+        {themeEmoji && <span className="print-id-theme-emoji" aria-hidden>{themeEmoji}</span>}
+      </div>
+      <div className="print-id-school" style={headerStyle}>
+        {schoolLogoUrl && (
+          <div className="print-id-school-logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={schoolLogoUrl} alt="" className={settings.logoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'} />
+          </div>
+        )}
+        <span className="print-id-header">{schoolName}</span>
+      </div>
+      <div className="print-id-main" style={mainStyle}>
+        <div className="print-id-avatar" style={avatarStyle}>
           {student.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} />
+            <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
           ) : (
-            <span>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
+            <span style={nameStyle}>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
           )}
         </div>
         <div className="print-id-text">
-          <div className="print-id-name">{getStudentNickname(student)} {student.lastName}</div>
-          <div className="print-id-class">{className}</div>
-          <div className="print-id-meta">ID #{student.nfcId}</div>
+          <div className="print-id-name" style={nameStyle}>{getStudentNickname(student)} {student.lastName}</div>
+          <div className="print-id-class" style={classStyle}>Class: {className}</div>
+          <div className="print-id-meta" style={metaStyle}>ID #{student.nfcId}</div>
         </div>
       </div>
-      <div className="print-id-barcode-container">
-        <div className="font-barcode text-[10px] tracking-[0.18em] leading-none overflow-hidden">
+      {/* Barcode zone: always light background + dark bars for scanner reliability (red-light scanners need light bg, dark bars) */}
+      <div
+        className="print-id-barcode-container"
+        style={{
+          background: '#ffffff',
+          color: '#000000',
+          borderTop: `1px solid #e5e7eb`,
+        }}
+      >
+        <div className="font-barcode text-[10px] tracking-[0.18em] leading-none" style={{ color: '#000000' }}>
           *{student.nfcId}*
         </div>
       </div>
