@@ -1,6 +1,6 @@
 
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useSettings } from './providers/SettingsProvider';
@@ -16,9 +16,10 @@ const steps = [
     target: '/portal',
   },
   {
-    title: 'Step 1: Admin Dashboard',
-    description: 'Click the "Admin Portal" link to manage your school\'s data. Once you\'re there, click "Next".',
+    title: 'Step 1: Go to Admin',
+    description: 'From the portal page, click on "Admin Portal" to start managing your school\'s data. The wizard will meet you there!',
     target: '/portal',
+    hideNext: true,
   },
   {
     title: 'Step 2: Add a Class',
@@ -32,16 +33,23 @@ const steps = [
   },
   {
     title: 'Step 4: Add a Student',
-    description: 'Add a student. You can assign them to a class and multiple teachers. Make a note of the Student ID you assign—you\'ll need it for the next step. Click "Next" when you\'re done.',
+    description: "Add a student. You can assign them to any classes and multiple teachers. Make a note of the Student ID—you'll need it for the next step. Click 'Next' when you're done.",
     target: '/admin',
   },
   {
-    title: 'Step 5: Go to Student Kiosk',
-    description: 'Excellent! Now, click the "Home" icon to go back to the main portal page. From there, click on "Student Kiosk" to sign in as the student.',
+    title: 'Step 5: Go to Portal',
+    description: 'Fantastic! Now, click the "Home" icon in the header to go back to the main portal page.',
     target: '/admin',
+    hideNext: true,
   },
   {
-    title: 'Step 6: Student Sign-In',
+    title: 'Step 6: Go to Student Kiosk',
+    description: 'From the portal, click on "Student Kiosk" to sign in as the student you just created.',
+    target: '/portal',
+    hideNext: true,
+  },
+  {
+    title: 'Step 7: Student Sign-In',
     description: "You're at the student kiosk. Type in the Student ID you just created and click 'Identify Student' to see their points and redeem coupons.",
     target: '/student',
   }
@@ -55,6 +63,19 @@ export function IntroWizard() {
   const { schoolId } = useAppContext();
 
   const isWizardEnabled = settings.showIntroWizard ?? true;
+
+  useEffect(() => {
+    if (!isWizardEnabled) return;
+
+    const currentStep = steps[stepIndex];
+    if (currentStep && currentStep.target !== pathname) {
+      const nextPageIndex = steps.findIndex((step, index) => index > stepIndex && step.target === pathname);
+      if (nextPageIndex !== -1) {
+        setStepIndex(nextPageIndex);
+      }
+    }
+  }, [pathname, stepIndex, isWizardEnabled]);
+  
   const currentStep = steps[stepIndex];
 
   const handleNext = () => {
@@ -94,10 +115,12 @@ export function IntroWizard() {
           </CardHeader>
           <CardContent>
             <div className="flex justify-end w-full">
+              {!(currentStep as any).hideNext && (
                 <Button onClick={handleNext} className="rounded-full shadow-lg">
                     {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
                     <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+              )}
             </div>
           </CardContent>
         </Card>

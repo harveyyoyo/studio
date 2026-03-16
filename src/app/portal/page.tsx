@@ -62,6 +62,14 @@ export default function PortalPage() {
         'chart-5': 'text-chart-5',
     };
 
+    const hoverColorClasses: Record<string, string> = {
+        destructive: 'hover:text-destructive',
+        'chart-1': 'hover:text-chart-1',
+        'chart-2': 'hover:text-chart-2',
+        'chart-3': 'hover:text-chart-3',
+        'chart-5': 'hover:text-chart-5',
+    };
+
     return (
         <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-12", settings.displayMode === 'app' && 'pb-24')}>
             {/* Noise overlay */}
@@ -98,7 +106,7 @@ export default function PortalPage() {
                         className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
                         style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)' }}
                     >
-                        Get Started
+                        Where to?
                     </h2>
                 </motion.div>
 
