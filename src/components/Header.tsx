@@ -91,6 +91,7 @@ export default function Header() {
       'chart-1': 'text-chart-1',
       'chart-2': 'text-chart-2',
       'chart-3': 'text-chart-3',
+      'chart-4': 'text-chart-4',
       'chart-5': 'text-chart-5',
     };
 
@@ -112,7 +113,7 @@ export default function Header() {
           </div>
           <div className="flex items-center justify-center">
             {(schoolId || loginState === 'developer') && (
-              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl text-primary truncate no-underline max-w-full">
+              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl truncate no-underline max-w-full">
                 {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
                   <span className="inline-flex h-8 w-8 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -123,7 +124,7 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <span className="truncate">{centerLabel}</span>
+                <span className="truncate text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.7)' }}>{centerLabel}</span>
               </Link>
             )}
           </div>
@@ -195,7 +196,10 @@ export default function Header() {
                   />
                 </span>
               )}
-              <span className="text-5xl font-school font-black tracking-tight text-primary drop-shadow-md whitespace-nowrap">
+              <span
+                className="text-5xl font-school font-black tracking-tight text-white whitespace-nowrap"
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}
+              >
                 {centerLabel}
               </span>
             </span>
