@@ -57,7 +57,8 @@ export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }:
         @media print {
           title { display: none; }
           @page {
-            size: 2.125in 3.375in;
+            /* CR80 card size (landscape) for Fargo DTC printers */
+            size: 3.375in 2.125in;
             margin: 0;
           }
           body {
@@ -79,14 +80,35 @@ export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }:
             background: white;
           }
           #student-id-dtc-print-wrapper .dtc-page {
-            width: 2.125in;
-            height: 3.375in;
+            width: 3.375in;
+            height: 2.125in;
             overflow: hidden;
             page-break-after: always;
             position: relative;
             background: white;
             box-sizing: border-box;
+            display: flex;
+            align-items: stretch;
+            justify-content: stretch;
           }
+
+          /*
+           * The global print stylesheet sizes .print-id-card for Avery labels.
+           * For DTC printing we must override to full CR80, otherwise the card is
+           * scaled/cropped and looks like it isn't "full page".
+           */
+          #student-id-dtc-print-wrapper .dtc-page .print-id-card {
+            width: 3.375in !important;
+            height: 2.125in !important;
+            min-width: 3.375in !important;
+            min-height: 2.125in !important;
+            max-width: 3.375in !important;
+            max-height: 2.125in !important;
+            padding: 0.12in 0.14in !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+          }
+
           /* Hide everything else */
           body > *:not(#student-id-dtc-print-wrapper) {
             display: none !important;
