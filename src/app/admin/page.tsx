@@ -9,14 +9,14 @@ import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette
+  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette, Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceScheduleSlot, AttendanceLogEntry } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -67,7 +67,6 @@ import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
 import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge } from '@/lib/db';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
-import { Wand2 } from 'lucide-react';
 
 function AdminDashboardSkeleton() {
   return (
@@ -123,7 +122,7 @@ function AdminDashboardInner() {
     purgeStudentProgress,
     getAttendanceConfig,
     setAttendanceConfig,
-    listAttendanceLog,
+    listAttendanceLog
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -1545,7 +1544,7 @@ function AdminDashboardInner() {
                             className="h-8 w-8 text-red-500 hover:bg-red-50"
                             onClick={() => setAchievementToDelete(ach)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </li>
@@ -1655,7 +1654,7 @@ function AdminDashboardInner() {
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => setCategoryBadgeToDelete(b)}>
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </li>
@@ -2010,7 +2009,7 @@ function AdminDashboardInner() {
               <Button variant="secondary" onClick={() => setBadgeEarnersFor(null)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </AlertDialog>
+        </Dialog>
         <AlertDialog open={!!achievementToDelete} onOpenChange={(open) => !open && setAchievementToDelete(null)}>
           <AlertDialogContent className="rounded-3xl border-2">
             <AlertDialogHeader>
