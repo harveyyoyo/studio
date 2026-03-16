@@ -43,14 +43,25 @@ const steps = [
     hideNext: true,
   },
   {
-    title: 'Step 6: Go to Student Kiosk',
-    description: 'From the portal, click on "Student Kiosk" to sign in as the student you just created.',
+    title: 'Step 6: Teacher Portal',
+    description: `Now that you have a class, teacher, and student, let's print some reward coupons. From the portal page, click on "Teacher Portal" to continue.`,
     target: '/portal',
     hideNext: true,
   },
   {
-    title: 'Step 7: Student Sign-In',
-    description: "You're at the student kiosk. Type in the Student ID you just created and click 'Identify Student' to see their points and redeem coupons.",
+    title: 'Step 7: Print Coupons',
+    description: `You are now in the Teacher Portal. Select your name, choose a category and point value, and click "Generate Sheet". A print preview will appear. Make a note of one of the coupon codes to use in the next step! Then click "Next".`,
+    target: '/teacher',
+  },
+  {
+    title: 'Step 8: Student Kiosk',
+    description: `Great! Now, navigate back to the portal (using the home icon in the header) and click on "Student Kiosk" to sign in as the student you created.`,
+    target: '/teacher',
+    hideNext: true,
+  },
+  {
+    title: 'Step 9: Redeem a Coupon',
+    description: "You're at the student kiosk. Type in the Student ID you created and click 'Identify Student'. Then, try redeeming the coupon code you noted down.",
     target: '/student',
   }
 ];
@@ -75,8 +86,6 @@ export function IntroWizard() {
       }
     }
   }, [pathname, stepIndex, isWizardEnabled]);
-  
-  const currentStep = steps[stepIndex];
 
   const handleNext = () => {
     if (stepIndex < steps.length - 1) {
@@ -89,6 +98,8 @@ export function IntroWizard() {
   const handleTurnOff = () => {
     updateSettings({ showIntroWizard: false });
   };
+  
+  const currentStep = steps[stepIndex];
 
   if (!isWizardEnabled || !currentStep || pathname !== currentStep.target || schoolId !== 'schoolabc') {
     return null;
@@ -97,6 +108,7 @@ export function IntroWizard() {
   return (
     <AnimatePresence>
       <motion.div
+        key={stepIndex}
         initial={{ opacity: 0, y: 50, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 50, scale: 0.9 }}
