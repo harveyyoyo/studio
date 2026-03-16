@@ -98,7 +98,7 @@ export default function PortalPage() {
                         className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
                         style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)' }}
                     >
-                        MAIN DASHBOARD
+                        Get Started
                     </h2>
                 </motion.div>
 
@@ -106,7 +106,7 @@ export default function PortalPage() {
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         return (
-                            <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
+                            <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline" data-wizard-id={area.id === 'admin' ? 'admin-portal-link' : undefined}>
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}

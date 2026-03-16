@@ -18,9 +18,9 @@ const steps = [
   },
   {
     title: 'Step 1: Admin Dashboard',
-    description: 'First, let\'s go to the Admin Dashboard. This is where you\'ll manage your school\'s data, including students, classes, and prizes.',
-    target: '/admin',
-    highlightId: null,
+    description: 'First, click the "Admin Portal" link. This is where you\'ll manage your school\'s data, including students, classes, and prizes.',
+    target: '/portal',
+    highlightId: 'admin-portal-link',
   },
   {
     title: 'Step 2: Add a Class',
@@ -36,7 +36,7 @@ const steps = [
   },
   {
     title: 'Step 4: Add a Student',
-    description: 'Next, add a student to your new class. Find the "Students" section and click "Add Student".',
+    description: 'Next, add a student. In the form, you can set their name, assign them an ID for scanning, give them starting points, and assign them to the class you just created.',
     target: '/admin',
     highlightId: 'students-card',
   },
