@@ -2009,7 +2009,7 @@ function AdminDashboardInner() {
               <Button variant="secondary" onClick={() => setBadgeEarnersFor(null)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </AlertDialog>
         <AlertDialog open={!!achievementToDelete} onOpenChange={(open) => !open && setAchievementToDelete(null)}>
           <AlertDialogContent className="rounded-3xl border-2">
             <AlertDialogHeader>

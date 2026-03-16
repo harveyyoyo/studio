@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize } from '@/lib/types';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
     Dialog,
@@ -376,6 +376,86 @@ function TeacherPrizeManager({ schoolId, teacherId }: { schoolId: string, teache
         </Card>
     );
 }
+
+function MyCoupons({ schoolId, teacherName, students }: { schoolId: string; teacherName: string; students: Student[] }) {
+    const firestore = useFirestore();
+    const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
+    const { data: coupons, isLoading } = useCollection<Coupon>(couponsQuery);
+  
+    const getStudentName = (studentId?: string) => {
+      if (!studentId) return 'N/A';
+      const student = students?.find(s => s.id === studentId);
+      return student ? `${getStudentNickname(student)} ${student.lastName}` : `ID: ${studentId}`;
+    };
+  
+    const myCoupons = useMemo(() => {
+      if (!coupons) return [];
+      return coupons.filter(c => c.teacher === teacherName).sort((a, b) => b.createdAt - a.createdAt);
+    }, [coupons, teacherName]);
+  
+    const available = myCoupons.filter(c => !c.used);
+    const redeemed = myCoupons.filter(c => c.used);
+  
+    return (
+      <Card className="md:col-span-2 border-t-4 border-chart-4 shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-xl font-black">
+              <Ticket className="w-6 h-6 text-chart-4" />
+              My Generated Coupons
+            </CardTitle>
+            <CardDescription className="font-medium">
+              Coupons you have created, separated by availability.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Available ({available.length})</h3>
+            <ScrollArea className="h-72 border rounded-lg bg-background/50">
+              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : available.length > 0 ? (
+                <ul className="p-3 space-y-2">
+                  {available.map(coupon => (
+                    <li key={coupon.id} className="p-3 bg-card rounded-lg border">
+                      <div className="flex justify-between items-center font-bold">
+                        <span className="font-code text-primary">{coupon.code}</span>
+                        <span>{coupon.value} pts</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <p>{coupon.category}</p>
+                        <p>Created on {new Date(coupon.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="p-8 text-center text-sm text-muted-foreground">No available coupons created by you.</p>}
+            </ScrollArea>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Redeemed ({redeemed.length})</h3>
+            <ScrollArea className="h-72 border rounded-lg bg-background/50">
+              {isLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading coupons...</div> : redeemed.length > 0 ? (
+                <ul className="p-3 space-y-2">
+                  {redeemed.map(coupon => (
+                    <li key={coupon.id} className="p-3 bg-card rounded-lg border opacity-60">
+                      <div className="flex justify-between items-center font-bold">
+                        <span className="font-code text-muted-foreground line-through">{coupon.code}</span>
+                        <span>{coupon.value} pts</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <p>{coupon.category}</p>
+                        <p>Used by {coupon.usedBy ? getStudentName(coupon.usedBy) : 'Unknown'} on {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="p-8 text-center text-sm text-muted-foreground">No redeemed coupons yet.</p>}
+            </ScrollArea>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
 function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName: string, teacherId: string, onLogout: () => void }) {
     const { updateTeacher, addCoupons, setCouponsToPrint, addCategory, schoolId, awardPointsToMultipleStudents, deductPointsFromMultipleStudents, addPrize, updatePrize, deletePrize } = useAppContext();
@@ -961,6 +1041,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                         </Card>
                         <TeacherPrizeManager schoolId={schoolId!} teacherId={teacherId} />
                         <RecentRedemptions schoolId={schoolId!} students={students || []} classes={classes || []} teacherId={teacherId} />
+                        <MyCoupons schoolId={schoolId!} teacherName={teacherName} students={students || []} />
                     </div>
                 </div>
 
