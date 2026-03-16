@@ -29,12 +29,12 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
         const image = new Image();
         image.addEventListener('load', () => resolve(image));
         image.addEventListener('error', (error) => reject(error));
-        image.setAttribute('crossOrigin', 'anonymous'); // needed to avoid cross-origin issues on CodeSandbox
+        image.setAttribute('crossOrigin', 'anonymous');
         image.src = url;
     });
 
 /**
- * Returns a Blob containing the cropped image.
+ * Returns a Blob containing the cropped and resized image.
  */
 async function getCroppedImg(
     imageSrc: string,
@@ -52,7 +52,6 @@ async function getCroppedImg(
 
     const rotRad = (rotation * Math.PI) / 180;
 
-    // calculate bounding box of the rotated image
     const { width: bBoxWidth, height: bBoxHeight } = (() => {
         if (Math.abs(rotation) === 90 || Math.abs(rotation) === 270) {
             return { width: image.height, height: image.width };
@@ -67,17 +66,13 @@ async function getCroppedImg(
         };
     })();
 
-    // set canvas size to match the bounding box
     canvas.width = bBoxWidth;
     canvas.height = bBoxHeight;
 
-    // translate canvas context to a central location to allow rotating and flipping around the center
     ctx.translate(bBoxWidth / 2, bBoxHeight / 2);
     ctx.rotate(rotRad);
     ctx.scale(flip.horizontal ? -1 : 1, flip.vertical ? -1 : 1);
     ctx.translate(-image.width / 2, -image.height / 2);
-
-    // draw rotated image
     ctx.drawImage(image, 0, 0);
 
     const croppedCanvas = document.createElement('canvas');
@@ -87,11 +82,9 @@ async function getCroppedImg(
         return null;
     }
 
-    // Set the size of the cropped canvas
     croppedCanvas.width = pixelCrop.width;
     croppedCanvas.height = pixelCrop.height;
 
-    // Draw the cropped image onto the new canvas
     croppedCtx.drawImage(
         canvas,
         pixelCrop.x,
@@ -104,9 +97,38 @@ async function getCroppedImg(
         pixelCrop.height
     );
 
-    // Convert the cropped canvas to a Blob
+    // --- RESIZING LOGIC ---
+    const MAX_DIMENSION = 400;
+    let { width, height } = pixelCrop;
+
+    if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) {
+        return new Promise((resolve) => {
+            croppedCanvas.toBlob((file) => resolve(file), 'image/jpeg', 0.9);
+        });
+    }
+
+    if (width > height) {
+        height = Math.round((height * MAX_DIMENSION) / width);
+        width = MAX_DIMENSION;
+    } else {
+        width = Math.round((width * MAX_DIMENSION) / height);
+        height = MAX_DIMENSION;
+    }
+
+    const resizeCanvas = document.createElement('canvas');
+    resizeCanvas.width = width;
+    resizeCanvas.height = height;
+
+    const resizeCtx = resizeCanvas.getContext('2d');
+    if (!resizeCtx) {
+        return null;
+    }
+    
+    // Draw cropped image to resize canvas, which performs the scaling
+    resizeCtx.drawImage(croppedCanvas, 0, 0, width, height);
+
     return new Promise((resolve, reject) => {
-        croppedCanvas.toBlob((file) => {
+        resizeCanvas.toBlob((file) => {
             if (file) {
                 resolve(file);
             } else {
@@ -175,4 +197,3 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel, aspectRatio =
         </Dialog>
     );
 }
-
