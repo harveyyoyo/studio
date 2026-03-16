@@ -26,6 +26,7 @@ export interface Category {
   name: string;
   points: number;
   color?: string;
+  teacherId?: string;
 }
 
 export interface StudentTheme {

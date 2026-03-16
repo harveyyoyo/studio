@@ -8,7 +8,7 @@ import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
-  User, Ticket, Upload, Download, Activity, Zap, Clock
+  User, Ticket, Upload, Download, Activity, Zap, Clock, Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,7 +46,7 @@ import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Coupon as CouponPreview } from '@/components/Coupon';
 import { Switch } from '@/components/ui/switch';
-import { cn, getStudentNickname } from '@/lib/utils';
+import { cn, getStudentNickname, getRandomColor } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -58,6 +58,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { ImageCropper } from '@/components/ImageCropper';
 import { Helper } from '@/components/ui/helper';
 import { CategoryModal } from '@/components/CategoryModal';
 import { ThemeGeneratorModal } from '@/components/ThemeGeneratorModal';
@@ -194,6 +195,7 @@ function AdminDashboardInner() {
   const [editingPrize, setEditingPrize] = useState<Prize | null>(null);
   const [activityStudent, setActivityStudent] = useState<Student | null>(null);
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [studentSortOption, setStudentSortOption] = useState<string>('lastNameAsc');
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [studentFilterClass, setStudentFilterClass] = useState<string>('all');
@@ -217,6 +219,8 @@ function AdminDashboardInner() {
 
   const [uploadReport, setUploadReport] = useState<{ success: number, failed: number, errors: string[] } | null>(null);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
+  const [cropLogoSrc, setCropLogoSrc] = useState<string | null>(null);
+  const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
 
   const [attendanceConfig, setAttendanceConfigState] = useState<AttendanceSettings | null>(null);
   const [attendanceLog, setAttendanceLogState] = useState<AttendanceLogEntry[]>([]);
@@ -453,7 +457,7 @@ function AdminDashboardInner() {
     }
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
 
     if (!allowedTypes.includes(file.type)) {
       playSound('error');
@@ -470,11 +474,23 @@ function AdminDashboardInner() {
       toast({
         variant: 'destructive',
         title: 'File too large',
-        description: 'Logo must be under 2MB. Try compressing or resizing the image.',
+        description: 'Logo must be under 5MB. Try compressing or resizing the image.',
       });
       e.target.value = '';
       return;
     }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropLogoSrc(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input to allow same file again
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropLogoSrc(null);
+    if (!schoolId || !functions) return;
 
     try {
       setIsLogoUploading(true);
@@ -488,14 +504,14 @@ function AdminDashboardInner() {
           resolve(base64 || '');
         };
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(croppedBlob);
       });
 
       const uploadLogo = httpsCallable<{ schoolId: string; imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadSchoolLogo');
       const res = await uploadLogo({
         schoolId,
         imageBase64,
-        contentType: file.type,
+        contentType: croppedBlob.type || 'image/jpeg',
       });
 
       const data = res.data;
@@ -525,7 +541,7 @@ function AdminDashboardInner() {
       } else if (code === 'functions/permission-denied') {
         description = 'You need admin access to update the school logo.';
       } else if (code === 'functions/invalid-argument') {
-        description = message || 'Invalid image. Use PNG, JPG, or WebP under 2MB.';
+        description = message || 'Invalid image. Use PNG, JPG, or WebP under 5MB.';
       } else if (!message || message === 'undefined') {
         description = 'Could not save the logo. Try again or use a smaller image.';
       }
@@ -536,7 +552,23 @@ function AdminDashboardInner() {
       });
     } finally {
       setIsLogoUploading(false);
-      e.target.value = '';
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!schoolId || !schoolDocRef) return;
+    try {
+      setIsLogoUploading(true);
+      await updateDoc(schoolDocRef, { logoUrl: null });
+      setLogoPreviewUrl(null);
+      playSound('success');
+      toast({ title: 'Logo removed', description: 'The school logo has been deleted.' });
+    } catch (err: any) {
+      console.error('Failed to remove logo', err);
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove the logo.' });
+    } finally {
+      setIsLogoUploading(false);
     }
   };
 
@@ -702,45 +734,73 @@ function AdminDashboardInner() {
                     <UploadCloud className="w-5 h-5 text-primary" /> School Logo
                   </CardTitle>
                 </Helper>
-                <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 2MB.</CardDescription>
+                <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 5MB.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="flex flex-col items-center gap-1">
-                  <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-lg shadow-primary/30">
-                    {(logoPreviewUrl ?? schoolData?.logoUrl) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                    ) : (
-                      <span>No logo</span>
+                  <div className="relative group">
+                    <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-lg shadow-primary/30">
+                      {(logoPreviewUrl ?? schoolData?.logoUrl) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                      ) : (
+                        <span>No logo</span>
+                      )}
+                    </div>
+                    {(logoPreviewUrl ?? schoolData?.logoUrl) && (
+                      <button
+                        onClick={handleRemoveLogo}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove logo"
+                        disabled={isLogoUploading}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
                   <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current</span>
                   <div className="mt-2 flex flex-col items-center gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Previous (click to use)</span>
                     {previousSchoolLogos.length >= 1 ? (
-                      <div className="flex flex-wrap justify-center gap-2 max-w-[240px]">
-                        {previousSchoolLogos.map((url, idx) => (
-                          <button
-                            key={`${url}-${idx}`}
-                            type="button"
-                            onClick={async () => {
-                              if (!schoolDocRef) return;
-                              try {
-                                await updateDoc(schoolDocRef, { logoUrl: url });
-                                setLogoPreviewUrl(url ?? null);
-                                playSound('success');
-                                toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
-                              } catch (e) {
-                                toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
-                              }
-                            }}
-                            className="h-10 w-10 rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors bg-muted/60 flex-shrink-0"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="Previous logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <Button variant="link" size="sm" className="text-[11px] h-auto p-0 text-muted-foreground" onClick={() => setIsPreviousLogosOpen(true)}>
+                          View previous logos
+                        </Button>
+                        <Dialog open={isPreviousLogosOpen} onOpenChange={setIsPreviousLogosOpen}>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Previous School Logos</DialogTitle>
+                              <DialogDescription>Select a previous logo to restore it.</DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-wrap justify-center gap-4 py-4 max-h-[400px] overflow-y-auto">
+                              {previousSchoolLogos.map((url, idx) => (
+                                <button
+                                  key={`${url}-${idx}`}
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!schoolDocRef) return;
+                                    try {
+                                      await updateDoc(schoolDocRef, { logoUrl: url });
+                                      setLogoPreviewUrl(url ?? null);
+                                      playSound('success');
+                                      toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
+                                      setIsPreviousLogosOpen(false);
+                                    } catch (e) {
+                                      toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
+                                    }
+                                  }}
+                                  className="h-24 w-24 rounded-2xl overflow-hidden border-2 border-border hover:border-primary transition-all bg-muted/60 flex-shrink-0"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={url} alt="Previous logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                                </button>
+                              ))}
+                            </div>
+                            <DialogFooter>
+                              <Button variant="secondary" onClick={() => setIsPreviousLogosOpen(false)}>Close</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </>
                     ) : (
                       <p className="text-[11px] text-muted-foreground text-center max-w-[200px]">Previous logos will appear here after you upload new ones.</p>
                     )}
@@ -1058,7 +1118,24 @@ function AdminDashboardInner() {
                   </Helper>
                   <CardDescription>Define categories and point values for coupons.</CardDescription>
                 </div>
-                <Button onClick={() => handleOpenCategoryModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Category</Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="rounded-xl" onClick={async () => {
+                    if (!confirm("This will assign a random color to all existing categories. Continue?")) return;
+                    try {
+                      let count = 0;
+                      for (const c of categories || []) {
+                        await updateCategory({ ...c, color: getRandomColor() });
+                        count++;
+                      }
+                      toast({ title: "Colors Randomized", description: `Updated ${count} categories.` });
+                    } catch(e) {
+                      toast({ variant: "destructive", title: "Failed to randomize colors" });
+                    }
+                  }}>
+                    <Palette className="mr-2 h-4 w-4" /> Randomize Colors
+                  </Button>
+                  <Button onClick={() => handleOpenCategoryModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Category</Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
@@ -1068,7 +1145,12 @@ function AdminDashboardInner() {
                         <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.color || '#cccccc' }} />
                         <div>
                           <p className="font-bold">{c.name}</p>
-                          <p className="text-xs text-muted-foreground">{c.points} pts</p>
+                          <p className="text-xs text-muted-foreground">
+                              {c.points} pts
+                              <span className="ml-2 font-medium">
+                                  • Added by {c.teacherId ? (teachers?.find(t => t.id === c.teacherId)?.name || 'Unknown Teacher') : 'Admin'}
+                              </span>
+                          </p>
                         </div>
                       </div>
                       <div className="flex gap-1">
@@ -1101,10 +1183,19 @@ function AdminDashboardInner() {
                   <Button
                     onClick={() => {
                       const filtered = students?.filter(s => {
-                        const matchesSearch = `${s.firstName} ${s.lastName}`.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                        const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
+                        const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                           (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                         const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
                         return matchesSearch && matchesClass;
+                      }).sort((a, b) => {
+                        if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
+                        if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
+                        if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
+                        if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
+                        if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
+                        if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
+                        return 0;
                       }) || [];
 
                       if (selectionMode && selectedStudentIds.size > 0) {
@@ -1135,10 +1226,23 @@ function AdminDashboardInner() {
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <div className="relative flex-grow">
-                    <Input placeholder="Search students by name or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
+                    <Input placeholder="Search by name, nickname, or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
                     <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
                   </div>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center flex-wrap">
+                    <Select value={studentSortOption} onValueChange={setStudentSortOption}>
+                      <SelectTrigger className="w-[180px] rounded-xl h-11">
+                        <SelectValue placeholder="Sort By" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lastNameAsc">Last Name (A-Z)</SelectItem>
+                        <SelectItem value="lastNameDesc">Last Name (Z-A)</SelectItem>
+                        <SelectItem value="firstNameAsc">First Name (A-Z)</SelectItem>
+                        <SelectItem value="firstNameDesc">First Name (Z-A)</SelectItem>
+                        <SelectItem value="pointsDesc">Points (High - Low)</SelectItem>
+                        <SelectItem value="pointsAsc">Points (Low - High)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Select value={studentFilterClass} onValueChange={setStudentFilterClass}>
                       <SelectTrigger className="w-[180px] rounded-xl h-11">
                         <SelectValue placeholder="All Classes" />
@@ -1166,12 +1270,20 @@ function AdminDashboardInner() {
                 <ScrollArea className="h-[500px]">
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
                     {students?.filter(s => {
-                      const computedName = `${s.firstName} ${s.lastName}`.toLowerCase();
+                      const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
                       const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
                         (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
                       const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
                       return matchesSearch && matchesClass;
-                    }).sort((a, b) => a.lastName.localeCompare(b.lastName)).map(s => (
+                    }).sort((a, b) => {
+                      if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
+                      if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
+                      if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
+                      if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
+                      if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
+                      if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
+                      return 0;
+                    }).map(s => (
                       <li key={s.id} className={cn(
                         "flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-background shadow-sm",
                         selectedStudentIds.has(s.id) ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20" : "bg-secondary/20 border-transparent"
@@ -1652,6 +1764,15 @@ function AdminDashboardInner() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {cropLogoSrc && (
+          <ImageCropper
+            imageSrc={cropLogoSrc}
+            aspectRatio={1}
+            onCropComplete={handleCropComplete}
+            onCancel={() => setCropLogoSrc(null)}
+          />
+        )}
 
         <StudentModal
           isOpen={isStudentModalOpen}

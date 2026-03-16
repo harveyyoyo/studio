@@ -420,48 +420,70 @@ exports.addDeveloperMe = functions.https.onCall(async (data, context) => {
 });
 /** Callable: set attendance config (allowed for school admin or developer). */
 exports.setAttendanceConfig = functions.https.onCall(async (data, context) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
-    const schoolId = String(data.schoolId).trim().toLowerCase();
-    const db = admin.firestore();
-    let allowed = false;
+    var _a;
     try {
-        await requireSchoolAdmin(schoolId, context);
-        allowed = true;
-    }
-    catch (_a) {
-        if (await isDeveloper(context))
+        requireAuth(context);
+        requireString(data.schoolId, "schoolId");
+        const schoolId = String(data.schoolId).trim().toLowerCase();
+        const db = admin.firestore();
+        let allowed = false;
+        try {
+            await requireSchoolAdmin(schoolId, context);
             allowed = true;
+        }
+        catch (_b) {
+            if (await isDeveloper(context))
+                allowed = true;
+        }
+        if (!allowed) {
+            throw new functions.https.HttpsError("permission-denied", "Admin privileges for this school or developer access required.");
+        }
+        const config = data.config;
+        if (!config || typeof config !== "object") {
+            throw new functions.https.HttpsError("invalid-argument", "config object is required.");
+        }
+        // Sanitize schedule so Firestore never gets undefined (causes internal error)
+        const schedule = Array.isArray(config.schedule)
+            ? config.schedule.map((s) => {
+                var _a, _b, _c, _d;
+                return ({
+                    id: String((_a = s === null || s === void 0 ? void 0 : s.id) !== null && _a !== void 0 ? _a : ""),
+                    label: String((_b = s === null || s === void 0 ? void 0 : s.label) !== null && _b !== void 0 ? _b : ""),
+                    startTime: String((_c = s === null || s === void 0 ? void 0 : s.startTime) !== null && _c !== void 0 ? _c : "08:00"),
+                    endTime: String((_d = s === null || s === void 0 ? void 0 : s.endTime) !== null && _d !== void 0 ? _d : "08:45"),
+                });
+            })
+            : [];
+        const payload = {
+            pointsForSignIn: typeof config.pointsForSignIn === "number" ? config.pointsForSignIn : 0,
+            pointsForOnTime: typeof config.pointsForOnTime === "number" ? config.pointsForOnTime : 0,
+            onTimeWindowMinutes: typeof config.onTimeWindowMinutes === "number" ? config.onTimeWindowMinutes : 15,
+            schedule,
+        };
+        if (Array.isArray(config.enabledClassIds) && config.enabledClassIds.length > 0) {
+            payload.enabledClassIds = config.enabledClassIds;
+        }
+        if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
+            payload.categoryId = config.categoryId;
+        }
+        const configRef = db.collection("schools").doc(schoolId).collection("attendance").doc("config");
+        await configRef.set(payload);
+        return { success: true };
     }
-    if (!allowed) {
-        throw new functions.https.HttpsError("permission-denied", "Admin privileges for this school or developer access required.");
+    catch (err) {
+        if ((err === null || err === void 0 ? void 0 : err.code) && err.code.startsWith("functions/")) {
+            throw err;
+        }
+        functions.logger.warn("setAttendanceConfig error", err);
+        throw new functions.https.HttpsError("internal", (_a = err === null || err === void 0 ? void 0 : err.message) !== null && _a !== void 0 ? _a : "Failed to save attendance settings.");
     }
-    const config = data.config;
-    if (!config || typeof config !== "object") {
-        throw new functions.https.HttpsError("invalid-argument", "config object is required.");
-    }
-    const payload = {
-        pointsForSignIn: typeof config.pointsForSignIn === "number" ? config.pointsForSignIn : 0,
-        pointsForOnTime: typeof config.pointsForOnTime === "number" ? config.pointsForOnTime : 0,
-        onTimeWindowMinutes: typeof config.onTimeWindowMinutes === "number" ? config.onTimeWindowMinutes : 15,
-        schedule: Array.isArray(config.schedule) ? config.schedule : [],
-    };
-    if (Array.isArray(config.enabledClassIds) && config.enabledClassIds.length > 0) {
-        payload.enabledClassIds = config.enabledClassIds;
-    }
-    if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
-        payload.categoryId = config.categoryId;
-    }
-    const configRef = db.collection("schools").doc(schoolId).collection("attendance").doc("config");
-    await configRef.set(payload);
-    return { success: true };
 });
 // ========================================================================
 // Callable: Upload school logo (server-side to avoid client Storage hangs)
 // ========================================================================
-const LOGO_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+const LOGO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-const STUDENT_PHOTO_MAX_BYTES = 2 * 1024 * 1024; // 2MB
+const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
     try {
@@ -484,10 +506,11 @@ exports.uploadSchoolLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
         }
         const bucket = admin.storage().bucket();
-        const path = `school-logos/${schoolId}`;
+        const timestamp = Date.now();
+        const path = `school-logos/${schoolId}-${timestamp}`;
         const file = bucket.file(path);
         const downloadToken = crypto.randomUUID();
         await file.save(buffer, {
@@ -549,10 +572,11 @@ exports.uploadAppLogo = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > LOGO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
         }
         const bucket = admin.storage().bucket();
-        const path = `app-branding/app-logo`;
+        const timestamp = Date.now();
+        const path = `app-branding/app-logo-${timestamp}`;
         const file = bucket.file(path);
         const downloadToken = crypto.randomUUID();
         await file.save(buffer, {
@@ -643,7 +667,7 @@ exports.uploadStudentPhoto = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > STUDENT_PHOTO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 2MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
         }
         const bucket = admin.storage().bucket();
         const path = `student-photos/${schoolId}/${studentId}`;

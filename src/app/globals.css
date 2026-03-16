@@ -64,6 +64,19 @@
   body {
     @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
   }
+  
+  .coupon-preview-container {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .coupon-preview-container .coupon-scalable {
+    font-size: 10.526cqi;
+  }
+
+  .print-coupon-wrapper .coupon-scalable {
+    font-size: 24px;
+  }
 }
 
 /* Color Schemes for both Light & Dark Mode */
@@ -122,7 +135,7 @@
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.5in;
+    margin: 0;
   }
 
   body,
@@ -148,8 +161,9 @@
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(8, 1fr);
     gap: 0;
-    width: 7.5in;
-    height: 10in;
+    width: 8.5in;
+    height: 11in;
+    padding: 0.5in;
     box-sizing: border-box;
     page-break-after: always;
     position: absolute;
@@ -157,78 +171,63 @@
     left: 0;
   }
 
-  .print-coupon {
-    border: 1px dotted #999;
-    padding: 0.05in;
-    text-align: center;
+  .print-coupon-wrapper {
     height: 1.25in;
     width: 2.5in;
     page-break-inside: avoid;
     box-sizing: border-box;
-    font-family: 'Ubuntu', sans-serif;
-    background: #fff !important;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-  }
-
-  .print-coupon-header {
-    font-size: 6pt;
-    font-weight: bold;
-    color: #333;
-    text-transform: uppercase;
-  }
-
-  .print-coupon-main {
-    width: 100%;
+    padding: 0.04in;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.1in;
-    border-top: 1px solid #eee;
-    border-bottom: 1px solid #eee;
-    padding: 0.02in 0;
   }
 
-  .print-coupon-value {
-    font-size: 22pt;
-    font-weight: 900;
-    line-height: 1;
-    font-family: 'Ubuntu', sans-serif;
-    color: #000;
+  #student-id-print-wrapper {
+    width: 100%;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
   }
 
-  .print-coupon-details {
-    text-align: left;
-    flex-grow: 1;
-    font-size: 7pt;
-  }
-
-  .print-coupon-barcode .font-barcode {
-    font-size: 38pt;
-    line-height: 1;
-    color: #000 !important;
-  }
-
-  #student-id-print-container {
+  .student-id-print-page {
     display: grid !important;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    width: 7.5in;
-    height: 10in;
-    position: absolute;
-    top: 0;
-    left: 0;
+    grid-template-columns: repeat(2, 3.33in) !important;
+    grid-template-rows: repeat(4, 2.33in) !important;
+    column-gap: 0.16in !important;
+    row-gap: 0 !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    padding: 0.63in 0.6in !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    justify-content: center !important;
+    align-content: center !important;
+    place-items: center !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  
+  .student-id-print-page:last-child {
+    page-break-after: auto;
   }
 
   .print-id-card {
-    border: 1px dotted #999;
-    padding: 0.12in 0.14in;
-    text-align: center;
-    height: 2in;
-    width: 3.75in;
+    /* 
+     * Target: Avery 25395 Name Badge Labels
+     * Label dimensions: 3.33" x 2.33"
+     * Grid gap: 0.16" horiz, 0" vert 
+     * Card dimensions: locked exactly to CC size to prevent internal DOM stretching breaks.
+     */
+    border: none !important;
+    padding: 0.12in 0.14in !important;
+    text-align: center !important;
+    width: 3.38in !important;
+    min-width: 3.38in !important;
+    max-width: 3.38in !important;
+    height: 2.18in !important;
+    min-height: 2.18in !important;
+    max-height: 2.18in !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid;
     font-family: 'Ubuntu', sans-serif;
     background: #fff;
@@ -236,22 +235,28 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    border-radius: 0.08in;
-    box-shadow: 0 0 0 0.03in rgba(0,0,0,0.03);
+    position: relative;
+    border-radius: 0.1in; 
+    overflow: hidden !important;
+  }
+
+  .print-id-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+    padding-bottom: 0.04in;
+    margin-bottom: 0.04in;
   }
 
   .print-id-app {
     display: flex;
     align-items: center;
     gap: 0.06in;
-    padding-bottom: 0.04in;
-    margin-bottom: 0.02in;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    min-height: 0.22in;
   }
   .print-id-app-logo {
-    width: 0.2in;
-    height: 0.2in;
+    width: 0.25in;
+    height: 0.25in;
     border-radius: 0.02in;
     overflow: hidden;
     flex-shrink: 0;
@@ -266,8 +271,6 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    flex: 1;
-    min-width: 0;
     text-align: left;
   }
   .print-id-app-name {
@@ -282,24 +285,16 @@
     opacity: 0.85;
     line-height: 1.2;
   }
-  .print-id-theme-emoji {
-    font-size: 0.18in;
-    line-height: 1;
-    flex-shrink: 0;
-  }
   .print-id-school {
     display: flex;
     align-items: center;
-    gap: 0.1in;
-    margin-bottom: 0.04in;
-    min-height: 0.4in;
-    flex-shrink: 0;
-    background: inherit; /* solid so barcode strip white doesn't show through behind school name */
+    gap: 0.06in;
+    text-align: right;
   }
   .print-id-school-logo {
-    width: 0.4in;
-    height: 0.4in;
-    border-radius: 0.04in;
+    width: 0.25in;
+    height: 0.25in;
+    border-radius: 0.02in;
     overflow: hidden;
     flex-shrink: 0;
     background: #f3f4f6;
@@ -311,36 +306,26 @@
     display: block;
   }
   .print-id-header {
-    font-size: 11pt;
+    font-size: 8pt;
     font-weight: 800;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     font-family: 'Ubuntu', sans-serif;
-    flex: 1;
-    min-width: 0;
   }
-
-  .print-id-name {
-    font-size: 14pt;
-    font-weight: bold;
-    font-family: 'Ubuntu', sans-serif;
-    margin: 0.06in 0 0.02in;
-  }
-
-  .print-id-class {
-    font-size: 9pt;
-    color: #555;
-    font-weight: 600;
-    margin-bottom: 0.08in;
-  }
-
+  
   .print-id-main {
     flex: 1;
-    min-height: 0.56in; /* reserve space so barcode strip stays below "Class: ..." and never overlaps */
-    background: inherit;
     display: flex;
     align-items: center;
     gap: 0.12in;
-    padding: 0.04in 0.02in 0.06in;
+    padding: 0.04in 0;
+  }
+
+  .print-id-theme-emoji-center {
+    font-size: 36pt;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0.85;
   }
 
   .print-id-avatar {
@@ -369,12 +354,14 @@
     display: flex;
     flex-direction: column;
     gap: 0.02in;
+    text-align: left;
   }
 
   .print-id-name {
     font-weight: 800;
     font-size: 12pt;
     letter-spacing: 0.03em;
+    white-space: nowrap;
   }
 
   .print-id-class {
@@ -383,7 +370,7 @@
     font-weight: 600;
   }
 
-  .print-id-meta {
+  .print-id-number {
     font-size: 8pt;
     color: #6b7280;
     font-weight: 600;
@@ -391,27 +378,28 @@
     text-transform: uppercase;
   }
 
-  /* Barcode zone: barcode sits comfortably between border and card edge */
   .print-id-barcode-container {
     width: 100%;
     flex-shrink: 0;
-    margin-top: 0.04in;
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: 0.34in;
-    padding-top: 0.06in;
-    padding-bottom: 0.10in;
-    border-top: 1px solid #e5e7eb;
+    align-items: flex-start;
+    border-top: none;
     background: #ffffff !important;
     color: #000000 !important;
+    padding-top: 0.12in;
+    padding-bottom: 0.06in;
+    border-radius: 0.06in;
+    margin-top: 0.04in;
   }
 
   .print-id-card .print-id-barcode-container .font-barcode,
   .print-id-card .font-barcode {
     font-size: 26pt;
-    line-height: 1;
+    line-height: 0.7;
     color: #000000 !important;
+    transform: scaleY(1.5);
+    transform-origin: top;
   }
 }
 

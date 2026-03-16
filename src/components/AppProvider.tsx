@@ -47,9 +47,10 @@ interface AppContextType {
   isTeacher: boolean;
   userName: string | null;
   userId: string | null;
+  teacherDocId: string | null;
   schoolId: string | null;
   syncStatus: 'synced' | 'syncing' | 'offline' | 'error';
-  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string }) => Promise<boolean>;
+  login: (type: 'school' | 'developer' | 'student' | 'teacher' | 'admin', credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string }) => Promise<boolean>;
   logout: () => void;
   setUserName: (name: string | null) => void;
   isKioskLocked: boolean;
@@ -66,7 +67,7 @@ interface AppContextType {
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: { name: string; points: number; color?: string; }) => Promise<Category | undefined>;
+  addCategory: (category: { name: string; points: number; color?: string; teacherId?: string }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
@@ -179,7 +180,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbDeleteTeacher(firestore, schoolId, id);
   }, [firestore, schoolId]);
 
-  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string }) => {
+  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string; teacherId?: string }) => {
     if (!firestore || !schoolId) return undefined;
     return dbAddCategory(firestore, schoolId, data);
   }, [firestore, schoolId]);

@@ -44,7 +44,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     }, [couponsToPrint, playSound]);
 
     const studentPrintTriggered = useRef(false);
-    useEffect(() => {
+    const triggerStudentPrint = React.useCallback(() => {
         if (printData && printData.students.length > 0 && !studentPrintTriggered.current) {
             studentPrintTriggered.current = true;
             const afterPrint = () => {
@@ -67,7 +67,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         <PrintContext.Provider value={value}>
             {children}
             {couponsToPrint.length > 0 && <PrintSheet coupons={couponsToPrint} schoolId={schoolId} />}
-            {printData && printData.students.length > 0 && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} />}
+            {printData && printData.students.length > 0 && <StudentIdPrintSheet students={printData.students} classes={printData.classes} schoolId={schoolId} onReady={triggerStudentPrint} />}
         </PrintContext.Provider>
     );
 }

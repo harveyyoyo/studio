@@ -28,7 +28,8 @@ import { Checkbox } from './ui/checkbox';
 import { getStudentNickname } from '@/lib/utils';
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from './ThemeGeneratorModal';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Trash2 } from 'lucide-react';
+import { ImageCropper } from './ImageCropper';
 
 interface StudentModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [theme, setTheme] = useState<StudentTheme | undefined>(undefined);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -103,7 +105,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     }
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const maxSizeBytes = 2 * 1024 * 1024;
+    const maxSizeBytes = 5 * 1024 * 1024;
     if (!allowedTypes.includes(file.type)) {
       playSound('error');
       toast({ variant: 'destructive', title: 'Unsupported file type', description: 'Use PNG, JPG, or WebP.' });
@@ -112,10 +114,22 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     }
     if (file.size > maxSizeBytes) {
       playSound('error');
-      toast({ variant: 'destructive', title: 'File too large', description: 'Photo must be under 2MB.' });
+      toast({ variant: 'destructive', title: 'File too large', description: 'Photo must be under 5MB.' });
       e.target.value = '';
       return;
     }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // reset the input so same file can be selected again
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setCropImageSrc(null);
+    if (!student?.id || !schoolId || !functions) return;
 
     try {
       setIsPhotoUploading(true);
@@ -127,7 +141,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           resolve(base64 || '');
         };
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(croppedBlob);
       });
 
       const uploadStudentPhoto = httpsCallable<
@@ -139,7 +153,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         schoolId,
         studentId: student.id,
         imageBase64,
-        contentType: file.type,
+        contentType: croppedBlob.type || 'image/jpeg',
       });
 
       if (!res.data?.photoUrl) throw new Error('No photo URL returned');
@@ -156,7 +170,22 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
       });
     } finally {
       setIsPhotoUploading(false);
-      e.target.value = '';
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!student?.id || !schoolId || !functions) return;
+    try {
+      setIsPhotoUploading(true);
+      await updateStudent({ ...student, photoUrl: '' });
+      playSound('success');
+      toast({ title: 'Profile photo removed' });
+    } catch (err: any) {
+      console.error('Failed to remove photo', err);
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not remove the photo.' });
+    } finally {
+      setIsPhotoUploading(false);
     }
   };
 
@@ -231,8 +260,9 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
         </DialogHeader>
@@ -241,12 +271,25 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
             <div className="space-y-2">
               <Label>Profile Photo</Label>
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
-                  {student?.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={student.photoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                  ) : (
-                    <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
+                <div className="relative group">
+                  <div className="h-12 w-12 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+                    {student?.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={student.photoUrl} alt="Student profile" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+                    ) : (
+                      <span>{(firstName[0] || '')}{(lastName[0] || '')}</span>
+                    )}
+                  </div>
+                  {student?.photoUrl && (
+                    <button
+                      onClick={handleRemovePhoto}
+                      className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove photo"
+                      disabled={isPhotoUploading}
+                      type="button"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   )}
                 </div>
                 <div className="flex-1">
@@ -256,7 +299,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
                     onChange={handlePhotoUpload}
                     disabled={isPhotoUploading}
                   />
-                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP under 2MB.</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">PNG/JPG/WebP under 5MB.</p>
                 </div>
               </div>
             </div>
@@ -367,5 +410,14 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         />
       )}
     </Dialog>
+      {cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc!}
+          aspectRatio={1}
+          onCropComplete={handleCropComplete}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
+    </>
   );
 }

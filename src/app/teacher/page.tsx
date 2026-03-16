@@ -456,7 +456,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             });
             return;
         }
-        const newCategory = await addCategory({ name: newPrintCategoryName, points });
+        const newCategory = await addCategory({ name: newPrintCategoryName, points, teacherId: currentTeacher?.id });
         if (newCategory) {
             setPrintCategoryId(newCategory.id);
         }
@@ -635,6 +635,10 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         expiresAt: computeExpiresAt(),
     };
 
+    const filteredCategories = useMemo(() => {
+        return categories?.filter(c => !c.teacherId || (currentTeacher && c.teacherId === currentTeacher.id)) || [];
+    }, [categories, currentTeacher]);
+
     const filteredStudents = (students || []).filter(s => {
         const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
         const nameMatch = computedName.includes(studentSearch.toLowerCase());
@@ -744,7 +748,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                                             <SelectValue placeholder="Select..." />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {categories?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                                            {filteredCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
                                                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
@@ -804,7 +808,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                         <div className="flex flex-col items-center pt-8 border-t border-dashed border-border/50">
                                             <p className="text-[10px] font-black uppercase tracking-widest mb-4 opacity-40">Sheet Preview (scaled)</p>
                                             <div className="w-full max-w-[260px] rounded-2xl border border-border/40 bg-slate-100/80 shadow-xl p-3 flex items-center justify-center">
-                                                <div className="origin-top-left scale-75">
+                                                <div className="w-full coupon-preview-container">
                                                     <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
                                                 </div>
                                             </div>
@@ -1011,7 +1015,7 @@ function TeacherPrinter(props: { teacherName: string, teacherId: string, onLogou
 
 
 export default function TeacherPage() {
-    const { loginState, isInitialized, schoolId, login, logout, isAdmin, isTeacher, userName, userId } = useAppContext();
+    const { loginState, isInitialized, schoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
     const router = useRouter();
     const firestore = useFirestore();
     const { settings } = useSettings();
@@ -1045,7 +1049,8 @@ export default function TeacherPage() {
             schoolId: schoolId || undefined,
             username: selectedLoginName,
             passcode,
-            teacherName: teacher?.name
+            teacherName: teacher?.name,
+            teacherDocId: teacher?.id
         });
         if (success) {
             playSound('login');
@@ -1075,7 +1080,8 @@ export default function TeacherPage() {
 
     if (loginState === 'teacher' || loginState === 'admin' || loginState === 'developer') {
         const displayName = userName || (loginState === 'admin' || loginState === 'developer' ? 'Admin' : 'Teacher');
-        return <TeacherPrinter teacherName={displayName} teacherId={userId || ''} onLogout={handleLogout} />;
+        const validTeacherId = teacherDocId || userId || '';
+        return <TeacherPrinter teacherName={displayName} teacherId={validTeacherId} onLogout={handleLogout} />;
     }
 
     return (

@@ -25,11 +25,12 @@ interface AuthContextType {
     isTeacher: boolean;
     userName: string | null;
     userId: string | null;
+    teacherDocId: string | null;
     schoolId: string | null;
     syncStatus: SyncStatus;
     login: (
         type: LoginState,
-        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; }
+        credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; }
     ) => Promise<boolean>;
     logout: () => void;
     setUserName: (name: string | null) => void;
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isTeacher, setIsTeacher] = useState(false);
     const [userName, setUserName] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
+    const [teacherDocId, setTeacherDocId] = useState<string | null>(null);
 
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
@@ -71,12 +73,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
             const savedName = localStorage.getItem('userName');
+            const savedTeacherDocId = localStorage.getItem('teacherDocId');
 
             console.log("AuthProvider: LocalStorage State", { savedState, savedSchoolId, savedName });
 
             if (savedState && savedSchoolId) {
                 setSchoolId(savedSchoolId);
                 setUserName(savedName);
+                if (savedTeacherDocId) setTeacherDocId(savedTeacherDocId);
                 if (auth.currentUser) {
                     setUserId(auth.currentUser.uid);
                     console.log("AuthProvider: User ID set from current user", auth.currentUser.uid);
@@ -193,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(
         async (
             type: LoginState,
-            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; }
+            credentials: { schoolId?: string; passcode?: string; username?: string; teacherName?: string; teacherDocId?: string; }
         ): Promise<boolean> => {
             if (type === 'developer') {
                 try {
@@ -311,6 +315,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const name = credentials.teacherName || credentials.username || 'Teacher';
                     setUserName(name);
                     setUserId(auth.currentUser.uid);
+                    if (credentials.teacherDocId) {
+                        setTeacherDocId(credentials.teacherDocId);
+                        localStorage.setItem('teacherDocId', credentials.teacherDocId);
+                    }
                     localStorage.setItem('loginState', 'teacher');
                     localStorage.setItem('schoolId', lowerSchoolId);
                     localStorage.setItem('userName', name);
@@ -330,7 +338,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsTeacher(false);
         setIsKioskLocked(false);
         setUserName(null);
+        setTeacherDocId(null);
         localStorage.removeItem('userName');
+        localStorage.removeItem('teacherDocId');
 
         if (loginState === 'admin' || loginState === 'teacher') {
             localStorage.setItem('loginState', 'student');
@@ -354,6 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             isTeacher,
             userName,
             userId,
+            teacherDocId,
             schoolId,
             syncStatus,
             isKioskLocked,
@@ -362,7 +373,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logout,
             setUserName
         }),
-        [isInitialized, isUserLoading, loginState, isAdmin, isTeacher, userName, userId, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout, setUserName]
+        [isInitialized, isUserLoading, loginState, isAdmin, isTeacher, userName, userId, teacherDocId, schoolId, syncStatus, isKioskLocked, setIsKioskLocked, login, logout, setUserName]
     );
 
     if (!isMounted) {

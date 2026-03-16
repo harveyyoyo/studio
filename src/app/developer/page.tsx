@@ -280,7 +280,7 @@ export default function DeveloperPage() {
     }
 
     const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
 
     if (!allowedTypes.includes(file.type)) {
       playSound('error');
@@ -297,7 +297,7 @@ export default function DeveloperPage() {
       toast({
         variant: 'destructive',
         title: 'File too large',
-        description: 'Logo must be under 2MB.',
+        description: 'Logo must be under 5MB.',
       });
       e.target.value = '';
       return;
@@ -352,7 +352,7 @@ export default function DeveloperPage() {
       } else if (code === 'functions/permission-denied') {
         description = 'You need developer access to update the app logo.';
       } else if (code === 'functions/invalid-argument') {
-        description = message || 'Invalid image. Use PNG, JPG, or WebP under 2MB.';
+        description = message || 'Invalid image. Use PNG, JPG, or WebP under 5MB.';
       } else if (!message || message === 'undefined') {
         description = 'Could not save the logo. Try again or use a smaller image.';
       }

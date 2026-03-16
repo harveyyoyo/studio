@@ -17,6 +17,7 @@ import {
 import type { Student, Class, Teacher, Category, Prize, Coupon, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { getRandomColor } from './utils';
 
 // Helper function to remove undefined values from an object
 const removeUndefined = (obj: any) => {
@@ -341,9 +342,9 @@ export const deleteTeacher = async (firestore: Firestore, schoolId: string, teac
 };
 
 // --- Category Mutations ---
-export const addCategory = async (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number; color?: string }): Promise<Category> => {
+export const addCategory = async (firestore: Firestore, schoolId: string, categoryData: { name: string; points: number; color?: string; teacherId?: string }): Promise<Category> => {
   const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-  const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || '#cccccc' };
+  const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || getRandomColor() };
   const categoryDocRef = doc(firestore, 'schools', schoolId, 'categories', newCategory.id);
   try {
     await setDoc(categoryDocRef, removeUndefined(newCategory));

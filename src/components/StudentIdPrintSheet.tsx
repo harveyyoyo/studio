@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
 import { useSettings } from './providers/SettingsProvider';
@@ -12,15 +12,26 @@ interface StudentIdPrintSheetProps {
   students: Student[];
   classes: Class[];
   schoolId: string | null;
+  onReady: () => void;
 }
 
-export function StudentIdPrintSheet({ students, classes, schoolId }: StudentIdPrintSheetProps) {
+export function StudentIdPrintSheet({ students, classes, schoolId, onReady }: StudentIdPrintSheetProps) {
   const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
   const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
-  const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
-  const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+  const { data: appConfig, isLoading: isAppConfigLoading } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
+  const { data: schoolData, isLoading: isSchoolLoading } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+
+  // Trigger print dialog only after the async configurations have finished loading
+  useEffect(() => {
+    if (!isAppConfigLoading && !isSchoolLoading) {
+      const t = setTimeout(() => {
+        onReady();
+      }, 100); // Give the DOM a tiny slice of time to render the fetched names/logos
+      return () => clearTimeout(t);
+    }
+  }, [isAppConfigLoading, isSchoolLoading, onReady]);
 
   const classMap = useMemo(() => {
     if (!classes) return new Map<string, string>();
@@ -42,20 +53,33 @@ export function StudentIdPrintSheet({ students, classes, schoolId }: StudentIdPr
     return null;
   }
 
+  // Chunk students into groups of 8 (since Avery 25395 has 8 labels per page)
+  const studentChunks = useMemo(() => {
+    const chunks = [];
+    for (let i = 0; i < students.length; i += 8) {
+      chunks.push(students.slice(i, i + 8));
+    }
+    return chunks;
+  }, [students]);
+
   return (
-    <div id="student-id-print-container">
-      {students.map((s) => (
-        <StudentIdCard
-          key={s.id}
-          student={s}
-          schoolName={schoolName}
-          schoolLogoUrl={schoolData?.logoUrl ?? null}
-          className={getClassName(s.classId || '')}
-          isColorEnabled={settings.enableColorPrinting}
-          appLogoUrl={appLogoUrl}
-          appName={appName}
-          appTagline={appTagline}
-        />
+    <div id="student-id-print-wrapper">
+      {studentChunks.map((chunk, pageIndex) => (
+        <div key={pageIndex} className="student-id-print-page">
+          {chunk.map((s) => (
+            <StudentIdCard
+              key={s.id}
+              student={s}
+              schoolName={schoolName}
+              schoolLogoUrl={schoolData?.logoUrl ?? null}
+              className={getClassName(s.classId || '')}
+              isColorEnabled={settings.enableColorPrinting}
+              appLogoUrl={appLogoUrl}
+              appName={appName}
+              appTagline={appTagline}
+            />
+          ))}
+        </div>
       ))}
     </div>
   );
