@@ -1,11 +1,13 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useSettings } from './providers/SettingsProvider';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppContext } from './AppProvider';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const steps = [
   {
@@ -78,52 +80,67 @@ export function IntroWizard() {
 
   // Logic to highlight an element
   useEffect(() => {
-    let highlightedElement: HTMLElement | null = null;
-    if (currentStep?.highlightId && schoolId === 'schoolabc') {
-      // Use a timeout to ensure the element is available after navigation
+    const cleanupHighlights = () => {
+        const allWizardElements = document.querySelectorAll('[data-wizard-id]');
+        allWizardElements.forEach(el => {
+            const htmlEl = el as HTMLElement;
+            htmlEl.style.transition = 'all 0.3s ease-in-out';
+            htmlEl.style.boxShadow = '';
+            htmlEl.style.borderRadius = '';
+            htmlEl.style.zIndex = '';
+        });
+    };
+
+    cleanupHighlights();
+    
+    if (currentStep?.highlightId && schoolId === 'schoolabc' && isWizardEnabled) {
       const timer = setTimeout(() => {
-        highlightedElement = document.querySelector(`[data-wizard-id="${currentStep.highlightId}"]`);
+        const highlightedElement = document.querySelector<HTMLElement>(`[data-wizard-id="${currentStep.highlightId}"]`);
         if (highlightedElement) {
-          highlightedElement.style.transition = 'all 0.3s ease-in-out';
-          highlightedElement.style.boxShadow = '0 0 0 4px hsl(var(--primary)), 0 0 25px hsl(var(--primary) / 0.7)';
+          highlightedElement.style.boxShadow = '0 0 0 4px hsl(var(--primary)), 0 0 35px hsl(var(--primary) / 0.7)';
           highlightedElement.style.borderRadius = '1.5rem';
+          highlightedElement.style.zIndex = '150';
           highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 100); // Small delay to allow page transition
+      }, 150);
       return () => clearTimeout(timer);
     }
-    return () => {
-      // This cleanup runs when the component unmounts or the step changes
-      const allHighlighted = document.querySelectorAll('[data-wizard-id]');
-      allHighlighted.forEach(el => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.boxShadow = '';
-        htmlEl.style.borderRadius = '';
-      });
-    };
-  }, [currentStep, schoolId]);
+    return cleanupHighlights;
+  }, [currentStep, schoolId, isWizardEnabled]);
 
   if (!isWizardEnabled || !currentStep || pathname !== currentStep.target || schoolId !== 'schoolabc') {
     return null;
   }
 
   return (
-    <Dialog open={true}>
-        <DialogContent onInteractOutside={(e) => e.preventDefault()} className="sm:max-w-md z-[200]">
-            <DialogHeader>
-                <DialogTitle>{currentStep.title}</DialogTitle>
-                <DialogDescription>{currentStep.description}</DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex justify-between w-full">
-                <Button variant="ghost" onClick={handleTurnOff}>
-                    Skip Tutorial
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 50, scale: 0.9 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed bottom-6 right-6 w-full max-w-sm z-[200]"
+      >
+        <Card className="shadow-2xl border-2 border-primary/20 bg-background/80 backdrop-blur-xl">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle>{currentStep.title}</CardTitle>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={handleTurnOff}>
+                    <X className="w-4 h-4"/>
                 </Button>
-                <Button onClick={handleNext}>
+            </div>
+            <CardDescription>{currentStep.description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-end w-full">
+                <Button onClick={handleNext} className="rounded-full shadow-lg">
                     {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
                     <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </AnimatePresence>
   );
 }
