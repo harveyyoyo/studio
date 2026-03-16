@@ -113,7 +113,7 @@ function AdminDashboardSkeleton() {
 function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
-    addClass, deleteClass, deleteCategory, addCategory,
+    addClass, deleteClass, deleteCategory, addCategory, updateCategory,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, updateTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
     updateStudent,
