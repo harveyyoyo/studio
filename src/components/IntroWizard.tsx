@@ -1,70 +1,61 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useSettings } from './providers/SettingsProvider';
 import { ArrowRight, X } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAppContext } from './AppProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const steps = [
   {
     title: 'Welcome to levelUp EDU!',
-    description: 'This quick tour will walk you through the essential features of the app, from setting up your school to seeing a student\'s view.',
+    description: 'This quick tour will walk you through the essential features of the app. Click "Next" to begin.',
     target: '/portal',
-    highlightId: null,
   },
   {
     title: 'Step 1: Admin Dashboard',
-    description: 'First, click the "Admin Portal" link. This is where you\'ll manage your school\'s data, including students, classes, and prizes.',
+    description: 'Click the "Admin Portal" link to manage your school\'s data. Once you\'re there, click "Next".',
     target: '/portal',
-    highlightId: 'admin-portal-link',
   },
   {
     title: 'Step 2: Add a Class',
-    description: 'In the admin dashboard, find the "Classes" section. Click the "Add Class" button to create your first class group.',
+    description: 'You\'re in the Admin Dashboard! Find the "Classes" section and click "Add Class" to create your first class group. Then click "Next".',
     target: '/admin',
-    highlightId: 'classes-card',
   },
   {
     title: 'Step 3: Add a Teacher',
-    description: 'Great! Now, let\'s add a teacher. Find the "Teachers" section and click "Add Teacher".',
+    description: 'Great! Now, let\'s add a teacher. Find the "Teachers" section and click "Add Teacher". Then click "Next".',
     target: '/admin',
-    highlightId: 'teachers-card',
   },
   {
     title: 'Step 4: Add a Student',
-    description: 'Next, add a student. In the form, you can set their name, assign them an ID for scanning, give them starting points, and assign them to the class you just created.',
+    description: 'Add a student. You can assign them to a class and multiple teachers. Make a note of the Student ID you assign—you\'ll need it for the next step. Click "Next" when you\'re done.',
     target: '/admin',
-    highlightId: 'students-card',
   },
   {
-    title: 'Step 5: Student Sign-In',
-    description: 'Excellent! Now that you have some data set up, let\'s see what the student sees. We will now go to the Student Kiosk where they can sign in.',
-    target: '/student',
-    highlightId: null,
+    title: 'Step 5: Go to Student Kiosk',
+    description: 'Excellent! Now, click the "Home" icon to go back to the main portal page. From there, click on "Student Kiosk" to sign in as the student.',
+    target: '/admin',
   },
+  {
+    title: 'Step 6: Student Sign-In',
+    description: "You're at the student kiosk. Type in the Student ID you just created and click 'Identify Student' to see their points and redeem coupons.",
+    target: '/student',
+  }
 ];
 
 
 export function IntroWizard() {
   const { settings, updateSettings } = useSettings();
   const [stepIndex, setStepIndex] = useState(0);
-  const router = useRouter();
   const pathname = usePathname();
   const { schoolId } = useAppContext();
 
   const isWizardEnabled = settings.showIntroWizard ?? true;
   const currentStep = steps[stepIndex];
-
-  useEffect(() => {
-    if (isWizardEnabled && schoolId === 'schoolabc' && currentStep && pathname !== currentStep.target) {
-      router.push(currentStep.target);
-    }
-  }, [stepIndex, isWizardEnabled, currentStep, router, pathname, schoolId]);
-
 
   const handleNext = () => {
     if (stepIndex < steps.length - 1) {
@@ -77,36 +68,6 @@ export function IntroWizard() {
   const handleTurnOff = () => {
     updateSettings({ showIntroWizard: false });
   };
-
-  // Logic to highlight an element
-  useEffect(() => {
-    const cleanupHighlights = () => {
-        const allWizardElements = document.querySelectorAll('[data-wizard-id]');
-        allWizardElements.forEach(el => {
-            const htmlEl = el as HTMLElement;
-            htmlEl.style.transition = 'all 0.3s ease-in-out';
-            htmlEl.style.boxShadow = '';
-            htmlEl.style.borderRadius = '';
-            htmlEl.style.zIndex = '';
-        });
-    };
-
-    cleanupHighlights();
-    
-    if (currentStep?.highlightId && schoolId === 'schoolabc' && isWizardEnabled) {
-      const timer = setTimeout(() => {
-        const highlightedElement = document.querySelector<HTMLElement>(`[data-wizard-id="${currentStep.highlightId}"]`);
-        if (highlightedElement) {
-          highlightedElement.style.boxShadow = '0 0 0 4px hsl(var(--primary)), 0 0 35px hsl(var(--primary) / 0.7)';
-          highlightedElement.style.borderRadius = '1.5rem';
-          highlightedElement.style.zIndex = '150';
-          highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-    return cleanupHighlights;
-  }, [currentStep, schoolId, isWizardEnabled]);
 
   if (!isWizardEnabled || !currentStep || pathname !== currentStep.target || schoolId !== 'schoolabc') {
     return null;

@@ -106,7 +106,7 @@ export default function PortalPage() {
                     {portals.map((area, index) => {
                         const Icon = area.icon;
                         return (
-                            <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline" data-wizard-id={area.id === 'admin' ? 'admin-portal-link' : undefined}>
+                            <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
