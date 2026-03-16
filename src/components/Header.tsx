@@ -129,6 +129,18 @@ export default function Header() {
             )}
           </div>
           <div className="flex items-center justify-end gap-2">
+            {schoolId && loginState !== 'loggedOut' && (
+              <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
+                <span className="relative flex h-1.5 w-1.5">
+                  {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
+                  <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
+                </span>
+                 <span className="text-[10px] font-black uppercase tracking-tighter text-emerald-600/80">{syncStatus === 'synced' ? 'Live' : syncStatus}</span>
+              </div>
+            )}
+             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={handleLogout}>
+              <LogOut className="w-4 h-4" />
+            </Button>
             <SettingsModal />
           </div>
         </header>
@@ -198,7 +210,7 @@ export default function Header() {
               )}
               <span
                 className="text-5xl font-school font-black tracking-tight text-white whitespace-nowrap"
-                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 1px rgba(0,0,0,0.5)' }}
               >
                 {centerLabel}
               </span>

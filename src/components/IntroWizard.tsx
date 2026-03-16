@@ -50,7 +50,7 @@ const steps = [
   },
   {
     title: 'Step 7: Print Coupons',
-    description: `You are now in the Teacher Portal. Select your name, choose a category and point value, and click "Generate Sheet". A print preview will appear. Make a note of one of the coupon codes to use in the next step! Then click "Next".`,
+    description: `You are now in the Teacher Portal. Select your name, choose a category and point value, and click "Generate Sheet". A print preview will appear. You can now print them out or just make note of the number of a coupon for the next step. Then click "Next".`,
     target: '/teacher',
   },
   {
