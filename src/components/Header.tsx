@@ -124,7 +124,7 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <span className="truncate text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.7)' }}>{centerLabel}</span>
+                <span className="truncate text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5), 0 0 1px #000' }}>{centerLabel}</span>
               </Link>
             )}
           </div>
@@ -198,7 +198,7 @@ export default function Header() {
               )}
               <span
                 className="text-5xl font-school font-black tracking-tight text-white whitespace-nowrap"
-                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.7)' }}
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
               >
                 {centerLabel}
               </span>
