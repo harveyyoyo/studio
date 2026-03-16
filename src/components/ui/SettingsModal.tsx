@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { useAppContext } from '@/components/AppProvider';
 import {
@@ -437,6 +438,16 @@ export function SettingsModal() {
                                     onToggle={handleToggle}
                                     isImplemented={true}
                                     isAdmin={isAdmin}
+                                />
+                                 <FeatureRow
+                                    id="showIntroWizard"
+                                    label="Show Welcome Tour"
+                                    desc="Display the introductory guide for new users that explains the basic features."
+                                    icon={<HelpCircle className="w-5 h-5" />}
+                                    settings={settings}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    isAdmin={true}
                                 />
                             </div>
                         </div>

@@ -48,6 +48,7 @@ interface Settings {
     enableClassSignIn: boolean;
     // Guidance
     enableHelperMode: boolean;
+    showIntroWizard?: boolean;
     // Workflow
     enableTeacherBudgets: boolean;
     legacyMode: boolean;
@@ -104,6 +105,7 @@ const defaultSettings: Settings = {
     enableStudentPortal: false,
     enableClassSignIn: false,
     enableHelperMode: true,
+    showIntroWizard: true,
     enableTeacherBudgets: false,
     legacyMode: false,
     logoDisplayMode: 'contain',

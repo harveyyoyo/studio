@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState, useRef, useMemo, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
@@ -1047,7 +1048,7 @@ function AdminDashboardInner() {
           )}
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
+            <Card data-wizard-id="classes-card" className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <div>
                   <Helper content="Manage class groups for your school.">
@@ -1076,7 +1077,7 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
+            <Card data-wizard-id="teachers-card" className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <div>
                   <Helper content="Add and manage teachers who can issue coupons.">
@@ -1185,7 +1186,7 @@ function AdminDashboardInner() {
           </TabsContent>
 
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md overflow-hidden">
+            <Card data-wizard-id="students-card" className="border-t-4 border-destructive shadow-md overflow-hidden">
               <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
                 <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
                   <CardTitle className="text-2xl flex items-center gap-2">
@@ -1485,7 +1486,7 @@ function AdminDashboardInner() {
 
           {settings.enableAchievements && (
           <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
+            <Card data-wizard-id="achievements-card" className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <div>
                   <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings → Features → Recognition.">

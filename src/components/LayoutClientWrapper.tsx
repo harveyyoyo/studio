@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { IntroWizard } from './IntroWizard';
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
@@ -33,6 +34,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
                 <main id="screen-view" className={isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10"}>
                     {children}
                 </main>
+                <IntroWizard />
             </div>
             <Toaster />
         </TooltipProvider>
