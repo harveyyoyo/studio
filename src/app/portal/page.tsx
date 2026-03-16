@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -70,7 +71,7 @@ export default function PortalPage() {
     };
 
     return (
-        <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-12", settings.displayMode === 'app' && 'pb-24')}>
+        <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-8 sm:pt-12", settings.displayMode === 'app' && 'pb-24')}>
             {/* Noise overlay */}
             <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
@@ -94,7 +95,7 @@ export default function PortalPage() {
                 </>
             )}
 
-            <main className="relative z-10 w-full max-w-2xl px-6 flex flex-col justify-start">
+            <main className="relative z-10 w-full max-w-2xl px-4 sm:px-6 flex flex-col justify-start">
                 <motion.div
                     initial={{ opacity: 0, y: 48, scale: 0.92 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -130,7 +131,7 @@ export default function PortalPage() {
                                     transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
-                                    className="relative flex w-full items-center justify-between rounded-2xl border-2 border-transparent bg-card/40 backdrop-blur-sm px-8 py-5 text-left transition-all duration-300 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
+                                    className="relative flex w-full items-center justify-between rounded-2xl border-2 border-transparent bg-card/40 backdrop-blur-sm px-6 py-4 md:px-8 md:py-5 text-left transition-all duration-300 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
                                 >
                                     {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
                                     <div className={cn(
@@ -140,15 +141,15 @@ export default function PortalPage() {
                                     )} />
 
                                     {/* Left content */}
-                                    <div className="flex items-center gap-5">
+                                    <div className="flex items-center gap-4">
                                         <div className={cn(
-                                            "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 bg-card/70 border-2 border-border/50 shadow-md",
+                                            "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 bg-card/70 border-2 border-border/50 shadow-md",
                                             "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
                                         )}>
-                                            <Icon className={cn("w-7 h-7", textColorClasses[area.color])} />
+                                            <Icon className={cn("w-6 h-6 md:w-7 md:h-7", textColorClasses[area.color])} />
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-black text-card-foreground tracking-tight leading-tight">{area.title}</h3>
+                                            <h3 className="text-lg md:text-xl font-black text-card-foreground tracking-tight leading-tight">{area.title}</h3>
                                             <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
                                         </div>
                                     </div>

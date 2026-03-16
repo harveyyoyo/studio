@@ -87,7 +87,7 @@ export default function Header() {
     });
 
     const colorClasses: Record<string, string> = {
-      destructive: 'text-destructive',
+      'destructive': 'text-destructive',
       'chart-1': 'text-chart-1',
       'chart-2': 'text-chart-2',
       'chart-3': 'text-chart-3',
@@ -113,7 +113,7 @@ export default function Header() {
           </div>
           <div className="flex items-center justify-center">
             {(schoolId || loginState === 'developer') && (
-              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-3xl truncate no-underline max-w-full">
+              <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-xl truncate no-underline max-w-full">
                 {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
                   <span className="inline-flex h-8 w-8 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -124,7 +124,7 @@ export default function Header() {
                     />
                   </span>
                 )}
-                <span className="truncate text-white" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5), 0 0 1px #000' }}>{centerLabel}</span>
+                <span className="truncate text-foreground font-bold">{centerLabel}</span>
               </Link>
             )}
           </div>
@@ -163,7 +163,7 @@ export default function Header() {
       "no-print w-full z-50 transition-colors border-b border-primary/10 sticky top-0",
       "bg-background/80 backdrop-blur-xl"
     )}>
-      <div className="max-w-7xl mx-auto px-8 h-20 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 h-20 flex justify-between items-center">
         {/* Left: Branding */}
         <div className="flex items-center gap-4 shrink-0">
           <Link href={logoLink} className="flex items-center gap-4 group" data-home-button="true">
@@ -175,7 +175,7 @@ export default function Header() {
             ) : (
               <Logo className="h-10 w-auto" />
             )}
-            <div className="flex flex-col">
+            <div className="flex-col hidden sm:flex">
               <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
               <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">School Rewards System</span>
             </div>
@@ -184,7 +184,7 @@ export default function Header() {
 
         {/* Center: School Name / Developer */}
         {(schoolId || loginState === 'developer') && (
-          <Link href={centerHref} className="absolute left-1/2 -translate-x-1/2 text-center no-underline">
+          <Link href={centerHref} className="absolute left-1/2 -translate-x-1/2 text-center no-underline hidden lg:inline-flex">
             <span className="inline-flex items-center gap-3">
               {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
                 <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">

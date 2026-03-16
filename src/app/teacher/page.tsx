@@ -669,8 +669,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         <TooltipProvider>
             <div className={cn(
                 "min-h-screen transition-colors duration-500 relative overflow-hidden font-sans",
-                settings.displayMode === 'app' ? 'pb-24' : 'pb-8',
-                isGraphic ? 'bg-background' : 'bg-slate-50'
+                settings.displayMode === 'app' && 'pb-24'
             )}>
                 {/* Background Decor - Only for Graphic Mode */}
                 {isGraphic && (
@@ -683,10 +682,10 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                 )}
 
                 <div className={cn(
-                    "px-6 pt-10 pb-12 transition-colors duration-500 relative z-10",
+                    "px-4 pt-6 pb-8 md:px-6 md:pt-10 md:pb-12 transition-colors duration-500 relative z-10",
                     isGraphic ? 'bg-card/30 backdrop-blur-xl border-b border-white/5 shadow-2xl' : 'bg-white border-b'
                 )}>
-                    <div className="max-w-full mx-auto flex justify-between items-center">
+                    <div className="max-w-full mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="animate-in fade-in slide-in-from-left duration-700">
                             <h1 className={cn("text-3xl font-black tracking-tighter uppercase font-headline", isGraphic ? 'text-primary drop-shadow-sm' : 'text-slate-800')}>Teacher Portal</h1>
                             <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -716,7 +715,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                     </div>
                 </div>
 
-                <div className="max-w-full mx-auto px-6 -mt-6 relative z-10 animate-in fade-in slide-in-from-bottom duration-700 delay-150 fill-mode-both">
+                <div className="max-w-full mx-auto px-4 md:px-6 -mt-6 relative z-10 animate-in fade-in slide-in-from-bottom duration-700 delay-150 fill-mode-both">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
                         <Card className={cn(
@@ -725,7 +724,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                 ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                 : 'bg-white border-chart-1 shadow-lg'
                         )}>
-                            <CardHeader>
+                            <CardHeader className="p-4 md:p-6">
                                 <CardTitle className="flex items-center gap-3">
                                     <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-indigo-50 text-indigo-600')}>
                                         <Printer className="w-6 h-6" />
@@ -736,7 +735,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                     Generate a sheet of 24 unique QR codes for rewards.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-4 md:p-6">
                                 {isLoading ? <Skeleton className="h-48 w-full rounded-xl" /> : (
                                     <div className="space-y-6">
                                         <div className="space-y-4">
@@ -824,7 +823,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                 ? 'bg-card/60 backdrop-blur-2xl border-chart-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
                                 : 'bg-white border-chart-2 shadow-lg'
                         )}>
-                            <CardHeader>
+                            <CardHeader className="p-4 md:p-6">
                                 <CardTitle className="flex items-center gap-3">
                                     <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-rose-50 text-rose-600')}>
                                         <Award className="w-6 h-6" />
@@ -835,7 +834,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                     Select students and apply points instantly.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-4 md:p-6">
                                 <div className="space-y-5">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="relative group">
@@ -976,7 +975,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function TeacherPrinterSkeleton() {
     return (
-        <div className="max-w-full mx-auto px-6 -mt-6 animate-pulse">
+        <div className="max-w-full mx-auto px-4 md:px-6 -mt-6 animate-pulse">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="border-t-4 border-primary">
                     <CardHeader>

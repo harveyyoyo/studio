@@ -1,3 +1,4 @@
+
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +31,7 @@ import { Input } from '@/components/ui/input';
 
 function HallOfFameSkeleton() {
     return (
-        <div className="min-h-screen bg-background p-12 flex flex-col items-center">
+        <div className="min-h-screen bg-background p-4 sm:p-8 md:p-12 flex flex-col items-center">
             <Skeleton className="h-16 w-64 mb-16 rounded-2xl" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-full items-end mb-12">
                 <Skeleton className="h-64 w-full rounded-3xl" />
@@ -238,25 +239,25 @@ export default function HallOfFamePage() {
             />
 
             <main className={cn(
-                "relative z-10 w-full px-8 pt-12 transition-all duration-500",
+                "relative z-10 w-full px-4 sm:px-8 pt-8 md:pt-12 transition-all duration-500",
                 "max-w-full",
                 settings.displayMode === 'app' ? 'pb-24' : 'pb-12'
             )}>
                 <Card className="border-t-8 border-chart-5 shadow-2xl bg-card/80 backdrop-blur-md">
-                    <CardContent className="p-6 md:p-8">
+                    <CardContent className="p-4 sm:p-6 md:p-8">
                         {/* Header */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6 }}
-                            className="mb-16"
+                            className="mb-12 md:mb-16"
                         >
                             <div className="flex justify-between items-start">
                                 <div className='text-center flex-grow'>
-                                    <h2 className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
-                                        <Trophy className="w-12 h-12 text-chart-5" /> Hall of Fame
+                                    <h2 className="text-4xl sm:text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-sm mb-4 flex items-center justify-center gap-4">
+                                        <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-chart-5" /> Hall of Fame
                                     </h2>
-                                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                                    <p className="text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-[0.3em]">
                                         {getScopeName()} &bull; {getSortByLabel()}
                                     </p>
                                 </div>
@@ -332,7 +333,7 @@ export default function HallOfFamePage() {
 
                         {/* Podium */}
                         {podium.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-20">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-12 md:mb-20">
                                 {/* 2nd Place */}
                                 {podium.length > 1 && (
                                     <motion.div
@@ -341,14 +342,14 @@ export default function HallOfFamePage() {
                                         transition={{ delay: 0.4 }}
                                         className="text-center md:order-1"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-slate-200 rounded-3xl p-8 relative h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-slate-200 rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black text-xl border-4 border-background">2</div>
                                             </div>
-                                            <Avatar className="w-20 h-20 mx-auto mb-4 border-4 border-slate-100 shadow-md">
+                                            <Avatar className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 border-4 border-slate-100 shadow-md">
                                                 <AvatarFallback className="bg-secondary text-2xl font-black">{getInitials(podium[1].firstName, podium[1].lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-xl truncate tracking-tight">{getStudentNickname(podium[1])}</p>
+                                            <p className="font-black text-foreground text-lg md:text-xl truncate tracking-tight">{getStudentNickname(podium[1])}</p>
                                             <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[1]).toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
@@ -361,15 +362,15 @@ export default function HallOfFamePage() {
                                     transition={{ duration: 0.5, delay: 0.2 }}
                                     className="text-center md:order-2"
                                 >
-                                    <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-8 relative shadow-2xl h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
+                                    <div className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all hover:-translate-y-2">
                                         <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                            <Crown className="w-16 h-16 text-chart-5 animate-float drop-shadow-lg" />
+                                            <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-chart-5 animate-float drop-shadow-lg" />
                                         </div>
-                                        <Avatar className="w-28 h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl">
+                                        <Avatar className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl">
                                             <AvatarFallback className="bg-primary text-primary-foreground text-3xl font-black">{getInitials(podium[0].firstName, podium[0].lastName)}</AvatarFallback>
                                         </Avatar>
-                                        <p className="font-black text-foreground text-2xl truncate tracking-tighter">{getStudentNickname(podium[0])}</p>
-                                        <p className="text-primary font-black text-3xl mt-1 tracking-tighter">{getPointsForStudent(podium[0]).toLocaleString()} pts</p>
+                                        <p className="font-black text-foreground text-xl md:text-2xl truncate tracking-tighter">{getStudentNickname(podium[0])}</p>
+                                        <p className="text-primary font-black text-2xl md:text-3xl mt-1 tracking-tighter">{getPointsForStudent(podium[0]).toLocaleString()} pts</p>
                                     </div>
                                 </motion.div>
 
@@ -381,14 +382,14 @@ export default function HallOfFamePage() {
                                         transition={{ delay: 0.6 }}
                                         className="text-center md:order-3"
                                     >
-                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-orange-200/50 rounded-3xl p-8 relative h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                                        <div className="bg-card/40 backdrop-blur-sm border-2 border-orange-200/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
                                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-black text-xl border-4 border-background">3</div>
                                             </div>
-                                            <Avatar className="w-16 h-16 mx-auto mb-4 border-4 border-orange-50 shadow-md">
+                                            <Avatar className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 border-4 border-orange-50 shadow-md">
                                                 <AvatarFallback className="bg-orange-50 text-xl font-black">{getInitials(podium[2].firstName, podium[2].lastName)}</AvatarFallback>
                                             </Avatar>
-                                            <p className="font-black text-foreground text-lg truncate tracking-tight">{getStudentNickname(podium[2])}</p>
+                                            <p className="font-black text-foreground text-base md:text-lg truncate tracking-tight">{getStudentNickname(podium[2])}</p>
                                             <p className="text-primary font-bold text-lg mt-1">{getPointsForStudent(podium[2]).toLocaleString()} pts</p>
                                         </div>
                                     </motion.div>
@@ -400,7 +401,7 @@ export default function HallOfFamePage() {
                         {others.length > 0 && (
                             <div className={cn(
                                 "mx-auto",
-                                landscapeMode ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full" : "flex flex-col w-full max-w-2xl space-y-3"
+                                landscapeMode ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 w-full" : "flex flex-col w-full max-w-2xl space-y-3"
                             )}>
                                 {!landscapeMode && (
                                     <div className="px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between w-full">
@@ -417,11 +418,11 @@ export default function HallOfFamePage() {
                                         onMouseEnter={() => setHoveredIndex(student.id)}
                                         onMouseLeave={() => setHoveredIndex(null)}
                                         className={cn(
-                                            "group relative flex items-center justify-between bg-card/40 backdrop-blur-sm border-2 border-transparent rounded-2xl px-6 py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5",
+                                            "group relative flex items-center justify-between bg-card/40 backdrop-blur-sm border-2 border-transparent rounded-2xl px-4 py-3 md:px-6 md:py-4 transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-0.5",
                                             landscapeMode ? "w-full" : "w-full"
                                         )}
                                     >
-                                        <div className="flex items-center gap-5">
+                                        <div className="flex items-center gap-4">
                                             <span className="text-sm font-black text-muted-foreground/30 w-6">{index + podiumSize + 1}</span>
                                             <Avatar className="w-10 h-10 border-2 border-background">
                                                 <AvatarFallback className="bg-secondary text-xs font-bold">{getInitials(student.firstName, student.lastName)}</AvatarFallback>

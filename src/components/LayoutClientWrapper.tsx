@@ -7,6 +7,8 @@ import Header from "@/components/Header";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IntroWizard } from './IntroWizard';
+import { useSettings } from './providers/SettingsProvider';
+import { cn } from '@/lib/utils';
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
@@ -14,6 +16,7 @@ interface LayoutClientWrapperProps {
 
 export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
     const pathname = usePathname();
+    const { settings } = useSettings();
     const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
 
     // Unregister service workers to prevent stale cache issues
@@ -31,7 +34,10 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         <TooltipProvider>
             <div className="min-h-screen flex flex-col">
                 {!isLoginPage && <Header />}
-                <main id="screen-view" className={isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10"}>
+                <main id="screen-view" className={cn(
+                    isLoginPage ? "flex-1" : "flex-1 w-full max-w-7xl mx-auto relative z-10",
+                    settings.displayMode === 'app' && 'pb-24'
+                )}>
                     {children}
                 </main>
                 <IntroWizard />

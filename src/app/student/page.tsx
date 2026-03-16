@@ -347,10 +347,7 @@ function StudentDashboardInner({
   return (
     <TooltipProvider>
       <div
-        className={cn(
-          `mt-12 space-y-6 relative max-w-full mx-auto px-4 ${isGraphic ? 'animate-in fade-in duration-500' : ''}`,
-          settings.displayMode === 'app' && 'pb-24'
-        )}
+        className={cn("mt-6 md:mt-12 space-y-6 relative max-w-full mx-auto px-4 md:px-8", isGraphic ? 'animate-in fade-in duration-500' : '', settings.displayMode === 'app' && 'pb-24')}
         style={student.theme ? ({
           '--theme-bg': student.theme.background,
           '--theme-text': student.theme.text,
@@ -440,10 +437,10 @@ function StudentDashboardInner({
             <div className="text-center md:text-right">
               <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Current Balance</p>
               <div className="flex items-baseline gap-1.5" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>
-                <span className="text-5xl md:text-7xl font-black leading-none" style={{ color: student.theme ? 'var(--theme-primary)' : undefined }}>
+                <span className="text-5xl md:text-7xl font-black leading-none" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>
                   {(student.points || 0).toLocaleString()}
                 </span>
-                <span className="text-xl md:text-2xl font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-primary)' : undefined, opacity: 0.6 }}>pts</span>
+                <span className="text-xl md:text-2xl font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span>
               </div>
             </div>
           </CardContent>
