@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +13,7 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
     const router = useRouter();
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
 
@@ -100,7 +99,7 @@ export default function PortalPage() {
                     initial={{ opacity: 0, y: 48, scale: 0.92 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                    className="mb-16 mt-4 text-center"
+                    className="mb-8 mt-4 text-center"
                 >
                     <h2
                         className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
@@ -108,6 +107,16 @@ export default function PortalPage() {
                     >
                         Where to?
                     </h2>
+                    {schoolId === 'schoolabc' && !settings.showIntroWizard && (
+                        <div className="mt-4">
+                            <Button variant="link" onClick={() => {
+                                playSound('click');
+                                updateSettings({ showIntroWizard: true });
+                            }}>
+                                Click here to start the wizard
+                            </Button>
+                        </div>
+                    )}
                 </motion.div>
 
                 <div className="flex flex-col gap-4">
@@ -118,7 +127,7 @@ export default function PortalPage() {
                                 <motion.div
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                                    transition={{ duration: 0.5, delay: 0.15 + index * 0.1 }}
                                     onMouseEnter={() => setHoveredIndex(area.id)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     className="relative flex w-full items-center justify-between rounded-2xl border-2 border-transparent bg-card/40 backdrop-blur-sm px-8 py-5 text-left transition-all duration-300 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
