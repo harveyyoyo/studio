@@ -1219,6 +1219,45 @@ function AdminDashboardInner() {
                         : "Bulk ID Print"
                     }
                   </Button>
+                  <Button
+                    onClick={() => {
+                      const filtered = students?.filter(s => {
+                        const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
+                        const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
+                          (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
+                        const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
+                        return matchesSearch && matchesClass;
+                      }).sort((a, b) => {
+                        if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
+                        if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
+                        if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
+                        if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
+                        if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
+                        if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
+                        return 0;
+                      }) || [];
+
+                      if (selectionMode && selectedStudentIds.size > 0) {
+                        const selected = students?.filter(s => selectedStudentIds.has(s.id)) || [];
+                        setStudentsToPrint({ students: selected, classes: classes || [], printerType: 'dtc4500e' });
+                      } else {
+                        setStudentsToPrint({ students: filtered, classes: classes || [], printerType: 'dtc4500e' });
+                      }
+                    }}
+                    variant={(selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all' ? "default" : "outline"}
+                    className={cn(
+                      "rounded-xl px-4",
+                      ((selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all') ? "bg-amber-500 hover:bg-amber-600 font-bold" : "bg-orange-50 hover:bg-orange-100 text-orange-800 border-orange-200"
+                    )}
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    {selectionMode && selectedStudentIds.size >= 1
+                      ? `Print Selected (DTC)`
+                      : studentFilterClass !== 'all'
+                        ? `Print Class (DTC)`
+                        : "Bulk DTC Print"
+                    }
+                  </Button>
                   <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
                   <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
                 </div>
@@ -1317,7 +1356,8 @@ function AdminDashboardInner() {
                         </div>
                         <div className="flex gap-1.5 self-end sm:self-center">
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setThemeStudent(s)} title="Generate AI Theme"><Wand2 className="w-4 h-4 text-purple-500" /></Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setStudentsToPrint({ students: [s], classes: classes || [] })} title="Print ID Card"><Printer className="w-4 h-4 text-orange-500" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setStudentsToPrint({ students: [s], classes: classes || [] })} title="Print ID Card (Avery)"><Printer className="w-4 h-4 text-orange-500" /></Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full bg-orange-50 hover:bg-orange-100 border-orange-200" onClick={() => setStudentsToPrint({ students: [s], classes: classes || [], printerType: 'dtc4500e' })} title="Print ID Card (DTC)"><Printer className="w-4 h-4 text-orange-600" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
                           {settings.enableBadges && (
                             <Button
