@@ -73,21 +73,23 @@ export function StudentIdCard({
       </div>
       
       <div className="print-id-main" style={mainStyle}>
-        <div className="print-id-avatar" style={avatarStyle}>
-          {student.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={student.photoUrl} alt="" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-          ) : (
-            <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
-          )}
-        </div>
-        
-        <div className="print-id-text">
-          <div className="print-id-name" style={nameStyle}>
-            {student.firstName} {student.lastName} {student.nickname ? `(${student.nickname})` : ''}
+        <div className="flex items-center" style={{ marginLeft: '0.1in', gap: '0.12in' }}>
+          <div className="print-id-avatar" style={avatarStyle}>
+            {student.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={student.photoUrl} alt="" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
+            ) : (
+              <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
+            )}
           </div>
-          <div className="print-id-class" style={classStyle}>Class: {className}</div>
-          <div className="print-id-number" style={metaStyle}>ID #{student.nfcId}</div>
+          
+          <div className="print-id-text">
+            <div className="print-id-name" style={nameStyle}>
+              {student.firstName} {student.lastName} {student.nickname ? `(${student.nickname})` : ''}
+            </div>
+            <div className="print-id-class" style={classStyle}>Class: {className}</div>
+            <div className="print-id-number" style={metaStyle}>ID #{student.nfcId}</div>
+          </div>
         </div>
 
         {themeEmoji && (
