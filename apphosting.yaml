@@ -1,3 +1,4 @@
+
 # Firebase App Hosting configuration for Next.js SSR
 # Docs: https://firebase.google.com/docs/app-hosting
 
@@ -7,4 +8,11 @@ runConfig:
   cpu: 1
   memoryMiB: 512
   concurrency: 80
+
+build:
+  run: |
+    npm i && npm run build
+
+start:
+  run: npm run start
 
