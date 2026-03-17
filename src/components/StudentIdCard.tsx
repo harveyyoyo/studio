@@ -4,6 +4,7 @@ import type { Student } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { APP_NAME, APP_TAGLINE } from '@/lib/app-branding';
+import { GoogleFontLoader } from '@/components/GoogleFontLoader';
 
 export function StudentIdCard({
   student,
@@ -27,12 +28,21 @@ export function StudentIdCard({
   const { settings } = useSettings();
   const theme = student.theme;
   const themeEmoji = theme?.emoji;
+  const themeFontFamily = theme?.fontFamily;
+
+  const emojiGlowFilter = (() => {
+    const primary = theme?.primary;
+    if (!primary || typeof primary !== 'string') return undefined;
+    // Works well for hex colors; safe fallback for other formats.
+    return `drop-shadow(0 0 8px ${primary}) drop-shadow(0 0 18px ${primary})`;
+  })();
 
   const cardStyle = theme && isColorEnabled
     ? {
         background: theme.backgroundStyle || theme.background,
         color: theme.text,
         borderColor: theme.primary,
+        ...(themeFontFamily ? { fontFamily: themeFontFamily } : {}),
       }
     : undefined;
 
@@ -47,6 +57,7 @@ export function StudentIdCard({
 
   return (
     <div className={cn("print-id-card", isColorEnabled && "is-colored")} style={cardStyle}>
+      {themeFontFamily && <GoogleFontLoader fontFamily={themeFontFamily} />}
       <div className="print-id-header-container">
         <div className="print-id-app" style={headerStyle}>
           {appLogoUrl && (
@@ -73,7 +84,7 @@ export function StudentIdCard({
       </div>
       
       <div className="print-id-main" style={mainStyle}>
-        <div className="flex items-center" style={{ marginLeft: '0.1in', gap: '0.12in' }}>
+        <div className="print-id-left flex items-center" style={{ marginLeft: '0.1in', gap: '0.12in' }}>
           <div className="print-id-avatar" style={avatarStyle}>
             {student.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -84,16 +95,17 @@ export function StudentIdCard({
           </div>
           
           <div className="print-id-text">
-            <div className="print-id-name" style={nameStyle}>
-              {student.firstName} {student.lastName} {student.nickname ? `(${student.nickname})` : ''}
-            </div>
+            <div className="print-id-name" style={nameStyle}>{student.firstName} {student.lastName}</div>
+            {student.nickname?.trim() ? (
+              <div className="print-id-nickname" style={metaStyle}>{student.nickname.trim()}</div>
+            ) : null}
             <div className="print-id-class" style={classStyle}>Class: {className}</div>
             <div className="print-id-number" style={metaStyle}>ID #{student.nfcId}</div>
           </div>
         </div>
 
         {themeEmoji && (
-          <div className="print-id-theme-emoji-center" aria-hidden>
+          <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowFilter ? { filter: emojiGlowFilter } : undefined}>
             {themeEmoji}
           </div>
         )}

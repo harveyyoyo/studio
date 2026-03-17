@@ -230,6 +230,8 @@ function PrizeDashboard({
         })
         .sort((a, b) => (a.points || 0) - (b.points || 0));
 
+    const fontScale = student.theme?.fontScale ?? 1;
+
     return (
         <TooltipProvider>
             <div
@@ -243,6 +245,7 @@ function PrizeDashboard({
                     background: student.theme.backgroundStyle || `radial-gradient(circle at top left, ${student.theme.primary || 'hsl(var(--primary))'}22 0, transparent 45%), radial-gradient(circle at bottom right, ${student.theme.accent || 'hsl(var(--accent))'}22 0, ${student.theme.background || 'transparent'} 55%)`,
                     color: 'var(--theme-text)',
                     fontFamily: student.theme.fontFamily || 'inherit',
+                    fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
                 } as React.CSSProperties : {}}
             >
                 {student.theme?.fontFamily && <GoogleFontLoader fontFamily={student.theme.fontFamily} />}
@@ -268,7 +271,12 @@ function PrizeDashboard({
                                 <div className="text-center md:text-left">
                                     <h2 className="text-5xl font-black tracking-tighter font-headline drop-shadow-sm mb-4 flex items-center justify-center md:justify-start gap-4">
                                         {student.theme?.emoji ? (
-                                            <span className="text-6xl drop-shadow-md leading-none">{student.theme.emoji}</span>
+                                            <span
+                                                className="text-6xl leading-none"
+                                                style={{ filter: student.theme?.primary ? `drop-shadow(0 0 10px ${student.theme.primary}) drop-shadow(0 0 20px ${student.theme.primary})` : undefined }}
+                                            >
+                                                {student.theme.emoji}
+                                            </span>
                                         ) : (
                                             <ShoppingBag className="w-12 h-12 text-primary" />
                                         )}
@@ -288,7 +296,14 @@ function PrizeDashboard({
                                         borderColor: 'hsl(var(--primary) / 0.2)'
                                     }}
                                 >
-                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>{getStudentNickname(student)}</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] mb-1" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.7 }}>
+                                        {student.firstName} {student.lastName}
+                                    </p>
+                                    {student.nickname?.trim() ? (
+                                        <p className="text-[10px] font-black uppercase tracking-[0.25em] -mt-1 mb-2" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: 0.65 }}>
+                                            {student.nickname.trim()}
+                                        </p>
+                                    ) : null}
                                     <p className="text-4xl font-black tracking-tighter" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}>{(student.points || 0).toLocaleString()} <span className="text-sm font-bold uppercase tracking-widest ml-1" style={{ color: student.theme ? 'var(--theme-primary)' : 'hsl(var(--primary) / 0.6)', opacity: 0.6 }}>pts</span></p>
                                 </div>
                             </div>

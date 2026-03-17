@@ -318,10 +318,16 @@
     align-items: center;
     gap: 0.12in;
     padding: 0.04in 0;
+    justify-content: space-between;
+  }
+
+  .print-id-left {
+    flex: 1;
+    min-width: 0;
   }
 
   .print-id-theme-emoji-center {
-    font-size: 36pt;
+    font-size: 34pt;
     line-height: 1;
     flex-shrink: 0;
     margin-left: auto;
@@ -355,12 +361,27 @@
     flex-direction: column;
     gap: 0.02in;
     text-align: left;
+    min-width: 0;
   }
 
   .print-id-name {
     font-weight: 800;
-    font-size: 12pt;
+    font-size: 11pt;
     letter-spacing: 0.03em;
+    line-height: 1.05;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .print-id-nickname {
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 

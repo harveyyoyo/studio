@@ -266,9 +266,6 @@ function StudentDashboardInner({
     if (result.success) {
       playSound('redeem');
       toast({ title: 'Coupon Redeemed!', description: `You gained ${result.value} points.` });
-      if (result.bonusTotal && result.bonusTotal > 0) {
-        toast({ title: 'Bonus points!', description: `You earned ${result.bonusTotal} bonus points from milestones.` });
-      }
       animationKey.current += 1;
       setFlyPointsValue(result.value || null);
       setTimeout(() => { setFlyPointsValue(null); setShowRedeem(false); }, 1500);
@@ -304,7 +301,7 @@ function StudentDashboardInner({
         playSound('success');
         const parts: string[] = [];
         if (newBadge) parts.push('a new badge');
-        if (newBonus) parts.push('new bonus points');
+        if (newBonus) parts.push('a new achievement');
         setCelebrationMessage(`You earned ${parts.join(' and ')}!`);
         setTimeout(() => setCelebrationMessage(null), 2200);
       }
@@ -406,10 +403,22 @@ function StudentDashboardInner({
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl md:text-4xl font-black">
-                      {getStudentNickname(student)} {student.lastName}
+                      {student.firstName} {student.lastName}
                     </h2>
-                    {student.theme?.emoji && <span className="text-4xl md:text-5xl drop-shadow-md leading-none">{student.theme.emoji}</span>}
+                    {student.theme?.emoji && (
+                      <span
+                        className="text-4xl md:text-5xl leading-none"
+                        style={{ filter: student.theme?.primary ? `drop-shadow(0 0 8px ${student.theme.primary}) drop-shadow(0 0 16px ${student.theme.primary})` : undefined }}
+                      >
+                        {student.theme.emoji}
+                      </span>
+                    )}
                   </div>
+                  {student.nickname?.trim() ? (
+                    <div className="text-[10px] md:text-xs font-black uppercase tracking-[0.25em] opacity-75">
+                      {student.nickname.trim()}
+                    </div>
+                  ) : null}
                   {settings.enableBadges && headerBadges.length > 0 && (
                     <div className="flex items-center gap-1.5 flex-wrap mt-1">
                       {headerBadges.map((b) => (

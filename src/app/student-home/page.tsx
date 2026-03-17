@@ -258,8 +258,13 @@ function StudentHomeDashboardInner({
             <div className="space-y-1 text-center md:text-left">
                         <p className="text-sm md:text-base font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Welcome back,</p>
                         <h2 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-white">
-                            {getStudentNickname(student)} {student.lastName}
+                            {student.firstName} {student.lastName}
                         </h2>
+                        {student.nickname?.trim() ? (
+                            <p className="text-xs md:text-sm font-black uppercase tracking-[0.25em] opacity-70 mt-2">
+                                {student.nickname.trim()}
+                            </p>
+                        ) : null}
                     </div>
                     <div className="text-center md:text-right">
                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Current Balance</p>

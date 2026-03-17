@@ -155,6 +155,8 @@ export interface AttendanceLogEntry {
   pointsAwarded: number;
   onTime: boolean;
   periodLabel?: string;
+  /** A deterministic per-session key used to prevent double sign-ins. */
+  sessionId?: string;
 }
 
 export interface BackupInfo {

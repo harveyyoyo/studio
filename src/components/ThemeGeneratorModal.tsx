@@ -29,6 +29,7 @@ export function ThemeGeneratorModal({
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme);
+    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme);
     const [model, setModel] = useState<string>('gemini-2.5-flash');
     const { toast } = useToast();
 
@@ -63,6 +64,7 @@ export function ThemeGeneratorModal({
             }
 
             const generatedTheme: StudentTheme = await response.json();
+            setPreviousTheme(previewTheme || currentTheme);
             setPreviewTheme(generatedTheme);
             toast({
                 title: 'Theme Generated',
@@ -81,14 +83,19 @@ export function ThemeGeneratorModal({
     };
 
     const handleSave = () => {
-        if (previewTheme) {
-            onSave(previewTheme);
-            onOpenChange(false);
-        }
+        if (!previewTheme) return;
+        onSave(previewTheme);
+        onOpenChange(false);
     };
 
     const updateTheme = (partial: Partial<StudentTheme>) => {
         setPreviewTheme(prev => (prev ? { ...prev, ...partial } : prev));
+    };
+
+    const handleRevert = () => {
+        if (previousTheme) {
+            setPreviewTheme(previousTheme);
+        }
     };
 
     const generateWithAI = async (kind: 'emoji' | 'font') => {
@@ -197,6 +204,16 @@ export function ThemeGeneratorModal({
                     <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                             <Label>Live Preview</Label>
+                            {previousTheme && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleRevert}
+                                >
+                                    Revert to previous
+                                </Button>
+                            )}
                         </div>
                         <div
                             className={cn(
@@ -207,6 +224,7 @@ export function ThemeGeneratorModal({
                                 background: previewTheme.backgroundStyle || previewTheme.background,
                                 color: previewTheme.text,
                                 fontFamily: previewTheme.fontFamily || 'inherit',
+                                fontSize: (previewTheme.fontScale ?? 1) !== 1 ? `${previewTheme.fontScale}em` : undefined,
                             } : undefined}
                         >
                             {previewTheme?.fontFamily && <GoogleFontLoader fontFamily={previewTheme.fontFamily} />}
@@ -385,16 +403,36 @@ export function ThemeGeneratorModal({
                                 })}
                             </div>
                             <div className="space-y-1 pt-1">
-                                <Label htmlFor="theme-background-style">Advanced background (optional)</Label>
-                                <Input
-                                    id="theme-background-style"
-                                    value={previewTheme.backgroundStyle || ''}
-                                    onChange={(e) => updateTheme({ backgroundStyle: e.target.value || null })}
-                                    placeholder="e.g. linear-gradient(135deg, #0ea5e9, #22c55e)"
-                                    className="font-mono text-xs"
-                                />
+                                <Label htmlFor="theme-background-style">Background (optional)</Label>
+                                <div className="flex flex-col gap-2">
+                                    <Input
+                                        id="theme-background-style"
+                                        value={previewTheme.backgroundStyle || ''}
+                                        onChange={(e) => updateTheme({ backgroundStyle: e.target.value || null })}
+                                        placeholder="CSS value, e.g. linear-gradient(...)"
+                                        className="font-mono text-xs"
+                                    />
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            const reader = new FileReader();
+                                            reader.onload = () => {
+                                                const dataUrl = String(reader.result || '');
+                                                if (!dataUrl) return;
+                                                updateTheme({
+                                                    backgroundStyle: `url("${dataUrl}") center / cover no-repeat`,
+                                                });
+                                            };
+                                            reader.readAsDataURL(file);
+                                        }}
+                                        className="text-xs"
+                                    />
+                                </div>
                                 <p className="text-[10px] text-muted-foreground">
-                                    When set, this full CSS value overrides the solid background color.
+                                    You can paste a CSS background or upload an image (small files recommended).
                                 </p>
                             </div>
                         </div>

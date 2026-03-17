@@ -10,9 +10,9 @@ const TutorialWizard = () => {
 
     const handleNext = () => setStep(prev => prev + 1);
     const handlePrevious = () => setStep(prev => prev - 1);
-    const handleClose = () => updateSettings({ tutorialEnabled: false });
+    const handleClose = () => updateSettings({ showIntroWizard: false });
 
-    if (!settings.tutorialEnabled) {
+    if (!settings.showIntroWizard) {
         return null;
     }
 

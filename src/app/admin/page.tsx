@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceLogEntry } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -227,6 +227,32 @@ function AdminDashboardInner() {
   const [attendanceLog, setAttendanceLogState] = useState<AttendanceLogEntry[]>([]);
   const [attendanceConfigSaving, setAttendanceConfigSaving] = useState(false);
   const [attendanceLogLoading, setAttendanceLogLoading] = useState(false);
+
+  const filteredStudents = useMemo(() => {
+    const list = (students || []).filter((s) => {
+      const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
+      const term = studentSearchTerm.toLowerCase();
+      const matchesSearch = computedName.includes(term) || (s.nfcId || '').toLowerCase().includes(term);
+      const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
+      return matchesSearch && matchesClass;
+    });
+
+    return list.sort((a, b) => {
+      if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
+      if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
+      if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
+      if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
+      if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
+      if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
+      return 0;
+    });
+  }, [students, studentSearchTerm, studentFilterClass, studentSortOption]);
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    if (filteredStudents.length !== 1) return;
+    setSelectedStudentIds(new Set([filteredStudents[0].id]));
+  }, [selectionMode, filteredStudents]);
 
   const defaultAttendanceConfig: AttendanceSettings = {
     pointsForSignIn: 1,
@@ -1197,21 +1223,7 @@ function AdminDashboardInner() {
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
                   <Button
                     onClick={() => {
-                      const filtered = students?.filter(s => {
-                        const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
-                        const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
-                          (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
-                        const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
-                        return matchesSearch && matchesClass;
-                      }).sort((a, b) => {
-                        if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
-                        if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
-                        if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
-                        if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
-                        if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
-                        if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
-                        return 0;
-                      }) || [];
+                      const filtered = filteredStudents;
 
                       if (selectionMode && selectedStudentIds.size > 0) {
                         const selected = students?.filter(s => selectedStudentIds.has(s.id)) || [];
@@ -1299,21 +1311,7 @@ function AdminDashboardInner() {
                 </div>
                 <ScrollArea className="h-[500px]">
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
-                    {students?.filter(s => {
-                      const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
-                      const matchesSearch = computedName.includes(studentSearchTerm.toLowerCase()) ||
-                        (s.nfcId || '').toLowerCase().includes(studentSearchTerm.toLowerCase());
-                      const matchesClass = studentFilterClass === 'all' || s.classId === studentFilterClass;
-                      return matchesSearch && matchesClass;
-                    }).sort((a, b) => {
-                      if (studentSortOption === 'lastNameAsc') return a.lastName.localeCompare(b.lastName);
-                      if (studentSortOption === 'lastNameDesc') return b.lastName.localeCompare(a.lastName);
-                      if (studentSortOption === 'firstNameAsc') return a.firstName.localeCompare(b.firstName);
-                      if (studentSortOption === 'firstNameDesc') return b.firstName.localeCompare(a.firstName);
-                      if (studentSortOption === 'pointsDesc') return (b.lifetimePoints || b.points || 0) - (a.lifetimePoints || a.points || 0);
-                      if (studentSortOption === 'pointsAsc') return (a.lifetimePoints || a.points || 0) - (b.lifetimePoints || b.points || 0);
-                      return 0;
-                    }).map(s => (
+                    {filteredStudents.map(s => (
                       <li key={s.id} className={cn(
                         "flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-background shadow-sm",
                         selectedStudentIds.has(s.id) ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20" : "bg-secondary/20 border-transparent"

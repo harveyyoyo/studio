@@ -1,9 +1,10 @@
 const admin = require('firebase-admin');
-const serviceAccount = require('../serviceAccountKey.json');
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
+// Uses Application Default Credentials.
+// Configure GOOGLE_APPLICATION_CREDENTIALS or run in a trusted GCP environment.
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
 
 const db = admin.firestore();
 

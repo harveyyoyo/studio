@@ -223,6 +223,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
     }
 
     const finalClassId = classId === 'none' ? '' : classId;
+    const normalizedNickname = nickname.trim();
 
     if (isEditing && student) {
       const updatedStudent: Student = {
@@ -230,7 +231,8 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         firstName,
         middleName: middleName || undefined,
         lastName,
-        nickname: nickname || undefined,
+        // Important: when clearing a nickname, persist the empty string so Firestore overwrites the old value.
+        nickname: normalizedNickname ? normalizedNickname : '',
         points: parseInt(points) || 0,
         classId: finalClassId,
         nfcId,
@@ -246,7 +248,7 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
         firstName,
         middleName: middleName || undefined,
         lastName,
-        nickname: nickname || undefined,
+        nickname: normalizedNickname || undefined,
         points: parseInt(points) || 0,
         classId: finalClassId,
         teacherIds: selectedTeacherIds,
@@ -326,7 +328,25 @@ export function StudentModal({ isOpen, setIsOpen, student, allStudents, allClass
           </div>
           <div className="space-y-1">
             <Label htmlFor="student-id">Student ID (for scanning)</Label>
-            <Input id="student-id" value={nfcId} onChange={e => setNfcId(e.target.value)} placeholder="Tap card or enter ID..." />
+            <div className="flex gap-2">
+              <Input
+                id="student-id"
+                value={nfcId}
+                onChange={e => setNfcId(e.target.value)}
+                placeholder="Tap card or enter ID..."
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="whitespace-nowrap"
+                onClick={() => {
+                  const randomId = Math.floor(10000000 + Math.random() * 90000000).toString();
+                  setNfcId(randomId);
+                }}
+              >
+                Random
+              </Button>
+            </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="points">Points</Label>

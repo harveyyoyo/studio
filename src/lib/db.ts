@@ -1299,47 +1299,62 @@ export const recordClassSignIn = async (
   }
 
   const now = Date.now();
-  const { periodLabel, onTime } = getCurrentPeriodAndOnTime(
-    config.schedule,
-    config.onTimeWindowMinutes,
-    now
-  );
-  const pointsAwarded = config.pointsForSignIn + (onTime ? config.pointsForOnTime : 0);
+  const { periodLabel, onTime } = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+  const computedPoints = config.pointsForSignIn + (onTime ? config.pointsForOnTime : 0);
+
+  // A "session" is the current day + class + period label. This allows multiple
+  // sign-ins across different periods, but prevents re-signing the same session.
+  const d = new Date(now);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const dayKey = `${yyyy}${mm}${dd}`;
+  const classKey = (student.classId || '').trim() || 'no_class';
+  const periodKey = (periodLabel || '').trim() || 'no_period';
+  const sessionId = `${dayKey}:${classKey}:${periodKey}`;
 
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
-  const logRef = doc(collection(firestore, 'schools', schoolId, 'attendanceLog'));
+  const logDocId = `${studentId}_${sessionId}`;
+  const logRef = doc(firestore, 'schools', schoolId, 'attendanceLog', logDocId);
 
-  await runTransaction(firestore, async (transaction) => {
+  const result = await runTransaction(firestore, async (transaction) => {
+    const existing = await transaction.get(logRef);
+    if (existing.exists()) {
+      return { pointsAwarded: 0, onTime: false, periodLabel };
+    }
+
     const studentSnap = await transaction.get(studentRef);
     if (!studentSnap.exists()) throw new Error('Student not found');
     const data = studentSnap.data() as Student;
-    const newPoints = data.points + pointsAwarded;
-    const newLifetime = (data.lifetimePoints ?? 0) + pointsAwarded;
 
     transaction.update(studentRef, {
-      points: newPoints,
-      lifetimePoints: newLifetime,
+      points: (data.points || 0) + computedPoints,
+      lifetimePoints: (data.lifetimePoints ?? 0) + computedPoints,
     });
+
     const desc = onTime && periodLabel
       ? `Class sign-in (on time): ${periodLabel}`
       : periodLabel
         ? `Class sign-in: ${periodLabel}`
         : 'Class sign-in';
-    transaction.set(activityRef, { desc, amount: pointsAwarded, date: now } as HistoryItem);
+    transaction.set(activityRef, { desc, amount: computedPoints, date: now } as HistoryItem);
 
     const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.nickname || studentId;
     transaction.set(logRef, {
       studentId,
       studentName,
       signedInAt: now,
-      pointsAwarded,
+      pointsAwarded: computedPoints,
       onTime,
       periodLabel: periodLabel ?? null,
+      sessionId,
     });
+
+    return { pointsAwarded: computedPoints, onTime, periodLabel };
   });
 
-  return { pointsAwarded, onTime, periodLabel };
+  return result;
 };
 
 export const listAttendanceLog = async (
