@@ -618,7 +618,6 @@ function StudentDashboardInner({
 
 export default function StudentLoginPage() {
   const { loginState, isInitialized, schoolId, isKioskLocked, setIsKioskLocked } = useAppContext();
-  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();

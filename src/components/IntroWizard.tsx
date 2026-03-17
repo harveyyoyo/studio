@@ -50,7 +50,7 @@ const steps = [
   },
   {
     title: 'Step 7: Print Coupons',
-    description: `You are now in the Teacher Portal. Select your name, choose a category and point value, and click "Generate Sheet". A print preview will appear. You can now print them out or just make note of the number of a coupon for the next step. Then click "Next".`,
+    description: `We're in the Teacher Portal as an Admin (you could also log in as a specific teacher). Let's generate some coupons. Select a category and point value, then click "Generate Sheet". A print preview will open. Make a note of one of the coupon codes for the next step, then click Next.`,
     target: '/teacher',
   },
   {
@@ -63,7 +63,30 @@ const steps = [
     title: 'Step 9: Redeem a Coupon',
     description: "You're at the student kiosk. Type in the Student ID you created and click 'Identify Student'. Then, try redeeming the coupon code you noted down.",
     target: '/student',
-  }
+  },
+  {
+    title: 'Step 10: Go to Prize Shop',
+    description: 'The points were added! Let\'s go spend them. Log out of the student kiosk and go to the "Prize Shop" from the main portal. Sign in as the same student.',
+    target: '/student',
+    hideNext: true,
+  },
+  {
+    title: 'Step 11: Fulfill the Prize',
+    description: "After the student 'buys' a prize, the teacher needs to give it to them. Log out and return to the 'Teacher Portal'. You'll see the redeemed prize in the 'Prize Redemptions' list. Check the box to mark it as delivered.",
+    target: '/prize',
+    hideNext: true,
+  },
+  {
+    title: 'Step 12: Hall of Fame',
+    description: 'Great! The final step is to check out the school leaderboards. Navigate back to the main portal and click on the "Hall of Fame".',
+    target: '/teacher',
+    hideNext: true,
+  },
+  {
+    title: "Step 13: You're a Pro!",
+    description: "You've completed the tour of the main features! Feel free to explore the Admin dashboard for more settings. You can turn this wizard off in the settings menu at any time.",
+    target: '/halloffame',
+  },
 ];
 
 
