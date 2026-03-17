@@ -107,38 +107,25 @@ export default function Header() {
       <>
         <header className="no-print grid grid-cols-3 w-full items-center relative z-20 px-4 pt-4 pb-4 border-b border-border/10">
           <div className="flex justify-start">
-            <Link href={schoolId ? "/portal" : "/"} data-home-button="true" className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center justify-center">
-              <Home className="h-5 w-5" />
-            </Link>
+            {/* Home button removed */}
           </div>
           <div className="flex items-center justify-center">
             {(schoolId || loginState === 'developer') && (
               <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-xl truncate no-underline max-w-full">
-                {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
-                  <span className="inline-flex h-8 w-8 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) || ''}
-                      alt="Logo"
-                      className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
-                    />
-                  </span>
-                )}
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
               </Link>
             )}
           </div>
           <div className="flex items-center justify-end gap-2">
             {schoolId && loginState !== 'loggedOut' && (
-              <div className="flex items-center gap-1.5 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">
-                <span className="relative flex h-1.5 w-1.5">
+              <div className="flex items-center justify-center h-9 w-9">
+                <span className="relative flex h-2.5 w-2.5">
                   {syncStatus === 'synced' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />}
-                  <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-300")} />
+                  <span className={cn("relative inline-flex h-full w-full rounded-full", syncStatus === 'synced' ? "bg-emerald-500" : syncStatus === 'syncing' ? "bg-amber-400 animate-pulse" : "bg-slate-400")} />
                 </span>
-                 <span className="text-[10px] font-black uppercase tracking-tighter text-emerald-600/80">{syncStatus === 'synced' ? 'Live' : syncStatus}</span>
               </div>
             )}
-             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={handleLogout}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>
             <SettingsModal />
@@ -210,7 +197,7 @@ export default function Header() {
               )}
               <span
                 className="text-5xl font-school font-black tracking-tight text-white whitespace-nowrap"
-                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 1px rgba(0,0,0,0.5)' }}
+                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.7), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
               >
                 {centerLabel}
               </span>
