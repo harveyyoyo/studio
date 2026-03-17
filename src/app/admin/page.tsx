@@ -31,8 +31,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+  AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
@@ -41,8 +41,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { StudentActivityModal } from '@/components/StudentActivityModal';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Coupon as CouponPreview } from '@/components/Coupon';
@@ -522,7 +522,7 @@ function AdminDashboardInner() {
 
       setLogoPreviewUrl(data.logoUrl);
       playSound('success');
-      toast({ title: 'Logo updated!', description: 'Your school logo will now appear next to the name.' });
+      toast({ title: 'Logo updated!', description: 'Your school logo will now appear next to the school name.' });
     } catch (error: unknown) {
       console.error('Logo upload failed', error);
       playSound('error');
@@ -1413,8 +1413,8 @@ function AdminDashboardInner() {
                         </div>
                       </div>
                       <div className="flex gap-1 self-end sm:self-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </li>
                   ))}
@@ -1564,7 +1564,7 @@ function AdminDashboardInner() {
             <Card className="border-t-4 border-destructive shadow-md">
               <CardHeader className="flex flex-row justify-between items-center py-6">
                 <div>
-                  <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge this month).">
+                  <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
                     <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-destructive" /> Badges</CardTitle>
                   </Helper>
                   <CardDescription>Category-based badges. Enable in Settings → Features → Recognition → Badges.</CardDescription>
@@ -2009,7 +2009,7 @@ function AdminDashboardInner() {
               <Button variant="secondary" onClick={() => setBadgeEarnersFor(null)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </AlertDialog>
+        </Dialog>
         <AlertDialog open={!!achievementToDelete} onOpenChange={(open) => !open && setAchievementToDelete(null)}>
           <AlertDialogContent className="rounded-3xl border-2">
             <AlertDialogHeader>
@@ -2146,34 +2146,6 @@ function AdminDashboardInner() {
                 {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Add 4 badges
               </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <AlertDialog open={!!uploadReport} onOpenChange={() => setUploadReport(null)}>
-          <AlertDialogContent className="rounded-3xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl">Import Report</AlertDialogTitle>
-              <AlertDialogDescription>
-                <div className="flex gap-4 mt-2">
-                  <div className="bg-green-100 text-green-700 p-3 rounded-2xl flex-1 text-center font-bold">
-                    {uploadReport?.success} SUCCESS
-                  </div>
-                  <div className="bg-red-100 text-red-700 p-3 rounded-2xl flex-1 text-center font-bold">
-                    {uploadReport?.failed} FAILED
-                  </div>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            {uploadReport && uploadReport.errors.length >= 1 && (
-              <ScrollArea className="h-40 mt-4 rounded-xl border bg-muted/50 p-3">
-                <p className="font-bold text-xs uppercase mb-2 opacity-60">Error Details</p>
-                <ul className="space-y-1 text-xs font-code">
-                  {uploadReport.errors.map((error, i) => <li key={i} className="text-red-500">• {error}</li>)}
-                </ul>
-              </ScrollArea>
-            )}
-            <AlertDialogFooter className="mt-4">
-              <AlertDialogAction onClick={() => setUploadReport(null)} className="rounded-full">Close</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
