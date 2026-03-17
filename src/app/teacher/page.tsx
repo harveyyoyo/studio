@@ -719,12 +719,20 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         return categories?.filter(c => !c.teacherId || (currentTeacher && c.teacherId === currentTeacher.id)) || [];
     }, [categories, currentTeacher]);
 
-    const filteredStudents = (students || []).filter(s => {
-        const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
-        const nameMatch = computedName.includes(studentSearch.toLowerCase());
-        const classMatch = filterClassId === 'all' || s.classId === filterClassId;
-        return nameMatch && classMatch;
-    }).sort((a, b) => a.lastName.localeCompare(b.lastName));
+    const filteredStudents = useMemo(() => {
+        return (students || []).filter(s => {
+            const computedName = `${getStudentNickname(s)} ${s.lastName}`.toLowerCase();
+            const nameMatch = computedName.includes(studentSearch.toLowerCase());
+            const classMatch = filterClassId === 'all' || s.classId === filterClassId;
+            return nameMatch && classMatch;
+        }).sort((a, b) => a.lastName.localeCompare(b.lastName));
+    }, [students, studentSearch, filterClassId]);
+
+    useEffect(() => {
+        if (filteredStudents.length === 1) {
+            setSelectedStudentIds([filteredStudents[0].id]);
+        }
+    }, [filteredStudents]);
 
     const toggleSelectAll = () => {
         if (selectedStudentIds.length === filteredStudents.length) {
