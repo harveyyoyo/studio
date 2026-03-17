@@ -10,18 +10,12 @@ import { getStorage } from 'firebase/storage';
 
 export function initializeFirebase() {
     const apps = getApps();
-    if (!apps.length) {
-        try {
-            const firebaseApp = initializeApp(firebaseConfig);
-            console.log("Firebase initialized with config.");
-            return getSdks(firebaseApp);
-        } catch (err) {
-            console.error("Critical Firebase Initialization Error:", err);
-            return null as any;
-        }
+    if (apps.length) {
+      return getSdks(apps[0]);
     }
 
-    return getSdks(apps[0]);
+    const firebaseApp = initializeApp(firebaseConfig);
+    return getSdks(firebaseApp);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
