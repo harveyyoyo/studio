@@ -32,7 +32,6 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&family=Source+Code+Pro:wght@400;600&family=Libre+Barcode+39&display=swap"
           rel="stylesheet"
-          crossOrigin="anonymous"
         />
       </head>
       <body className="font-sans antialiased bg-background text-foreground transition-colors duration-500 min-h-screen" suppressHydrationWarning>
