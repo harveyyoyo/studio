@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, Teacher, BackupInfo, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StudentModal } from '@/components/StudentModal';
@@ -242,6 +242,19 @@ function AdminDashboardInner() {
   const [teacherAttendanceSaving, setTeacherAttendanceSaving] = useState(false);
   const [teacherAttendanceLog, setTeacherAttendanceLogState] = useState<AttendanceLogEntry[]>([]);
   const [teacherAttendanceLogLoading, setTeacherAttendanceLogLoading] = useState(false);
+  const teacherAttendanceRewardsQuery = useMemoFirebase(
+    () => (schoolId && selectedAttendanceTeacherId
+      ? collection(firestore, 'schools', schoolId, 'teachers', selectedAttendanceTeacherId, 'attendanceRewards')
+      : null),
+    [firestore, schoolId, selectedAttendanceTeacherId]
+  );
+  const { data: teacherAttendanceRewards, isLoading: teacherAttendanceRewardsLoading } = useCollection<AttendanceRewardRule>(teacherAttendanceRewardsQuery);
+  const [ruleDrafts, setRuleDrafts] = useState<Record<string, Partial<AttendanceRewardRule>>>({});
+  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRuleDrafts({});
+  }, [selectedAttendanceTeacherId]);
 
   const filteredStudents = useMemo(() => {
     const list = (students || []).filter((s) => {
@@ -335,6 +348,45 @@ function AdminDashboardInner() {
       toast({ variant: 'destructive', title: 'Failed to save', description: (e as Error).message });
     } finally {
       setTeacherAttendanceSaving(false);
+    }
+  };
+
+  const saveTeacherRewardRule = async (ruleId: string) => {
+    if (!schoolId || !selectedAttendanceTeacherId) return;
+    const draft = ruleDrafts[ruleId];
+    if (!draft) return;
+    setSavingRuleId(ruleId);
+    try {
+      const ref = doc(firestore, 'schools', schoolId, 'teachers', selectedAttendanceTeacherId, 'attendanceRewards', ruleId);
+      await updateDoc(ref, {
+        ...draft,
+        // never write undefined to Firestore
+        periodId: draft.periodId ?? null,
+        customPeriod: draft.customPeriod ?? null,
+        categoryId: draft.categoryId ?? null,
+      });
+      playSound('success');
+      setRuleDrafts((prev) => {
+        const next = { ...prev };
+        delete next[ruleId];
+        return next;
+      });
+      toast({ title: 'Reward rule updated.' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Failed to update rule', description: (e as Error).message });
+    } finally {
+      setSavingRuleId(null);
+    }
+  };
+
+  const deleteTeacherRewardRule = async (ruleId: string) => {
+    if (!schoolId || !selectedAttendanceTeacherId) return;
+    try {
+      await deleteDoc(doc(firestore, 'schools', schoolId, 'teachers', selectedAttendanceTeacherId, 'attendanceRewards', ruleId));
+      playSound('swoosh');
+      toast({ title: 'Reward rule deleted.' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Failed to delete rule', description: (e as Error).message });
     }
   };
 
@@ -998,19 +1050,251 @@ function AdminDashboardInner() {
 
                   {teacherAttendanceConfig && (
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                          <Label>Points per sign-in</Label>
-                          <Input type="number" min={0} value={teacherAttendanceConfig.pointsForSignIn} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, pointsForSignIn: parseInt(e.target.value, 10) || 0 })} />
-                        </div>
-                        <div>
-                          <Label>Bonus points (on time)</Label>
-                          <Input type="number" min={0} value={teacherAttendanceConfig.pointsForOnTime} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, pointsForOnTime: parseInt(e.target.value, 10) || 0 })} />
-                        </div>
-                        <div>
-                          <Label>On-time window (minutes)</Label>
-                          <Input type="number" min={1} max={120} value={teacherAttendanceConfig.onTimeWindowMinutes} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, onTimeWindowMinutes: parseInt(e.target.value, 10) || 15 })} />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Attendance reward rules created by this teacher</Label>
+                        {teacherAttendanceRewardsLoading ? (
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Loading reward rules…
+                          </p>
+                        ) : (teacherAttendanceRewards || []).length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No reward rules found for this teacher yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {(teacherAttendanceRewards || []).map((rule) => {
+                              const draft = ruleDrafts[rule.id] ?? {};
+                              const effective: AttendanceRewardRule = { ...rule, ...draft };
+                              const hasUnsaved = !!ruleDrafts[rule.id];
+
+                              const className = (classes || []).find((c) => c.id === effective.classId)?.name ?? 'Unknown class';
+                              const periodLabel =
+                                effective.periodId
+                                  ? (attendancePeriods || []).find((p) => p.id === effective.periodId)?.label ?? 'Unknown period'
+                                  : effective.customPeriod?.label
+                                    ? effective.customPeriod.label
+                                    : 'From class assignment';
+
+                              return (
+                                <div key={rule.id} className="rounded-2xl border bg-muted/30 p-3 space-y-3">
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="min-w-[260px]">
+                                      <p className="font-bold">{className}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Period: {periodLabel}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-xs">Enabled</Label>
+                                        <Switch
+                                          checked={!!effective.enabled}
+                                          onCheckedChange={(checked) => {
+                                            setRuleDrafts((prev) => ({
+                                              ...prev,
+                                              [rule.id]: { ...(prev[rule.id] ?? {}), enabled: checked },
+                                            }));
+                                          }}
+                                        />
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => saveTeacherRewardRule(rule.id)}
+                                        disabled={!hasUnsaved || savingRuleId === rule.id}
+                                      >
+                                        {savingRuleId === rule.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-red-600 hover:bg-red-50"
+                                        onClick={() => deleteTeacherRewardRule(rule.id)}
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                                    <div className="lg:col-span-2 space-y-1">
+                                      <Label className="text-xs">Class</Label>
+                                      <Select
+                                        value={effective.classId}
+                                        onValueChange={(v) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: { ...(prev[rule.id] ?? {}), classId: v },
+                                        }))}
+                                      >
+                                        <SelectTrigger className="h-10 rounded-xl">
+                                          <SelectValue placeholder="Select class" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(classes || []).map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Sign-in points</Label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={effective.pointsForSignIn}
+                                        onChange={(e) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: { ...(prev[rule.id] ?? {}), pointsForSignIn: parseInt(e.target.value, 10) || 0 },
+                                        }))}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">On-time bonus</Label>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        value={effective.pointsForOnTime}
+                                        onChange={(e) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: { ...(prev[rule.id] ?? {}), pointsForOnTime: parseInt(e.target.value, 10) || 0 },
+                                        }))}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Window (min)</Label>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        max={120}
+                                        value={effective.onTimeWindowMinutes}
+                                        onChange={(e) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: { ...(prev[rule.id] ?? {}), onTimeWindowMinutes: parseInt(e.target.value, 10) || 3 },
+                                        }))}
+                                      />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Category</Label>
+                                      <Select
+                                        value={effective.categoryId || '__none__'}
+                                        onValueChange={(v) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: { ...(prev[rule.id] ?? {}), categoryId: v === '__none__' ? undefined : v },
+                                        }))}
+                                      >
+                                        <SelectTrigger className="h-10 rounded-xl">
+                                          <SelectValue placeholder="None" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="__none__">None</SelectItem>
+                                          {(categories || []).map((c) => (
+                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Universal period override (optional)</Label>
+                                      <Select
+                                        value={effective.periodId || '__none__'}
+                                        onValueChange={(v) => setRuleDrafts((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? {}),
+                                            periodId: v === '__none__' ? undefined : v,
+                                            customPeriod: undefined,
+                                          }
+                                        }))}
+                                        disabled={attendancePeriodsLoading || (attendancePeriods || []).length === 0}
+                                      >
+                                        <SelectTrigger className="h-10 rounded-xl">
+                                          <SelectValue placeholder="From class assignment" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="__none__">From class assignment</SelectItem>
+                                          {(attendancePeriods || []).map((p) => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                              {p.label} ({p.startTime}–{p.endTime})
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Custom period (optional)</Label>
+                                      <div className="grid grid-cols-3 gap-2">
+                                        <Input
+                                          value={effective.customPeriod?.label ?? ''}
+                                          placeholder="Label"
+                                          onChange={(e) => {
+                                            const nextLabel = e.target.value;
+                                            setRuleDrafts((prev) => ({
+                                              ...prev,
+                                              [rule.id]: {
+                                                ...(prev[rule.id] ?? {}),
+                                                customPeriod: nextLabel
+                                                  ? {
+                                                    label: nextLabel,
+                                                    startTime: effective.customPeriod?.startTime ?? '08:00',
+                                                    endTime: effective.customPeriod?.endTime ?? '08:45',
+                                                  }
+                                                  : undefined,
+                                                periodId: undefined,
+                                              },
+                                            }));
+                                          }}
+                                        />
+                                        <Input
+                                          value={effective.customPeriod?.startTime ?? ''}
+                                          placeholder="Start"
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setRuleDrafts((prev) => ({
+                                              ...prev,
+                                              [rule.id]: {
+                                                ...(prev[rule.id] ?? {}),
+                                                customPeriod: effective.customPeriod
+                                                  ? { ...effective.customPeriod, startTime: v }
+                                                  : (v ? { label: 'Custom', startTime: v, endTime: '08:45' } : undefined),
+                                                periodId: undefined,
+                                              },
+                                            }));
+                                          }}
+                                        />
+                                        <Input
+                                          value={effective.customPeriod?.endTime ?? ''}
+                                          placeholder="End"
+                                          onChange={(e) => {
+                                            const v = e.target.value;
+                                            setRuleDrafts((prev) => ({
+                                              ...prev,
+                                              [rule.id]: {
+                                                ...(prev[rule.id] ?? {}),
+                                                customPeriod: effective.customPeriod
+                                                  ? { ...effective.customPeriod, endTime: v }
+                                                  : (v ? { label: 'Custom', startTime: '08:00', endTime: v } : undefined),
+                                                periodId: undefined,
+                                              },
+                                            }));
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1069,7 +1353,7 @@ function AdminDashboardInner() {
 
                       <Button onClick={handleSaveTeacherAttendanceConfig} disabled={teacherAttendanceSaving}>
                         {teacherAttendanceSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Save teacher attendance settings
+                        Save class period assignments
                       </Button>
 
                       {teacherAttendanceLog.length > 0 && (
