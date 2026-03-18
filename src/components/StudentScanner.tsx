@@ -114,7 +114,7 @@ export function StudentScanner({
 
     return (
         <div className={cn(
-            "w-full max-w-md rounded-[2.5rem] p-7 transition-all duration-700 relative z-10",
+            "w-full max-w-md rounded-[2.5rem] p-6 transition-all duration-700 relative z-10",
             isGraphic ? 'bg-card/5 backdrop-blur-2xl border border-border shadow-2xl shadow-primary/10' : 'bg-card shadow-2xl border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
@@ -123,7 +123,7 @@ export function StudentScanner({
             )}
 
             <div className={cn(
-                "p-5 text-center relative z-10",
+                "p-4 text-center relative z-10",
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 {/* Kiosk lock removed */}
