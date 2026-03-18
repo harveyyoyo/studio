@@ -102,6 +102,7 @@ interface AppContextType {
   devBackupAllSchools: () => Promise<void>;
   devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
   devMigrateSchoolData: (schoolId: string) => Promise<void>;
+  devResetSampleSchool: (schoolId: string) => Promise<void>;
   purgeStudentProgress: (studentId: string) => Promise<void>;
   getAttendanceConfig: () => Promise<AttendanceSettings | null>;
   setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;

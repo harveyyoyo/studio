@@ -598,6 +598,9 @@ function TeacherAttendancePanel({
         setConfig({ ...config, classPeriodAssignments: Object.keys(next).length ? next : undefined });
     };
 
+    const assignments = config.classPeriodAssignments || {};
+    const selectedCategory = categories.find((c) => c.id === config.categoryId);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1247,6 +1250,8 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
         return date.getTime();
     };
 
+    const COUPONS_PER_SHEET = 12;
+
     const handlePrintSheet = async () => {
         const value = parseInt(printValue);
         if (!teacherName) {
@@ -1274,7 +1279,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
             return;
         }
 
-        const totalCost = value * 24;
+        const totalCost = value * COUPONS_PER_SHEET;
         if (settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined) {
             const spent = currentTeacher.spentThisMonth || 0;
             const remaining = currentTeacher.monthlyBudget - spent;
@@ -1291,7 +1296,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
 
         const expiresAt = computeExpiresAt();
 
-        const couponsToCreate: Coupon[] = Array.from({ length: 24 }, () => {
+        const couponsToCreate: Coupon[] = Array.from({ length: COUPONS_PER_SHEET }, () => {
             const code = Math.floor(100000 + Math.random() * 900000).toString();
             return {
                 id: code,
@@ -1562,7 +1567,7 @@ function TeacherPrinterInner({ teacherName, teacherId, onLogout }: { teacherName
                                     Print Coupons
                                 </CardTitle>
                                 <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                    Generate a sheet of 24 unique QR codes for rewards.
+                                    Generate a sheet of 12 larger QR coupons for rewards.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-4 md:p-6">

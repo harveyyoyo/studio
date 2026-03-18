@@ -84,7 +84,7 @@
   }
 
   .print-coupon-wrapper .coupon-scalable {
-    font-size: 24px;
+    font-size: 34px;
   }
 }
 
@@ -259,7 +259,7 @@
   #print-container {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(8, 1fr);
+    grid-template-rows: repeat(4, 1fr);
     gap: 0;
     width: 8.5in;
     height: 11in;
@@ -272,7 +272,7 @@
   }
 
   .print-coupon-wrapper {
-    height: 1.25in;
+    height: 2.5in;
     width: 2.5in;
     page-break-inside: avoid;
     box-sizing: border-box;

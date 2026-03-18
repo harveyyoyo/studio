@@ -70,8 +70,8 @@ export default function Header() {
   }
 
   const logoLink = '/';
-  const centerLabel = loginState === 'developer' ? 'Developer' : schoolName;
-  const centerHref = loginState === 'developer' ? '/developer' : '/portal';
+  const centerLabel = schoolName;
+  const centerHref = '/portal';
 
 
   // --- APP MODE HEADER ---
@@ -111,7 +111,7 @@ export default function Header() {
             {/* Home button removed */}
           </div>
           <div className="flex items-center justify-center">
-            {(schoolId || loginState === 'developer') && (
+            {schoolId && (
               <Link href={centerHref} className="flex items-center gap-2 font-school font-black text-xl truncate no-underline max-w-full">
                 <span className="truncate text-foreground font-bold">{centerLabel}</span>
               </Link>
@@ -133,7 +133,7 @@ export default function Header() {
           </div>
         </header>
 
-        {loginState !== 'loggedOut' && loginState !== 'developer' && !isKioskLocked && (
+        {loginState !== 'loggedOut' && !isKioskLocked && (
           <nav className={cn("fixed bottom-0 left-0 right-0 py-3 pb-[max(1rem,env(safe-area-inset-bottom))] z-[100] no-print border-t",
             settings.darkMode ? "bg-background/90 backdrop-blur-md border-border" : "bg-card border-border"
           )}>
@@ -182,15 +182,15 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Center: School Name / Developer */}
-        {(schoolId || loginState === 'developer') && (
+        {/* Center: School Name */}
+        {schoolId && (
           <Link href={centerHref} className="absolute left-1/2 -translate-x-1/2 text-center no-underline hidden lg:inline-flex">
             <span className="inline-flex items-center gap-3">
-              {(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) && (
+              {schoolData?.logoUrl && (
                 <span className="inline-flex h-10 w-10 rounded-full overflow-hidden bg-muted border border-border/40 shrink-0 drop-shadow-md">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={(loginState === 'developer' ? appLogoUrl : schoolData?.logoUrl) || ''}
+                    src={schoolData.logoUrl}
                     alt="Logo"
                     className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
                   />
@@ -223,10 +223,10 @@ export default function Header() {
               {loginState !== 'student' && loginState !== 'loggedOut' && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className={cn("font-bold gap-2 h-12 px-4 rounded-xl", loginState === 'developer' ? "text-destructive" : "text-primary")}>
+                    <Button variant="ghost" className="font-bold gap-2 h-12 px-4 rounded-xl text-primary">
                       <User className="w-5 h-5" />
                       <span className="hidden sm:inline">
-                        {userName || (loginState === 'developer' ? 'Dev Mode' : loginState === 'admin' ? 'Admin' : loginState === 'teacher' ? 'Teacher' : 'School')}
+                        {userName || (loginState === 'admin' ? 'Admin' : loginState === 'teacher' ? 'Teacher' : 'School')}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
