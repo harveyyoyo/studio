@@ -121,7 +121,7 @@ export function StudentScanner({
 
     return (
         <div className={cn(
-            "w-full max-w-sm rounded-[2.5rem] p-8 transition-all duration-700 relative z-10",
+            "w-full max-w-md rounded-[2.5rem] p-7 transition-all duration-700 relative z-10",
             isGraphic ? 'bg-card/5 backdrop-blur-2xl border border-border shadow-2xl shadow-primary/10' : 'bg-card shadow-2xl border border-border'
         )}>
             {/* Mascot Decoration for Graphic Mode */}
@@ -130,7 +130,7 @@ export function StudentScanner({
             )}
 
             <div className={cn(
-                "p-6 text-center relative z-10",
+                "p-5 text-center relative z-10",
                 isGraphic ? 'border-b border-border' : 'bg-muted/30 border-b border-border'
             )}>
                 <div className="absolute top-3 right-3">
@@ -164,13 +164,13 @@ export function StudentScanner({
                 )}>
                     {icon}
                 </div>
-                <div className="space-y-1 mb-8">
+                <div className="space-y-1 mb-6">
                     <h2 className={cn("text-4xl font-black tracking-tighter uppercase font-headline", isGraphic ? 'text-foreground graphic-text-glow' : 'text-foreground')}>Ready to Scan</h2>
                     <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", isGraphic ? 'text-primary' : 'text-muted-foreground')}>Place your ID card on the reader</p>
                 </div>
             </div>
 
-            <div className="p-6">
+            <div className="p-5">
                 <Tabs defaultValue="nfc" className="w-full" value={loginTab} onValueChange={setLoginTab}>
                     <TabsList className={cn("grid w-full grid-cols-3 p-1 rounded-xl mb-6", isGraphic ? 'bg-foreground/5' : 'bg-muted/50')}>
                         <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">

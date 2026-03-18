@@ -160,9 +160,11 @@ function StudentActivityList({ schoolId, studentId }: { schoolId: string; studen
 function StudentDashboardInner({
   studentId,
   onDone,
+  onRequestExit,
 }: {
   studentId: string;
   onDone: () => void;
+  onRequestExit: () => void;
 }) {
   const router = useRouter();
   const { redeemCoupon, schoolId, isKioskLocked, achievements, badges, getAttendanceConfig, getTeacherAttendanceConfig, recordClassSignIn } = useAppContext();
@@ -424,14 +426,16 @@ function StudentDashboardInner({
   }
 
   const fontScale = student.theme?.fontScale ?? 1;
+  const themeBg = student.theme?.background || '#020617';
+  const computedThemeText = student.theme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
 
   return (
     <TooltipProvider>
       <div
         className={cn("mt-6 md:mt-12 space-y-6 relative max-w-full mx-auto px-4 md:px-8", isGraphic ? 'animate-in fade-in duration-500' : '', settings.displayMode === 'app' && 'pb-24')}
         style={student.theme ? ({
-          '--theme-bg': student.theme.background,
-          '--theme-text': student.theme.text,
+          '--theme-bg': themeBg,
+          '--theme-text': computedThemeText,
           '--theme-primary': student.theme.primary,
           '--theme-card': student.theme.cardBackground,
           '--theme-accent': student.theme.accent,
@@ -548,20 +552,31 @@ function StudentDashboardInner({
             >
               <CardHeader className="pb-3 border-b" style={student.theme ? { borderColor: 'var(--theme-bg)' } : undefined}>
                 <Helper content="Enter a coupon code to add points to your account. You can type it in manually or use the camera to scan a QR code.">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <CardTitle className="text-base font-black flex items-center gap-2">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={student.theme ? { backgroundColor: 'var(--theme-bg)' } : { backgroundColor: 'var(--theme-bg)' /* Will be overridden by classes if no theme */ }}>
                         <Wallet className="w-4 h-4" style={student.theme ? { color: 'var(--theme-primary)' } : undefined} />
                       </div>
                       Redeem Coupon Code
                     </CardTitle>
-                    <div className={cn(
-                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors",
-                      isKioskLocked
-                        ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
-                        : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
-                    )}>
-                      <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-colors whitespace-nowrap",
+                        isKioskLocked
+                          ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800"
+                          : "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800"
+                      )}>
+                        <span>{isKioskLocked ? 'Kiosk Locked • ' : ''}Auto-logout in {logoutTimer}s</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                        onClick={onRequestExit}
+                      >
+                        Logout
+                      </Button>
                     </div>
                   </div>
                 </Helper>
@@ -862,6 +877,7 @@ export default function StudentLoginPage() {
           <StudentDashboardInner
             studentId={activeStudentId}
             onDone={handleDone}
+            onRequestExit={() => setIsLogoutDialogOpen(true)}
           />
         </SchoolGate>
       </ErrorBoundary>

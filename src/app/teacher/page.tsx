@@ -651,6 +651,37 @@ function TeacherAttendancePanel({
                     </DialogContent>
                 </Dialog>
             </div>
+            {claimableClasses.length > 0 && (
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Apply to a class</Label>
+                    <p className="text-sm text-muted-foreground">
+                        Claim an unassigned class so attendance rewards will apply to it.
+                    </p>
+                    <div className="space-y-2">
+                        {claimableClasses.map((c) => (
+                            <div
+                                key={c.id}
+                                className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30"
+                            >
+                                <div className="min-w-[180px]">
+                                    <p className="font-bold">{c.name}</p>
+                                    <p className="text-xs text-muted-foreground">Unassigned</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={claimingClassId === c.id}
+                                    onClick={() => applyToClass(c.id)}
+                                    className="rounded-xl h-10 font-bold"
+                                >
+                                    {claimingClassId === c.id ? 'Applying...' : 'Apply'}
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-3">
                 <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Which classes use this?</Label>
                 {myClasses.length === 0 ? (
@@ -690,37 +721,6 @@ function TeacherAttendancePanel({
                     </div>
                 )}
             </div>
-
-            {claimableClasses.length > 0 && (
-                <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Apply to a class</Label>
-                    <p className="text-sm text-muted-foreground">
-                        Claim an unassigned class so attendance rewards will apply to it.
-                    </p>
-                    <div className="space-y-2">
-                        {claimableClasses.map((c) => (
-                            <div
-                                key={c.id}
-                                className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30"
-                            >
-                                <div className="min-w-[180px]">
-                                    <p className="font-bold">{c.name}</p>
-                                    <p className="text-xs text-muted-foreground">Unassigned</p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={claimingClassId === c.id}
-                                    onClick={() => applyToClass(c.id)}
-                                    className="rounded-xl h-10 font-bold"
-                                >
-                                    {claimingClassId === c.id ? 'Applying...' : 'Apply'}
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {myClasses.length > 0 && (
                 <div className="space-y-3">

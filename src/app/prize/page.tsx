@@ -33,7 +33,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import DynamicIcon from '@/components/DynamicIcon';
-import { cn, getStudentNickname } from '@/lib/utils';
+import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -231,14 +231,16 @@ function PrizeDashboard({
         .sort((a, b) => (a.points || 0) - (b.points || 0));
 
     const fontScale = student.theme?.fontScale ?? 1;
+    const themeBg = student.theme?.background || 'transparent';
+    const computedThemeText = student.theme?.text || (getContrastColor(student.theme?.background || student.theme?.cardBackground || student.theme?.primary || '#0ea5e9') === 'black' ? '#020617' : '#ffffff');
 
     return (
         <TooltipProvider>
             <div
                 className={cn("min-h-screen relative overflow-hidden font-sans flex flex-col items-center", settings.displayMode === 'app' && 'pb-24', (!student || !student.theme) ? "bg-background text-foreground" : "")}
                 style={(student && student.theme) ? {
-                    '--theme-bg': student.theme.background || 'transparent',
-                    '--theme-text': student.theme.text || 'inherit',
+                    '--theme-bg': themeBg,
+                    '--theme-text': computedThemeText,
                     '--theme-primary': student.theme.primary || 'hsl(var(--primary))',
                     '--theme-card': student.theme.cardBackground || 'hsl(var(--card))',
                     '--theme-accent': student.theme.accent || 'hsl(var(--accent))',

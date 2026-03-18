@@ -220,12 +220,16 @@ export function ThemeGeneratorModal({
                                 "w-full h-64 md:h-72 rounded-2xl border border-border shadow-inner p-5 flex flex-col gap-4 overflow-hidden relative transition-colors duration-500",
                                 !previewTheme && "bg-muted flex items-center justify-center text-muted-foreground"
                             )}
-                            style={previewTheme ? {
-                                background: previewTheme.backgroundStyle || previewTheme.background,
-                                color: previewTheme.text,
-                                fontFamily: previewTheme.fontFamily || 'inherit',
-                                fontSize: (previewTheme.fontScale ?? 1) !== 1 ? `${previewTheme.fontScale}em` : undefined,
-                            } : undefined}
+                            style={previewTheme ? (() => {
+                                const bg = previewTheme.backgroundStyle ? undefined : (previewTheme.background || '#020617');
+                                const effectiveText = previewTheme.text || (getContrastColor(bg || '#020617') === 'black' ? '#020617' : '#ffffff');
+                                return {
+                                    background: previewTheme.backgroundStyle || bg,
+                                    color: effectiveText,
+                                    fontFamily: previewTheme.fontFamily || 'inherit',
+                                    fontSize: (previewTheme.fontScale ?? 1) !== 1 ? `${previewTheme.fontScale}em` : undefined,
+                                };
+                            })() : undefined}
                         >
                             {previewTheme?.fontFamily && <GoogleFontLoader fontFamily={previewTheme.fontFamily} />}
 
