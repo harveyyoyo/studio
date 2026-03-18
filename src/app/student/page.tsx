@@ -725,7 +725,7 @@ function StudentDashboardInner({
 }
 
 export default function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, isKioskLocked, setIsKioskLocked } = useAppContext();
+  const { loginState, isInitialized, schoolId } = useAppContext();
   const router = useRouter();
   const { toast } = useToast();
   const playSound = useArcadeSound();
@@ -736,8 +736,6 @@ export default function StudentLoginPage() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
-  const [isUnlockDialogOpen, setIsUnlockDialogOpen] = useState(false);
-  const [unlockPasscode, setUnlockPasscode] = useState('');
 
   const handleDone = useCallback(() => {
     setActiveStudentId(null);
@@ -771,95 +769,6 @@ export default function StudentLoginPage() {
       setIsLogoutDialogOpen(false);
     }
   }, [schoolId, functions, logoutPasscode, activeStudentId, playSound, router, toast]);
-
-  const handleUnlockRequest = () => {
-    setIsUnlockDialogOpen(true);
-  };
-
-  const handleConfirmUnlock = useCallback(async () => {
-    if (!schoolId) return;
-    try {
-      const verify = httpsCallable(functions, 'verifySchoolPasscode');
-      await verify({ schoolId, passcode: unlockPasscode });
-      playSound('swoosh');
-      setIsKioskLocked(false);
-      toast({ title: "Kiosk Unlocked" });
-    } catch (e) {
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Incorrect Passcode',
-        description: 'The passcode you entered is incorrect.',
-      });
-    } finally {
-      setUnlockPasscode('');
-      setIsUnlockDialogOpen(false);
-    }
-  }, [schoolId, functions, unlockPasscode, playSound, toast, setIsKioskLocked]);
-
-  useEffect(() => {
-    // This effect hijacks the home buttons in the header when the kiosk is locked.
-    const homeButtons = document.querySelectorAll('[data-home-button="true"]');
-    if (homeButtons.length === 0) return;
-
-    const handleClick = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsLogoutDialogOpen(true);
-    };
-
-    if (isKioskLocked) {
-      homeButtons.forEach(button => {
-        button.setAttribute('aria-disabled', 'true');
-        button.addEventListener('click', handleClick, true); // Use capture phase
-      });
-    }
-
-    return () => {
-      homeButtons.forEach(button => {
-        button.removeAttribute('aria-disabled');
-        button.removeEventListener('click', handleClick, true);
-      });
-    };
-  }, [isKioskLocked, setIsLogoutDialogOpen]);
-
-  useEffect(() => {
-    // This effect traps the browser's back button when the kiosk is locked.
-    if (isKioskLocked) {
-      window.history.pushState({ locked: true }, '');
-
-      const handlePopState = (event: PopStateEvent) => {
-        if (isKioskLocked) {
-          window.history.pushState({ locked: true }, '');
-          setIsLogoutDialogOpen(true);
-        }
-      };
-
-      window.addEventListener('popstate', handlePopState);
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-      };
-    }
-  }, [isKioskLocked, setIsLogoutDialogOpen]);
-
-  useEffect(() => {
-    if (isKioskLocked) {
-      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-        // This is the standard way to trigger the confirmation prompt.
-        // Modern browsers will show their own generic message, not this custom one.
-        e.preventDefault();
-        e.returnValue = 'Are you sure you want to exit? The kiosk is locked.';
-        return e.returnValue;
-      };
-
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      };
-    }
-  }, [isKioskLocked]);
-
 
   if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
     return <div className="min-h-screen flex items-center justify-center p-8 bg-background">
@@ -895,19 +804,8 @@ export default function StudentLoginPage() {
           <StudentScanner
             onStudentFound={setActiveStudentId}
             title="Student Portal"
-            isLocked={isKioskLocked}
-            setIsLocked={setIsKioskLocked}
-            onUnlockRequest={handleUnlockRequest}
             icon={<GraduationCap className="w-8 h-8 text-chart-1" />}
           />
-          <div className="w-full max-w-sm mt-4 bg-slate-50 p-4 rounded-2xl border flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-            <p className="text-muted-foreground">School: <span className="text-slate-800">{schoolId?.replace(/_/g, ' ')}</span></p>
-            {isKioskLocked ? (
-              <span className="text-red-500 flex items-center gap-1"><Lock className="w-3 h-3" /> Locked</span>
-            ) : (
-              <span className="text-green-600 flex items-center gap-1"><Unlock className="w-3 h-3" /> Unlocked</span>
-            )}
-          </div>
         </div>
         <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
           <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
@@ -932,32 +830,6 @@ export default function StudentLoginPage() {
             <DialogFooter className="flex gap-2 sm:justify-between">
               <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsLogoutDialogOpen(false); setLogoutPasscode(''); }}>Cancel</Button>
               <Button onClick={handleConfirmLogout} className="rounded-xl flex-1 h-11 bg-red-500 hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-200">Confirm Exit</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={isUnlockDialogOpen} onOpenChange={setIsUnlockDialogOpen}>
-          <DialogContent className="sm:max-w-md rounded-2xl shadow-2xl border-none">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-black text-slate-800">Unlock Kiosk?</DialogTitle>
-              <DialogDescription className="text-slate-500 font-medium text-sm">
-                Enter the school passcode to unlock the kiosk.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor="unlock-passcode" className="font-black text-slate-700 uppercase tracking-widest text-[10px] ml-1">School Passcode</Label>
-              <Input
-                id="unlock-passcode"
-                type="password"
-                className="mt-2 text-xl rounded-xl h-14 border-2 border-slate-200 bg-slate-50 focus-visible:ring-primary font-mono tracking-widest text-center shadow-inner"
-                value={unlockPasscode}
-                onChange={(e) => setUnlockPasscode(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleConfirmUnlock()}
-                autoFocus
-              />
-            </div>
-            <DialogFooter className="flex gap-2 sm:justify-between">
-              <Button variant="ghost" className="rounded-xl flex-1 h-11 font-bold text-slate-500 text-sm" onClick={() => { setIsUnlockDialogOpen(false); setUnlockPasscode(''); }}>Cancel</Button>
-              <Button onClick={handleConfirmUnlock} className="rounded-xl flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-bold text-sm">Confirm Unlock</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

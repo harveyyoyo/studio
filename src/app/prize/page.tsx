@@ -475,17 +475,12 @@ export default function PrizePage() {
     const firestore = useFirestore();
 
     const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
-    const [isLocked, setIsLocked] = useState(false);
+    // Kiosk lock removed.
 
 
     const handleDone = useCallback(() => {
         setActiveStudentId(null);
     }, []);
-
-    const handleUnlockRequest = () => {
-        setIsLocked(false);
-        toast({ title: "Unlocked", description: "Scanner unlocked." });
-    };
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (
@@ -512,9 +507,6 @@ export default function PrizePage() {
                     title="Prize Redemption"
                     description="Choose how to identify the student below."
                     icon={<Gift className="w-10 h-10 text-chart-3" />}
-                    isLocked={isLocked}
-                    setIsLocked={setIsLocked}
-                    onUnlockRequest={handleUnlockRequest}
                 />
             </div>
         </TooltipProvider>
