@@ -263,6 +263,15 @@ function AdminDashboardInner() {
     setSelectedStudentIds(new Set([filteredStudents[0].id]));
   }, [selectionMode, filteredStudents]);
 
+  const isAllFilteredSelected =
+    filteredStudents.length > 0 && selectedStudentIds.size === filteredStudents.length;
+
+  const toggleSelectAllFiltered = () => {
+    if (filteredStudents.length === 0) return;
+    if (isAllFilteredSelected) setSelectedStudentIds(new Set());
+    else setSelectedStudentIds(new Set(filteredStudents.map((s) => s.id)));
+  };
+
   const defaultAttendanceConfig: AttendanceSettings = {
     pointsForSignIn: 1,
     pointsForOnTime: 1,
@@ -1244,8 +1253,21 @@ function AdminDashboardInner() {
                   </CardTitle>
                 </Helper>
                 <CardDescription>Manage your enrollments and view student activity.</CardDescription>
-                <div className='flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0'>
+                <div className='flex flex-wrap gap-2 w-full pb-1 sm:pb-0'>
                   <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
+                  {selectionMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={toggleSelectAllFiltered}
+                      className={cn(
+                        "rounded-xl px-3 h-11 whitespace-nowrap",
+                        isAllFilteredSelected ? "bg-secondary/40" : "bg-orange-50 text-orange-800 border-orange-200"
+                      )}
+                    >
+                      {isAllFilteredSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  )}
                   <Button
                     onClick={() => {
                       const filtered = filteredStudents;
@@ -1339,8 +1361,19 @@ function AdminDashboardInner() {
                     {filteredStudents.map(s => (
                       <li key={s.id} className={cn(
                         "flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-background shadow-sm",
+                        selectionMode && "cursor-pointer",
                         selectedStudentIds.has(s.id) ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20" : "bg-secondary/20 border-transparent"
-                      )}>
+                      )}
+                      onClick={() => {
+                        if (!selectionMode) return;
+                        setSelectedStudentIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(s.id)) next.delete(s.id);
+                          else next.add(s.id);
+                          return next;
+                        });
+                      }}
+                      >
                         <div className="flex items-center gap-3">
                           {selectionMode && (
                             <Checkbox
@@ -1352,6 +1385,7 @@ function AdminDashboardInner() {
                                 setSelectedStudentIds(next);
                               }}
                               className="mr-2"
+                              onClick={(e) => e.stopPropagation()}
                             />
                           )}
                           <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
@@ -1368,7 +1402,7 @@ function AdminDashboardInner() {
                             <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
                           </div>
                         </div>
-                        <div className="flex gap-1.5 self-end sm:self-center">
+                        <div className="flex gap-1.5 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setThemeStudent(s)} title="Generate AI Theme"><Wand2 className="w-4 h-4 text-purple-500" /></Button>
                           <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
                           {settings.enableBadges && (

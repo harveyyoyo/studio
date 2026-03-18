@@ -276,7 +276,11 @@ function StudentDashboardInner({
           };
           const result = await recordClassSignIn(student.id, student, configFromRule);
           if (result && result.pointsAwarded > 0) {
+            playSound('success');
             toast({ title: 'Attendance recorded', description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.` });
+            animationKey.current += 1;
+            setFlyPointsValue(result.pointsAwarded);
+            setTimeout(() => { setFlyPointsValue(null); }, 1500);
           }
           return;
         }
@@ -289,7 +293,11 @@ function StudentDashboardInner({
         const configWithUniversalPeriods: AttendanceSettings = { ...config, schedule: Array.isArray(periods) ? periods : [] };
         const result = await recordClassSignIn(student.id, student, configWithUniversalPeriods);
         if (result && result.pointsAwarded > 0) {
+          playSound('success');
           toast({ title: 'Class sign-in recorded', description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.` });
+          animationKey.current += 1;
+          setFlyPointsValue(result.pointsAwarded);
+          setTimeout(() => { setFlyPointsValue(null); }, 1500);
         }
       } catch (err) {
         console.error('Attendance sign-in failed', err);
