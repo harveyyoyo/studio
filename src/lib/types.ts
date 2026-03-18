@@ -10,6 +10,8 @@ export interface HistoryItem {
 export interface Class {
   id: string;
   name: string;
+  /** Optional primary teacher for this class, used for per-teacher attendance. */
+  primaryTeacherId?: string;
 }
 
 export interface Teacher {
@@ -27,6 +29,23 @@ export interface Category {
   points: number;
   color?: string;
   teacherId?: string;
+}
+
+export interface AttendanceRewardRule {
+  id: string;
+  teacherId: string;
+  classId: string;
+  className?: string;
+  /** Period reference from universal periods, if used. */
+  periodId?: string;
+  /** Inline custom period (teacher-created), if used. */
+  customPeriod?: { label: string; startTime: string; endTime: string };
+  pointsForSignIn: number;
+  pointsForOnTime: number;
+  onTimeWindowMinutes: number;
+  categoryId?: string;
+  enabled: boolean;
+  createdAt: number;
 }
 
 export interface StudentTheme {
@@ -135,15 +154,22 @@ export interface AttendanceScheduleSlot {
   endTime: string;
 }
 
-/** Per-school attendance (class sign-in) configuration. */
+/** Attendance (class sign-in) configuration.
+ *  Historically this was per-school; with per-teacher attendance, `teacherId`
+ *  can be used to scope a config to a specific teacher.
+ */
 export interface AttendanceSettings {
   pointsForSignIn: number;
   pointsForOnTime: number;
   onTimeWindowMinutes: number;
   /** If set and non-empty, only students in these classes get attendance points. Empty = all classes. */
   enabledClassIds?: string[];
+  /** Optional mapping of classId -> schedule slot id (period) for that class. */
+  classPeriodAssignments?: Record<string, string>;
   categoryId?: string;
   schedule: AttendanceScheduleSlot[];
+  /** Optional owner for per-teacher attendance configuration. */
+  teacherId?: string;
 }
 
 /** One sign-in event stored for admin reporting. */
@@ -157,6 +183,8 @@ export interface AttendanceLogEntry {
   periodLabel?: string;
   /** A deterministic per-session key used to prevent double sign-ins. */
   sessionId?: string;
+   /** Optional owning teacher when using per-teacher attendance configs. */
+  teacherId?: string;
 }
 
 export interface BackupInfo {

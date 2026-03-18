@@ -146,7 +146,7 @@ export default function PortalPage() {
                                             <Icon className={cn("w-6 h-6 md:w-7 md:h-7", textColorClasses[area.color])} />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg md:text-xl font-black text-card-foreground tracking-tight leading-tight">{area.title}</h3>
+                                            <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight text-primary">{area.title}</h3>
                                             <p className="text-sm text-muted-foreground mt-1 font-medium leading-normal">{area.description}</p>
                                         </div>
                                     </div>

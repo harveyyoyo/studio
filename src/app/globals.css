@@ -89,50 +89,141 @@
 }
 
 /* Color Schemes for both Light & Dark Mode */
+.data-color-scheme-default,
 [data-color-scheme="sky"] {
   --primary: 199 89% 48%;
+  --primary-foreground: 210 40% 98%;
   --background: 199 80% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 199 90% 95%;
+  --accent-foreground: 199 40% 30%;
+  --border: 199 60% 85%;
+  --muted: 199 40% 96%;
+  --muted-foreground: 199 30% 45%;
+  --chart-1: 199 89% 48%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 [data-color-scheme="rose"] {
   --primary: 347 77% 50%;
+  --primary-foreground: 210 40% 98%;
   --background: 347 70% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 347 85% 95%;
+  --accent-foreground: 347 45% 35%;
+  --border: 347 60% 85%;
+  --muted: 347 45% 96%;
+  --muted-foreground: 347 32% 45%;
+  --chart-1: 347 77% 50%;
+  --chart-2: 25 95% 53%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 [data-color-scheme="mint"] {
   --primary: 160 84% 39%;
+  --primary-foreground: 210 40% 98%;
   --background: 160 60% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 160 70% 94%;
+  --accent-foreground: 160 40% 30%;
+  --border: 160 50% 84%;
+  --muted: 160 40% 96%;
+  --muted-foreground: 160 28% 42%;
+  --chart-1: 160 84% 39%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
 }
 
 [data-color-scheme="lavender"] {
   --primary: 263 70% 58%;
+  --primary-foreground: 210 40% 98%;
   --background: 263 60% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 263 75% 95%;
+  --accent-foreground: 263 45% 35%;
+  --border: 263 55% 85%;
+  --muted: 263 40% 96%;
+  --muted-foreground: 263 30% 45%;
+  --chart-1: 263 70% 58%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 40 90% 60%;
+  --chart-5: 280 70% 60%;
 }
 
 [data-color-scheme="peach"] {
   --primary: 25 95% 53%;
+  --primary-foreground: 210 40% 98%;
   --background: 25 80% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 25 90% 95%;
+  --accent-foreground: 25 55% 35%;
+  --border: 25 70% 85%;
+  --muted: 25 40% 96%;
+  --muted-foreground: 25 30% 45%;
+  --chart-1: 25 95% 53%;
+  --chart-2: 347 77% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
 }
 
 /* Dark mode variations for themes */
 .dark[data-color-scheme="sky"] {
   --background: 199 80% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 199 50% 25%;
+  --muted: 199 40% 15%;
+  --muted-foreground: 199 30% 70%;
 }
 
 .dark[data-color-scheme="rose"] {
   --background: 347 70% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 347 50% 25%;
+  --muted: 347 40% 15%;
+  --muted-foreground: 347 30% 72%;
 }
 
 .dark[data-color-scheme="mint"] {
   --background: 160 60% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 160 45% 22%;
+  --muted: 160 40% 15%;
+  --muted-foreground: 160 30% 70%;
 }
 
 .dark[data-color-scheme="lavender"] {
   --background: 263 60% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 263 45% 25%;
+  --muted: 263 40% 15%;
+  --muted-foreground: 263 30% 72%;
 }
 
 .dark[data-color-scheme="peach"] {
   --background: 25 80% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 25 60% 25%;
+  --muted: 25 40% 15%;
+  --muted-foreground: 25 30% 72%;
 }
 
 /* Print Styles */

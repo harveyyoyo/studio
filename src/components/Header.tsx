@@ -58,13 +58,14 @@ export default function Header() {
   const appLogoUrl = appConfig?.appLogoUrl;
 
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
+  const isDeveloperMode = loginState === 'developer';
 
   const handleLogout = () => {
     playSound('swoosh');
     logout();
   };
 
-  if (isLoginPage || !isInitialized) {
+  if (isLoginPage || !isInitialized || isDeveloperMode) {
     return null;
   }
 

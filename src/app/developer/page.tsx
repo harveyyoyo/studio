@@ -150,7 +150,7 @@ export default function DeveloperPage() {
   const {
     loginState, isInitialized, isUserLoading, createSchool, deleteSchool, updateSchool,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-    devVerifyBackup, devMigrateSchoolData
+    devVerifyBackup, devMigrateSchoolData, devResetSampleSchool
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -195,21 +195,7 @@ export default function DeveloperPage() {
   // Note: Admin roles are provisioned by backend-only code (Cloud Functions / Admin SDK).
   // We intentionally do not write to roles collections from the client.
 
-  // Automatically creates or resets the sample schools on developer login
-  useEffect(() => {
-    if (loginState !== 'developer' || !firestore || !createSchool) return;
-
-    const createOrResetSampleSchool = async (schoolId: string) => {
-      try {
-        await createSchool(schoolId);
-      } catch (error) {
-        console.error(`Failed to create or reset '${schoolId}' school:`, error);
-      }
-    };
-
-    createOrResetSampleSchool('yeshiva');
-    createOrResetSampleSchool('schoolabc');
-  }, [loginState, firestore, createSchool]);
+  // Developer can manually create sample schools if needed using the controls below.
 
   // Load current app-wide logo and history from global app config
   useEffect(() => {
@@ -545,6 +531,31 @@ export default function DeveloperPage() {
               <p className="text-slate-400 text-sm">Manage all school databases.</p>
             </div>
           </Helper>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sample Schools</CardTitle>
+            <CardDescription>
+              Quickly reset the built-in demo schools back to their default data. This will wipe any changes (students, themes, prizes, etc.) for that sample only.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => devResetSampleSchool('yeshiva')}
+              className="justify-between sm:w-auto"
+            >
+              <span className="font-bold">Reset &quot;yeshiva&quot;</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => devResetSampleSchool('schoolabc')}
+              className="justify-between sm:w-auto"
+            >
+              <span className="font-bold">Reset &quot;schoolabc&quot;</span>
+            </Button>
+          </CardContent>
         </Card>
 
         <Card className="border shadow-md">

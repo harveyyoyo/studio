@@ -30,7 +30,7 @@ export function ThemeGeneratorModal({
     const [isGenerating, setIsGenerating] = useState(false);
     const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(currentTheme);
     const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(currentTheme);
-    const [model, setModel] = useState<string>('gemini-2.5-flash');
+    const [model, setModel] = useState<string>('gpt-4o-mini');
     const { toast } = useToast();
 
     // Load provider from local storage on mount

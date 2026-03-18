@@ -16,7 +16,7 @@ import {
   redeemPrize as dbRedeemPrize, addPrize as dbAddPrize,
   updatePrize as dbUpdatePrize, deletePrize as dbDeletePrize,
   addStudent as dbAddStudent, updateStudent as dbUpdateStudent,
-  deleteStudent as dbDeleteStudent, addClass as dbAddClass,
+  deleteStudent as dbDeleteStudent, addClass as dbAddClass, updateClass as dbUpdateClass,
   deleteClass as dbDeleteClass, addTeacher as dbAddTeacher, updateTeacher as dbUpdateTeacher, deleteTeacher as dbDeleteTeacher, uploadStudents as dbUploadStudents,
   awardPointsToStudent as dbAwardPointsToStudent,
   awardPointsToMultipleStudents as dbAwardPointsToMultipleStudents,
@@ -27,6 +27,9 @@ import {
   setAttendanceConfig as dbSetAttendanceConfig,
   recordClassSignIn as dbRecordClassSignIn,
   listAttendanceLog as dbListAttendanceLog,
+  getTeacherAttendanceConfig as dbGetTeacherAttendanceConfig,
+  setTeacherAttendanceConfig as dbSetTeacherAttendanceConfig,
+  listTeacherAttendanceLog as dbListTeacherAttendanceLog,
 } from '@/lib/db';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
@@ -63,6 +66,7 @@ interface AppContextType {
   updateStudent: (student: Student) => Promise<void>;
   deleteStudent: (studentId: string) => Promise<void>;
   addClass: (newClass: Omit<Class, 'id'>) => Promise<void>;
+  updateClass: (updatedClass: Class) => Promise<void>;
   deleteClass: (classId: string, students: Student[]) => Promise<void>;
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher) => Promise<void>;
@@ -103,6 +107,10 @@ interface AppContextType {
   setAttendanceConfig: (settings: AttendanceSettings) => Promise<void>;
   recordClassSignIn: (studentId: string, student: Student, config: AttendanceSettings) => Promise<{ pointsAwarded: number; onTime: boolean; periodLabel?: string }>;
   listAttendanceLog: (limitCount?: number) => Promise<AttendanceLogEntry[]>;
+  // Per-teacher attendance helpers
+  getTeacherAttendanceConfig: (teacherId: string) => Promise<AttendanceSettings | null>;
+  setTeacherAttendanceConfig: (teacherId: string, settings: AttendanceSettings) => Promise<void>;
+  listTeacherAttendanceLog: (teacherId: string, limitCount?: number) => Promise<AttendanceLogEntry[]>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -158,6 +166,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const addClass_ = useCallback((c: Omit<Class, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
     return dbAddClass(firestore, schoolId, c);
+  }, [firestore, schoolId]);
+
+  const updateClass_ = useCallback((c: Class) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbUpdateClass(firestore, schoolId, c);
   }, [firestore, schoolId]);
 
   const deleteClass_ = useCallback((id: string, students: Student[]) => {
@@ -303,6 +316,21 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return dbListAttendanceLog(firestore, schoolId, limitCount);
   }, [firestore, schoolId]);
 
+  const getTeacherAttendanceConfig_ = useCallback(async (teacherId: string) => {
+    if (!firestore || !schoolId || !teacherId) return null;
+    return dbGetTeacherAttendanceConfig(firestore, schoolId, teacherId);
+  }, [firestore, schoolId]);
+
+  const setTeacherAttendanceConfig_ = useCallback(async (teacherId: string, settings: AttendanceSettings) => {
+    if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
+    return dbSetTeacherAttendanceConfig(firestore, schoolId, teacherId, settings);
+  }, [firestore, schoolId]);
+
+  const listTeacherAttendanceLog_ = useCallback(async (teacherId: string, limitCount?: number) => {
+    if (!firestore || !schoolId || !teacherId) return [];
+    return dbListTeacherAttendanceLog(firestore, schoolId, teacherId, limitCount);
+  }, [firestore, schoolId]);
+
   const value = useMemo(() => ({
     // Auth
     ...authCtx,
@@ -312,7 +340,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     ...printCtx,
     // CRUD
     addStudent: addStudent_, updateStudent: updateStudent_, deleteStudent: deleteStudent_,
-    addClass: addClass_, deleteClass: deleteClass_,
+    addClass: addClass_, updateClass: updateClass_, deleteClass: deleteClass_,
     addTeacher: addTeacher_, updateTeacher: updateTeacher_, deleteTeacher: deleteTeacher_,
     addCategory: addCategory_, updateCategory: updateCategory_, deleteCategory: deleteCategory_,
     addCoupons: addCoupons_, redeemCoupon: redeemCoupon_, deleteCoupon: deleteCoupon_, awardPoints: awardPoints_,
@@ -335,6 +363,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     setAttendanceConfig: setAttendanceConfig_,
     recordClassSignIn: recordClassSignIn_,
     listAttendanceLog: listAttendanceLog_,
+    getTeacherAttendanceConfig: getTeacherAttendanceConfig_,
+    setTeacherAttendanceConfig: setTeacherAttendanceConfig_,
+    listTeacherAttendanceLog: listTeacherAttendanceLog_,
   }), [
     authCtx, printCtx, backupCtx,
     addStudent_, updateStudent_, deleteStudent_,
@@ -346,6 +377,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     togglePrizeFulfillment_,
     purgeStudentProgress_,
     getAttendanceConfig_, setAttendanceConfig_, recordClassSignIn_, listAttendanceLog_,
+    getTeacherAttendanceConfig_, setTeacherAttendanceConfig_, listTeacherAttendanceLog_,
     categories, categoriesLoading,
     achievements, achievementsLoading,
     badges, badgesLoading,

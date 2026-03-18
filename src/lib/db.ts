@@ -262,6 +262,23 @@ export const addClass = async (firestore: Firestore, schoolId: string, classData
   }
 };
 
+export const updateClass = async (firestore: Firestore, schoolId: string, updatedClass: Class) => {
+  const classDocRef = doc(firestore, 'schools', schoolId, 'classes', updatedClass.id);
+  try {
+    await updateDoc(classDocRef, removeUndefined({ ...updatedClass }));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: classDocRef.path,
+        operation: 'update',
+        requestResourceData: updatedClass,
+      })
+    );
+    throw error;
+  }
+};
+
 export const deleteClass = async (firestore: Firestore, schoolId: string, classId: string, students: Student[]) => {
   const batch = writeBatch(firestore);
 
@@ -1244,6 +1261,27 @@ function getCurrentPeriodAndOnTime(
   return { onTime: false };
 }
 
+function getAssignedPeriodAndOnTime(
+  schedule: AttendanceSettings['schedule'],
+  assignedSlotId: string | undefined,
+  onTimeWindowMinutes: number,
+  now: number
+): { periodLabel?: string; onTime: boolean } {
+  if (!assignedSlotId) return { onTime: false };
+  const slot = (schedule || []).find((s) => s.id === assignedSlotId);
+  if (!slot) return { onTime: false };
+  const d = new Date(now);
+  const nowMinutes = d.getHours() * 60 + d.getMinutes();
+  const start = parseTimeToMinutes(slot.startTime);
+  const end = parseTimeToMinutes(slot.endTime);
+  if (nowMinutes < start || nowMinutes > end) return { onTime: false };
+  const onTime = nowMinutes <= start + onTimeWindowMinutes;
+  return { periodLabel: slot.label, onTime };
+}
+
+/** Legacy per-school attendance configuration.
+ *  New code can prefer `getTeacherAttendanceConfig` for per-teacher configs.
+ */
 export const getAttendanceConfig = async (
   firestore: Firestore,
   schoolId: string
@@ -1258,11 +1296,17 @@ export const getAttendanceConfig = async (
     pointsForOnTime: data.pointsForOnTime ?? 0,
     onTimeWindowMinutes: data.onTimeWindowMinutes ?? 15,
     enabledClassIds: enabledClassIds?.length ? enabledClassIds : undefined,
+    classPeriodAssignments: (data.classPeriodAssignments && typeof data.classPeriodAssignments === 'object')
+      ? data.classPeriodAssignments
+      : undefined,
     categoryId: data.categoryId,
     schedule: Array.isArray(data.schedule) ? data.schedule : [],
   };
 };
 
+/** Legacy per-school attendance configuration writer.
+ *  New code can prefer `setTeacherAttendanceConfig` for per-teacher configs.
+ */
 export const setAttendanceConfig = async (
   firestore: Firestore,
   schoolId: string,
@@ -1271,6 +1315,77 @@ export const setAttendanceConfig = async (
   const configRef = doc(firestore, 'schools', schoolId, 'attendance', ATTENDANCE_CONFIG_ID);
   try {
     await setDoc(configRef, removeUndefined(settings));
+  } catch (error) {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: configRef.path,
+        operation: 'write',
+        requestResourceData: settings,
+      })
+    );
+    throw error;
+  }
+};
+
+/** Per-teacher attendance configuration helpers. */
+export const getTeacherAttendanceConfig = async (
+  firestore: Firestore,
+  schoolId: string,
+  teacherId: string
+): Promise<AttendanceSettings | null> => {
+  if (!teacherId) return null;
+  const configRef = doc(
+    firestore,
+    'schools',
+    schoolId,
+    'teachers',
+    teacherId,
+    'attendanceConfig',
+    ATTENDANCE_CONFIG_ID
+  );
+  const snap = await getDoc(configRef);
+  const data = snap.data();
+  if (!data) return null;
+  const enabledClassIds = Array.isArray(data.enabledClassIds) ? data.enabledClassIds : undefined;
+  return {
+    pointsForSignIn: data.pointsForSignIn ?? 0,
+    pointsForOnTime: data.pointsForOnTime ?? 0,
+    onTimeWindowMinutes: data.onTimeWindowMinutes ?? 15,
+    enabledClassIds: enabledClassIds?.length ? enabledClassIds : undefined,
+    classPeriodAssignments: (data.classPeriodAssignments && typeof data.classPeriodAssignments === 'object')
+      ? data.classPeriodAssignments
+      : undefined,
+    categoryId: data.categoryId,
+    schedule: Array.isArray(data.schedule) ? data.schedule : [],
+    teacherId,
+  };
+};
+
+export const setTeacherAttendanceConfig = async (
+  firestore: Firestore,
+  schoolId: string,
+  teacherId: string,
+  settings: AttendanceSettings
+): Promise<void> => {
+  if (!teacherId) throw new Error('teacherId is required for per-teacher attendance settings');
+  const configRef = doc(
+    firestore,
+    'schools',
+    schoolId,
+    'teachers',
+    teacherId,
+    'attendanceConfig',
+    ATTENDANCE_CONFIG_ID
+  );
+  try {
+    await setDoc(
+      configRef,
+      removeUndefined({
+        ...settings,
+        teacherId,
+      })
+    );
   } catch (error) {
     errorEmitter.emit(
       'permission-error',
@@ -1299,7 +1414,12 @@ export const recordClassSignIn = async (
   }
 
   const now = Date.now();
-  const { periodLabel, onTime } = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+  const studentClassId = (student.classId || '').trim();
+  const assignedSlotId = studentClassId ? config.classPeriodAssignments?.[studentClassId] : undefined;
+  const assigned = getAssignedPeriodAndOnTime(config.schedule, assignedSlotId, config.onTimeWindowMinutes, now);
+  const fallback = getCurrentPeriodAndOnTime(config.schedule, config.onTimeWindowMinutes, now);
+  const periodLabel = assigned.periodLabel ?? fallback.periodLabel;
+  const onTime = assigned.periodLabel ? assigned.onTime : fallback.onTime;
   const computedPoints = config.pointsForSignIn + (onTime ? config.pointsForOnTime : 0);
 
   // A "session" is the current day + class + period label. This allows multiple
@@ -1349,6 +1469,7 @@ export const recordClassSignIn = async (
       onTime,
       periodLabel: periodLabel ?? null,
       sessionId,
+      teacherId: config.teacherId ?? null,
     });
 
     return { pointsAwarded: computedPoints, onTime, periodLabel };
@@ -1375,6 +1496,37 @@ export const listAttendanceLog = async (
       pointsAwarded: data.pointsAwarded ?? 0,
       onTime: data.onTime ?? false,
       periodLabel: data.periodLabel,
+    };
+  });
+};
+
+/** List attendance log entries for a specific teacher (per-teacher attendance). */
+export const listTeacherAttendanceLog = async (
+  firestore: Firestore,
+  schoolId: string,
+  teacherId: string,
+  limitCount: number = 50
+): Promise<AttendanceLogEntry[]> => {
+  if (!teacherId) return [];
+  const logRef = collection(firestore, 'schools', schoolId, 'attendanceLog');
+  const q = query(
+    logRef,
+    where('teacherId', '==', teacherId),
+    orderBy('signedInAt', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      studentId: data.studentId ?? '',
+      studentName: data.studentName,
+      signedInAt: data.signedInAt ?? 0,
+      pointsAwarded: data.pointsAwarded ?? 0,
+      onTime: data.onTime ?? false,
+      periodLabel: data.periodLabel,
+      teacherId: data.teacherId,
     };
   });
 };

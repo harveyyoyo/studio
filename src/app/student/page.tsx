@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, HistoryItem } from '@/lib/types';
+import type { Student, Prize, HistoryItem, AttendanceScheduleSlot, Class, AttendanceSettings, AttendanceRewardRule } from '@/lib/types';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
@@ -165,7 +165,7 @@ function StudentDashboardInner({
   onDone: () => void;
 }) {
   const router = useRouter();
-  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges, getAttendanceConfig, recordClassSignIn } = useAppContext();
+  const { redeemCoupon, schoolId, isKioskLocked, achievements, badges, getAttendanceConfig, getTeacherAttendanceConfig, recordClassSignIn } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
   const { toast } = useToast();
@@ -178,6 +178,21 @@ function StudentDashboardInner({
 
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
   const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+
+  const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
+  const { data: classes } = useCollection<Class>(classesQuery);
+
+  const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
+  const { data: periods } = useCollection<AttendanceScheduleSlot>(periodsQuery);
+
+  const teacherRewardsQuery = useMemoFirebase(() => {
+    if (!schoolId || !student?.classId || !classes) return null;
+    const cls = classes.find((c) => c.id === student.classId);
+    const teacherId = cls?.primaryTeacherId;
+    if (!teacherId) return null;
+    return collection(firestore, 'schools', schoolId, 'teachers', teacherId, 'attendanceRewards');
+  }, [firestore, schoolId, student?.classId, classes]);
+  const { data: teacherRewards } = useCollection<AttendanceRewardRule>(teacherRewardsQuery);
 
   const [couponCode, setCouponCode] = useState('');
   const [logoutTimer, setLogoutTimer] = useState(15);
@@ -206,22 +221,83 @@ function StudentDashboardInner({
   }, [hookHasPermission]);
 
   useEffect(() => {
-    if (!settings.enableClassSignIn || !student || signInRecordedRef.current || !getAttendanceConfig || !recordClassSignIn) return;
+    if (!settings.enableClassSignIn || !student || signInRecordedRef.current || !recordClassSignIn) return;
     signInRecordedRef.current = true;
-    getAttendanceConfig()
-      .then((config) => {
+
+    const resolveConfigAndSignIn = async () => {
+      try {
+        const studentClassId = student.classId;
+        const classForStudent = studentClassId && classes ? classes.find((c) => c.id === studentClassId) : undefined;
+        const teacherId = classForStudent?.primaryTeacherId;
+
+        // Prefer teacher-created attendance reward rules.
+        const enabledRules = (teacherRewards || []).filter(r => r.enabled);
+        const now = Date.now();
+        const nowMinutes = new Date(now).getHours() * 60 + new Date(now).getMinutes();
+
+        const resolveRulePeriod = (rule: AttendanceRewardRule) => {
+          if (rule.customPeriod) return rule.customPeriod;
+          const slot = (periods || []).find(p => p.id === rule.periodId);
+          return slot ? { label: slot.label, startTime: slot.startTime, endTime: slot.endTime } : null;
+        };
+
+        const parse = (hhmm: string) => {
+          const [h, m] = hhmm.split(':').map(Number);
+          return (h || 0) * 60 + (m || 0);
+        };
+
+        const matchingRule = enabledRules.find((r) => {
+          if (!studentClassId || r.classId !== studentClassId) return false;
+          const period = resolveRulePeriod(r);
+          if (!period) return false;
+          const start = parse(period.startTime);
+          const end = parse(period.endTime);
+          return nowMinutes >= start && nowMinutes <= end;
+        });
+
+        if (matchingRule && teacherId) {
+          const period = resolveRulePeriod(matchingRule);
+          if (!period) return;
+          const slotId = matchingRule.periodId || `custom_${matchingRule.id}`;
+          const configFromRule: AttendanceSettings = {
+            pointsForSignIn: matchingRule.pointsForSignIn,
+            pointsForOnTime: matchingRule.pointsForOnTime,
+            onTimeWindowMinutes: matchingRule.onTimeWindowMinutes ?? 15,
+            enabledClassIds: [studentClassId!],
+            classPeriodAssignments: { [studentClassId!]: slotId },
+            schedule: [{
+              id: slotId,
+              label: period.label,
+              startTime: period.startTime,
+              endTime: period.endTime,
+            }],
+            categoryId: matchingRule.categoryId,
+            teacherId,
+          };
+          const result = await recordClassSignIn(student.id, student, configFromRule);
+          if (result && result.pointsAwarded > 0) {
+            toast({ title: 'Attendance recorded', description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.` });
+          }
+          return;
+        }
+
+        // Fallback to legacy configs.
+        let config: AttendanceSettings | null = null;
+        if (teacherId && getTeacherAttendanceConfig) config = await getTeacherAttendanceConfig(teacherId);
+        if (!config && getAttendanceConfig) config = await getAttendanceConfig();
         if (!config) return;
-        return recordClassSignIn(student.id, student, config);
-      })
-      .then((result) => {
+        const configWithUniversalPeriods: AttendanceSettings = { ...config, schedule: Array.isArray(periods) ? periods : [] };
+        const result = await recordClassSignIn(student.id, student, configWithUniversalPeriods);
         if (result && result.pointsAwarded > 0) {
           toast({ title: 'Class sign-in recorded', description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.` });
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Attendance sign-in failed', err);
-      });
-  }, [settings.enableClassSignIn, student, getAttendanceConfig, recordClassSignIn, toast]);
+      }
+    };
+
+    resolveConfigAndSignIn();
+  }, [settings.enableClassSignIn, student, classes, periods, teacherRewards, getAttendanceConfig, getTeacherAttendanceConfig, recordClassSignIn, toast]);
 
   const resetTimer = useCallback(() => {
     if (!isKioskLocked) {

@@ -35,6 +35,7 @@ interface BackupContextType {
     devBackupAllSchools: () => Promise<void>;
     devVerifyBackup: (schoolId: string, backupId: string) => Promise<{ verified: boolean; reason: string }>;
     devMigrateSchoolData: (schoolId: string) => Promise<void>;
+    devResetSampleSchool: (schoolId: string) => Promise<void>;
 }
 
 const BackupContext = createContext<BackupContextType | null>(null);
@@ -57,46 +58,10 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const schoolExists = (await getDoc(schoolDocRef)).exists();
 
         if (schoolExists) {
-            if (cleanId === 'yeshiva' || cleanId === 'schoolabc') {
-                // It's a sample school, so we'll reset it.
-                if (cleanId === 'schoolabc') {
-                    toast({ title: `Resetting ${cleanId}...`, description: "Updating to latest sample data." });
-                }
-                const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
-                const BATCH_LIMIT = 499;
-
-                for (const sub of SUBCOLLECTIONS) {
-                    const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
-                    const snap = await getDocs(subcollectionRef);
-
-                    if (snap.empty) continue;
-
-                    if (sub === "students") {
-                        for (const studentDoc of snap.docs) {
-                            const activitiesRef = collection(studentDoc.ref, "activities");
-                            const activitiesSnap = await getDocs(activitiesRef);
-                            if (activitiesSnap.empty) continue;
-
-                            for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
-                                const batch = writeBatch(firestore);
-                                activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
-                                await batch.commit();
-                            }
-                        }
-                    }
-
-                    for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
-                        const batch = writeBatch(firestore);
-                        snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
-                        await batch.commit();
-                    }
-                }
-            } else {
-                // It's a regular school that already exists, so bail.
-                playSound('error');
-                toast({ variant: 'destructive', title: `School ID "${cleanId}" already exists.` });
-                return null;
-            }
+            // For all schools (including sample schools), do not overwrite existing data here.
+            playSound('error');
+            toast({ variant: 'destructive', title: `School ID "${cleanId}" already exists.` });
+            return null;
         }
 
 
@@ -283,6 +248,118 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [functions]);
 
+    const devResetSampleSchool = useCallback(async (schoolId: string) => {
+        if (!firestore || !auth.currentUser) return;
+        const cleanId = schoolId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (cleanId !== 'yeshiva' && cleanId !== 'schoolabc') {
+            playSound('error');
+            toast({ variant: 'destructive', title: `Reset only allowed for sample schools.`, description: 'Use this on "yeshiva" or "schoolabc" only.' });
+            return;
+        }
+
+        const schoolDocRef = doc(firestore, 'schools', cleanId);
+        const SUBCOLLECTIONS = ["students", "classes", "teachers", "categories", "prizes", "coupons"];
+        const BATCH_LIMIT = 499;
+
+        toast({ title: `Resetting ${cleanId}...`, description: "Reapplying latest sample data." });
+
+        // Clear subcollections (and student activities)
+        for (const sub of SUBCOLLECTIONS) {
+            const subcollectionRef = collection(firestore, 'schools', cleanId, sub);
+            const snap = await getDocs(subcollectionRef);
+            if (snap.empty) continue;
+
+            if (sub === "students") {
+                for (const studentDoc of snap.docs) {
+                    const activitiesRef = collection(studentDoc.ref, "activities");
+                    const activitiesSnap = await getDocs(activitiesRef);
+                    if (activitiesSnap.empty) continue;
+                    for (let i = 0; i < activitiesSnap.docs.length; i += BATCH_LIMIT) {
+                        const batch = writeBatch(firestore);
+                        activitiesSnap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                        await batch.commit();
+                    }
+                }
+            }
+
+            for (let i = 0; i < snap.docs.length; i += BATCH_LIMIT) {
+                const batch = writeBatch(firestore);
+                snap.docs.slice(i, i + BATCH_LIMIT).forEach(d => batch.delete(d.ref));
+                await batch.commit();
+            }
+        }
+
+        // Re-seed from built-in sample data
+        let schoolData: Record<string, any>, newPasscode: string;
+        if (cleanId === 'yeshiva') {
+            newPasscode = '1234';
+            schoolData = YESHIVA_DATA;
+        } else {
+            newPasscode = '1234';
+            schoolData = SCHOOL_DATA;
+        }
+
+        const { students, classes, teachers, categories, prizes, coupons, ...schoolDocData } = schoolData;
+        const finalSchoolDocData = {
+            ...schoolDocData,
+            passcode: newPasscode,
+            name: schoolData.name,
+            hasMigratedStudents: true,
+            hasMigratedClasses: true,
+            hasMigratedTeachers: true,
+            hasMigratedPrizes: true,
+            hasMigratedCoupons: true,
+            hasMigratedCategories: true,
+        };
+
+        const allOps: Array<{ ref: any; data: any }> = [];
+
+        const collectItems = (list: any[] | undefined, collectionName: string) => {
+            if (!list) return;
+            for (const item of list) {
+                const itemRef = doc(firestore, 'schools', cleanId, collectionName, item.id);
+                if (collectionName === 'students') {
+                    const studentData: Student = {
+                        ...item,
+                        points: item.points || 0,
+                        lifetimePoints: item.lifetimePoints || item.points || 0,
+                        categoryPoints: item.categoryPoints || {},
+                        categoryPointsByPeriod: item.categoryPointsByPeriod || {},
+                        earnedAchievements: item.earnedAchievements || [],
+                        earnedBadges: item.earnedBadges || [],
+                    };
+                    allOps.push({ ref: itemRef, data: studentData });
+                } else {
+                    allOps.push({ ref: itemRef, data: item });
+                }
+            }
+        };
+
+        collectItems(students, 'students');
+        collectItems(classes, 'classes');
+        collectItems(teachers, 'teachers');
+        collectItems(categories, 'categories');
+        collectItems(prizes, 'prizes');
+        collectItems(coupons, 'coupons');
+
+        const firstBatch = writeBatch(firestore);
+        firstBatch.set(schoolDocRef, finalSchoolDocData);
+        await firstBatch.commit();
+
+        const restOps = allOps;
+        for (let i = 0; i < restOps.length; i += BATCH_LIMIT) {
+            const chunk = restOps.slice(i, i + BATCH_LIMIT);
+            const batch = writeBatch(firestore);
+            for (const op of chunk) {
+                batch.set(op.ref, op.data);
+            }
+            await batch.commit();
+        }
+
+        playSound('success');
+        toast({ title: `Sample school "${cleanId}" reset`, description: 'All sample data was restored.' });
+    }, [firestore, auth, playSound, toast]);
+
     const deleteSchool = useCallback(async (schoolId: string) => {
         if (!firestore || !auth.currentUser) return;
         try {
@@ -340,12 +417,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         () => ({
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool,
         }),
         [
             createSchool, deleteSchool, updateSchool,
             devCreateBackup, devRestoreFromBackup, devDownloadBackup, devBackupAllSchools,
-            devVerifyBackup, devMigrateSchoolData,
+            devVerifyBackup, devMigrateSchoolData, devResetSampleSchool,
         ]
     );
 

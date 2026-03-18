@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useFunctions } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
   Users, Gift, BookOpen, Trash2, Edit, Plus, UploadCloud, Printer, LayoutDashboard, Database,
@@ -113,7 +113,7 @@ function AdminDashboardSkeleton() {
 function AdminDashboardInner() {
   const {
     schoolId, setCouponsToPrint, deleteStudent,
-    addClass, deleteClass, deleteCategory, addCategory, updateCategory,
+    addClass, updateClass, deleteClass, deleteCategory, addCategory, updateCategory,
     devCreateBackup, devRestoreFromBackup, devDownloadBackup, addTeacher, updateTeacher, deleteTeacher,
     addPrize, updatePrize, deletePrize, uploadStudents, setStudentsToPrint,
     updateStudent,
@@ -122,7 +122,10 @@ function AdminDashboardInner() {
     purgeStudentProgress,
     getAttendanceConfig,
     setAttendanceConfig,
-    listAttendanceLog
+    listAttendanceLog,
+    getTeacherAttendanceConfig,
+    setTeacherAttendanceConfig,
+    listTeacherAttendanceLog
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
@@ -228,6 +231,12 @@ function AdminDashboardInner() {
   const [attendanceConfigSaving, setAttendanceConfigSaving] = useState(false);
   const [attendanceLogLoading, setAttendanceLogLoading] = useState(false);
 
+  const [selectedAttendanceTeacherId, setSelectedAttendanceTeacherId] = useState<string>('');
+  const [teacherAttendanceConfig, setTeacherAttendanceConfigState] = useState<AttendanceSettings | null>(null);
+  const [teacherAttendanceSaving, setTeacherAttendanceSaving] = useState(false);
+  const [teacherAttendanceLog, setTeacherAttendanceLogState] = useState<AttendanceLogEntry[]>([]);
+  const [teacherAttendanceLogLoading, setTeacherAttendanceLogLoading] = useState(false);
+
   const filteredStudents = useMemo(() => {
     const list = (students || []).filter((s) => {
       const computedName = `${s.firstName} ${s.lastName} ${s.nickname || ''}`.toLowerCase();
@@ -271,6 +280,57 @@ function AdminDashboardInner() {
         setAttendanceConfigState(defaultAttendanceConfig);
       });
   }, [settings.enableClassSignIn, schoolId, getAttendanceConfig]);
+
+  useEffect(() => {
+    if (!teachers?.length) return;
+    if (!selectedAttendanceTeacherId) setSelectedAttendanceTeacherId(teachers[0].id);
+  }, [teachers, selectedAttendanceTeacherId]);
+
+  useEffect(() => {
+    if (!settings.enableClassSignIn || !schoolId || !selectedAttendanceTeacherId || !getTeacherAttendanceConfig) return;
+    getTeacherAttendanceConfig(selectedAttendanceTeacherId)
+      .then((cfg) => {
+        setTeacherAttendanceConfigState(cfg ?? {
+          pointsForSignIn: 1,
+          pointsForOnTime: 1,
+          onTimeWindowMinutes: 15,
+          schedule: [],
+          teacherId: selectedAttendanceTeacherId,
+        });
+      })
+      .catch(() => {
+        setTeacherAttendanceConfigState({
+          pointsForSignIn: 1,
+          pointsForOnTime: 1,
+          onTimeWindowMinutes: 15,
+          schedule: [],
+          teacherId: selectedAttendanceTeacherId,
+        });
+      });
+  }, [settings.enableClassSignIn, schoolId, selectedAttendanceTeacherId, getTeacherAttendanceConfig]);
+
+  const handleSaveTeacherAttendanceConfig = async () => {
+    if (!teacherAttendanceConfig || !selectedAttendanceTeacherId || !setTeacherAttendanceConfig) return;
+    setTeacherAttendanceSaving(true);
+    try {
+      await setTeacherAttendanceConfig(selectedAttendanceTeacherId, { ...teacherAttendanceConfig, teacherId: selectedAttendanceTeacherId });
+      playSound('success');
+      toast({ title: 'Teacher attendance settings saved.' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Failed to save', description: (e as Error).message });
+    } finally {
+      setTeacherAttendanceSaving(false);
+    }
+  };
+
+  const loadTeacherAttendanceLog = () => {
+    if (!selectedAttendanceTeacherId || !listTeacherAttendanceLog) return;
+    setTeacherAttendanceLogLoading(true);
+    listTeacherAttendanceLog(selectedAttendanceTeacherId, 80)
+      .then(setTeacherAttendanceLogState)
+      .catch(() => setTeacherAttendanceLogState([]))
+      .finally(() => setTeacherAttendanceLogLoading(false));
+  };
 
   const loadAttendanceLog = () => {
     if (!listAttendanceLog) return;
@@ -888,187 +948,130 @@ function AdminDashboardInner() {
 
           {settings.enableClassSignIn && (
             <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <Card className="border-t-4 border-primary/50 shadow-md">
+              <Card className="border-t-4 border-chart-4/60 shadow-md">
                 <CardHeader className="py-6">
-                  <Helper content="When Class Sign-In is on in Settings → Features, student kiosk logins can award points. Choose which classes participate, what rewards they get, what counts as on time, and set your class times.">
-                    <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" /> Attendance & Punctuality</CardTitle>
-                  </Helper>
-                  <CardDescription>Control who gets attendance, what rewards they earn, what &quot;on time&quot; means, and your period schedule.</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-chart-4" /> Universal Periods</CardTitle>
+                  <CardDescription>Create and manage period time slots used by all teachers for on-time attendance.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-8">
-                  {attendanceConfig && (
-                    <>
-                      {/* Who gets attendance */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Users className="w-4 h-4" /> Who gets attendance</h4>
-                        <p className="text-sm text-muted-foreground">Only students in the selected classes will earn points when they sign in at the kiosk. Leave &quot;All classes&quot; checked to include everyone.</p>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="att-all-classes"
-                            checked={!attendanceConfig.enabledClassIds || attendanceConfig.enabledClassIds.length === 0}
-                            onCheckedChange={(checked) => {
-                              if (checked) setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: undefined });
-                              else setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: (classes ?? []).map((c) => c.id) });
-                            }}
-                          />
-                          <Label htmlFor="att-all-classes" className="font-semibold cursor-pointer">All classes</Label>
-                        </div>
-                        {(attendanceConfig.enabledClassIds && attendanceConfig.enabledClassIds.length >= 1) ? (
-                          <div className="flex flex-wrap gap-3 pt-2">
-                            {(classes ?? []).map((c) => (
-                              <div key={c.id} className="flex items-center gap-2">
-                                <Checkbox
-                                  id={`att-class-${c.id}`}
-                                  checked={attendanceConfig.enabledClassIds?.includes(c.id) ?? false}
-                                  onCheckedChange={(checked) => {
-                                    const prev = attendanceConfig.enabledClassIds ?? [];
-                                    const next = checked ? [...prev, c.id] : prev.filter((id) => id !== c.id);
-                                    setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: next.length ? next : undefined });
-                                  }}
-                                />
-                                <Label htmlFor={`att-class-${c.id}`} className="cursor-pointer">{c.name}</Label>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                        {attendanceConfig.enabledClassIds && attendanceConfig.enabledClassIds.length >= 1
-                          ? <Button type="button" variant="outline" size="sm" onClick={() => setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: undefined })}>Switch to all classes</Button>
-                          : (classes?.length ?? 0) >= 1
-                            ? <Button type="button" variant="outline" size="sm" onClick={() => setAttendanceConfigState({ ...attendanceConfig, enabledClassIds: (classes ?? []).map((c) => c.id) })}>Select specific classes</Button>
-                            : null}
-                      </div>
+                <CardContent className="space-y-3">
+                  <UniversalPeriodsAdmin schoolId={schoolId!} />
+                </CardContent>
+              </Card>
+              <Card className="border-t-4 border-chart-2/60 shadow-md">
+                <CardHeader className="py-6">
+                  <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-chart-2" /> Teacher Attendance (per-teacher)</CardTitle>
+                  <CardDescription>View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="space-y-2">
+                      <Label>Teacher</Label>
+                      <Select value={selectedAttendanceTeacherId || '__none__'} onValueChange={setSelectedAttendanceTeacherId}>
+                        <SelectTrigger className="w-[260px]"><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                        <SelectContent>
+                          {teachers?.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={loadTeacherAttendanceLog} disabled={teacherAttendanceLogLoading || !selectedAttendanceTeacherId}>
+                      {teacherAttendanceLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      Refresh teacher log
+                    </Button>
+                  </div>
 
-                      {/* Rewards */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Award className="w-4 h-4" /> Rewards</h4>
-                        <p className="text-sm text-muted-foreground">Points students earn for signing in and (optionally) for being on time.</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div>
-                            <Label>Points per sign-in</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={attendanceConfig.pointsForSignIn}
-                              onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, pointsForSignIn: parseInt(e.target.value, 10) || 0 })}
-                            />
-                            <p className="text-[11px] text-muted-foreground mt-1">Awarded every time they log in at the kiosk.</p>
-                          </div>
-                          <div>
-                            <Label>Bonus points (on time)</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={attendanceConfig.pointsForOnTime}
-                              onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, pointsForOnTime: parseInt(e.target.value, 10) || 0 })}
-                            />
-                            <p className="text-[11px] text-muted-foreground mt-1">Extra when they sign in within the on-time window.</p>
-                          </div>
-                          <div>
-                            <Label>Award to category (optional)</Label>
-                            <Select
-                              value={attendanceConfig.categoryId ?? '__none__'}
-                              onValueChange={(v) => setAttendanceConfigState({ ...attendanceConfig, categoryId: v === '__none__' ? undefined : v })}
-                            >
-                              <SelectTrigger><SelectValue placeholder="General points" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">General points</SelectItem>
-                                {categories?.map((cat) => (
-                                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-[11px] text-muted-foreground mt-1">Leave as &quot;General&quot; to add to total only.</p>
-                          </div>
+                  {teacherAttendanceConfig && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label>Points per sign-in</Label>
+                          <Input type="number" min={0} value={teacherAttendanceConfig.pointsForSignIn} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, pointsForSignIn: parseInt(e.target.value, 10) || 0 })} />
                         </div>
-                      </div>
-
-                      {/* What counts as on time */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Zap className="w-4 h-4" /> What counts as on time</h4>
-                        <p className="text-sm text-muted-foreground">A sign-in is &quot;on time&quot; if the student logs in within this many minutes after the period start. After that they still get sign-in points but not the on-time bonus.</p>
-                        <div className="max-w-[200px]">
+                        <div>
+                          <Label>Bonus points (on time)</Label>
+                          <Input type="number" min={0} value={teacherAttendanceConfig.pointsForOnTime} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, pointsForOnTime: parseInt(e.target.value, 10) || 0 })} />
+                        </div>
+                        <div>
                           <Label>On-time window (minutes)</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={120}
-                            value={attendanceConfig.onTimeWindowMinutes}
-                            onChange={(e) => setAttendanceConfigState({ ...attendanceConfig, onTimeWindowMinutes: parseInt(e.target.value, 10) || 15 })}
-                          />
-                          <p className="text-[11px] text-muted-foreground mt-1">e.g. 15 = on time if they sign in within 15 min of period start.</p>
+                          <Input type="number" min={1} max={120} value={teacherAttendanceConfig.onTimeWindowMinutes} onChange={(e) => setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, onTimeWindowMinutes: parseInt(e.target.value, 10) || 15 })} />
                         </div>
                       </div>
 
-                      {/* Class times */}
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /> Class times (periods)</h4>
-                        <p className="text-sm text-muted-foreground">Define your periods with start and end times (24h format HH:mm). Used to decide which period a sign-in belongs to and whether it was on time.</p>
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <Label>Schedule</Label>
-                          <Button type="button" variant="outline" size="sm" onClick={addScheduleSlot}>Add period</Button>
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Periods (times)</Label>
                         <div className="space-y-2">
-                          {attendanceConfig.schedule.map((slot, index) => (
+                          {(teacherAttendanceConfig.schedule || []).map((slot, index) => (
                             <div key={slot.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Input className="w-28" placeholder="e.g. Period 1" value={slot.label} onChange={(e) => updateScheduleSlot(index, 'label', e.target.value)} />
-                              <Input className="w-20" placeholder="08:00" value={slot.startTime} onChange={(e) => updateScheduleSlot(index, 'startTime', e.target.value)} />
+                              <Input className="w-28" value={slot.label} onChange={(e) => {
+                                const next = [...(teacherAttendanceConfig.schedule || [])];
+                                next[index] = { ...next[index], label: e.target.value };
+                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
+                              }} />
+                              <Input className="w-20" value={slot.startTime} onChange={(e) => {
+                                const next = [...(teacherAttendanceConfig.schedule || [])];
+                                next[index] = { ...next[index], startTime: e.target.value };
+                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
+                              }} />
                               <span className="text-muted-foreground">–</span>
-                              <Input className="w-20" placeholder="08:45" value={slot.endTime} onChange={(e) => updateScheduleSlot(index, 'endTime', e.target.value)} />
-                              <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => removeScheduleSlot(index)}><Trash2 className="w-4 h-4" /></Button>
+                              <Input className="w-20" value={slot.endTime} onChange={(e) => {
+                                const next = [...(teacherAttendanceConfig.schedule || [])];
+                                next[index] = { ...next[index], endTime: e.target.value };
+                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
+                              }} />
+                              <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => {
+                                const next = [...(teacherAttendanceConfig.schedule || [])];
+                                next.splice(index, 1);
+                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
+                              }}><Trash2 className="w-4 h-4" /></Button>
                             </div>
                           ))}
-                          {(!attendanceConfig.schedule || attendanceConfig.schedule.length === 0) && (
-                            <p className="text-sm text-muted-foreground py-2">No periods yet. Add periods (e.g. Period 1 08:00–08:45) to enable on-time bonus.</p>
-                          )}
+                          <Button type="button" variant="outline" size="sm" onClick={() => {
+                            const next = [...(teacherAttendanceConfig.schedule || [])];
+                            next.push({ id: `slot_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, label: `Period ${next.length + 1}`, startTime: '08:00', endTime: '08:45' });
+                            setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
+                          }}>Add period</Button>
                         </div>
                       </div>
 
-                      <Button onClick={handleSaveAttendanceConfig} disabled={attendanceConfigSaving}>
-                        {attendanceConfigSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Save attendance settings
+                      <Button onClick={handleSaveTeacherAttendanceConfig} disabled={teacherAttendanceSaving}>
+                        {teacherAttendanceSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Save teacher attendance settings
                       </Button>
-                    </>
+
+                      {teacherAttendanceLog.length > 0 && (
+                        <div className="space-y-2">
+                          <Label>Recent sign-ins (teacher)</Label>
+                          <ScrollArea className="h-[240px] w-full pr-4">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b text-left">
+                                  <th className="py-2 font-bold">Student</th>
+                                  <th className="py-2 font-bold">Time</th>
+                                  <th className="py-2 font-bold">Points</th>
+                                  <th className="py-2 font-bold">Period</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {teacherAttendanceLog.map((entry) => (
+                                  <tr key={entry.id ?? entry.signedInAt} className="border-b border-border/50">
+                                    <td className="py-2">{entry.studentName || entry.studentId}</td>
+                                    <td className="py-2 text-muted-foreground">{new Date(entry.signedInAt).toLocaleString()}</td>
+                                    <td className="py-2">+{entry.pointsAwarded}</td>
+                                    <td className="py-2 text-muted-foreground">{entry.periodLabel ?? '–'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </ScrollArea>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
-              <Card className="border-t-4 border-primary/30 shadow-md">
-                <CardHeader className="flex flex-row justify-between items-center py-6">
-                  <CardTitle className="flex items-center gap-2"><History className="w-5 h-5" /> Recent sign-ins</CardTitle>
-                  <Button variant="outline" size="sm" onClick={loadAttendanceLog} disabled={attendanceLogLoading}>
-                    {attendanceLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                    Refresh
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[320px] w-full pr-4">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left">
-                          <th className="py-2 font-bold">Student</th>
-                          <th className="py-2 font-bold">Time</th>
-                          <th className="py-2 font-bold">Points</th>
-                          <th className="py-2 font-bold">On time</th>
-                          <th className="py-2 font-bold">Period</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attendanceLog.map((entry) => (
-                          <tr key={entry.id ?? entry.signedInAt} className="border-b border-border/50">
-                            <td className="py-2">{entry.studentName || entry.studentId}</td>
-                            <td className="py-2 text-muted-foreground">{new Date(entry.signedInAt).toLocaleString()}</td>
-                            <td className="py-2">+{entry.pointsAwarded}</td>
-                            <td className="py-2">{entry.onTime ? <CheckCircle className="w-4 h-4 text-green-600 inline" /> : '–'}</td>
-                            <td className="py-2 text-muted-foreground">{entry.periodLabel ?? '–'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {attendanceLog.length === 0 && !attendanceLogLoading && (
-                      <p className="text-center text-muted-foreground py-8">No sign-ins yet, or click Refresh to load. Have students log in at the kiosk to record attendance.</p>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+
+              {/* Legacy per-school attendance settings removed in favor of Universal Periods + per-teacher Attendance Rewards. */}
             </TabsContent>
           )}
 
@@ -1086,9 +1089,31 @@ function AdminDashboardInner() {
               <CardContent>
                 <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
                   {classes?.map((c) => (
-                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
-                      <span className="font-bold">{c.name}</span>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteClass(c.id, students || [])}>
+                    <li key={c.id} className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
+                      <div className="space-y-1">
+                        <span className="font-bold block">{c.name}</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold uppercase tracking-widest">Primary Teacher:</span>
+                          <Select
+                            value={c.primaryTeacherId || '__none__'}
+                            onValueChange={(value) => {
+                              const next = value === '__none__' ? { ...c, primaryTeacherId: undefined } : { ...c, primaryTeacherId: value };
+                              updateClass(next);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 w-[180px] text-xs">
+                              <SelectValue placeholder="Unassigned" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Unassigned</SelectItem>
+                              {teachers?.map((t) => (
+                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 self-end md:self-auto" onClick={() => deleteClass(c.id, students || [])}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </li>
@@ -2170,6 +2195,97 @@ function AdminDashboardInner() {
         )}
       </div>
     </TooltipProvider>
+  );
+}
+
+function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
+  const { data: periods, isLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
+
+  const [label, setLabel] = useState('Period 1');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('08:45');
+
+  const addPeriod = async () => {
+    try {
+      const id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      await setDoc(doc(firestore, 'schools', schoolId, 'periods', id), { id, label, startTime, endTime });
+      toast({ title: 'Period added' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Failed to add period', description: (e as Error).message });
+    }
+  };
+
+  const updatePeriod = async (p: AttendanceScheduleSlot) => {
+    try {
+      await updateDoc(doc(firestore, 'schools', schoolId, 'periods', p.id), { label: p.label, startTime: p.startTime, endTime: p.endTime });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Failed to update period', description: (e as Error).message });
+    }
+  };
+
+  const removePeriod = async (id: string) => {
+    if (!confirm('Delete this period?')) return;
+    try {
+      await deleteDoc(doc(firestore, 'schools', schoolId, 'periods', id));
+      toast({ title: 'Period deleted' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Failed to delete period', description: (e as Error).message });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1">
+          <Label>Label</Label>
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} className="w-[160px]" />
+        </div>
+        <div className="space-y-1">
+          <Label>Start</Label>
+          <Input value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-[110px] font-mono" />
+        </div>
+        <div className="space-y-1">
+          <Label>End</Label>
+          <Input value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-[110px] font-mono" />
+        </div>
+        <Button onClick={addPeriod} className="rounded-xl">Add</Button>
+      </div>
+
+      <div className="space-y-2">
+        {isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : (periods || []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No periods yet.</p>
+        ) : (
+          (periods || []).map((p) => (
+            <div key={p.id} className="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-muted/40 border">
+              <Input
+                className="w-[160px]"
+                value={p.label}
+                onChange={(e) => updatePeriod({ ...p, label: e.target.value })}
+              />
+              <Input
+                className="w-[110px] font-mono"
+                value={p.startTime}
+                onChange={(e) => updatePeriod({ ...p, startTime: e.target.value })}
+              />
+              <span className="text-muted-foreground">–</span>
+              <Input
+                className="w-[110px] font-mono"
+                value={p.endTime}
+                onChange={(e) => updatePeriod({ ...p, endTime: e.target.value })}
+              />
+              <Button variant="ghost" size="icon" className="text-red-600" onClick={() => removePeriod(p.id)}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
