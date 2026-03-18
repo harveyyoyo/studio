@@ -1354,7 +1354,7 @@ function AdminDashboardInner() {
                               className="mr-2"
                             />
                           )}
-                          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
                             {s.photoUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />

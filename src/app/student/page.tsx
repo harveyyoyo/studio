@@ -468,7 +468,7 @@ function StudentDashboardInner({
             <div className="space-y-1 text-center md:text-left">
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: student.theme ? 'var(--theme-text)' : undefined, opacity: student.theme ? 0.7 : undefined }}>Welcome back,</p>
               <div className="flex items-center gap-4 mt-1">
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 border border-border/60 flex items-center justify-center font-bold text-primary flex-shrink-0">
                   {student.photoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={student.photoUrl} alt={`${student.firstName} ${student.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
