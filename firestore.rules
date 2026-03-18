@@ -51,6 +51,20 @@ service cloud.firestore {
         allow read: if isAdmin(schoolId);
         allow write: if isAdmin(schoolId);
       }
+
+      // Per-teacher attendance configuration (stored under each teacher document).
+      match /teachers/{teacherId}/attendanceConfig/{docId} {
+        // Admins and developers can manage all configs. You can later relax this
+        // to also allow the specific teacher's UID if you map auth.uid -> teacherId.
+        allow read, write: if isAdmin(schoolId) || isDeveloper();
+      }
+
+      // Per-teacher attendance reward rules (teacher-managed).
+      match /teachers/{teacherId}/attendanceRewards/{ruleId} {
+        // This app relies on app-layer passcode gating; allow authenticated users.
+        // Admins can also manage these.
+        allow read, write: if isAuth() || isAdmin(schoolId) || isDeveloper();
+      }
       
       match /classes/{classId} {
         allow read: if isAdmin(schoolId);
@@ -58,8 +72,12 @@ service cloud.firestore {
       }
       
       match /categories/{categoryId} {
-        allow read: if isAdmin(schoolId);
-        allow write: if isAdmin(schoolId);
+        // Categories are used by teachers in the UI; allow authenticated users to read.
+        // Writes are allowed for admins/developers, and also for authenticated users
+        // creating teacher-owned categories (teacherId present).
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId) || isDeveloper()
+          || (isAuth() && request.resource.data.teacherId is string && request.resource.data.teacherId.size() > 0);
       }
 
       match /achievements/{achievementId} {
@@ -108,6 +126,12 @@ service cloud.firestore {
       }
 
       match /attendance/{docId} {
+        allow read: if isAuth();
+        allow write: if isAdmin(schoolId) || isDeveloper();
+      }
+
+      // Universal period definitions (created/managed by admin).
+      match /periods/{periodId} {
         allow read: if isAuth();
         allow write: if isAdmin(schoolId) || isDeveloper();
       }
