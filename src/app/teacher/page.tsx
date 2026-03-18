@@ -474,13 +474,14 @@ function TeacherAttendancePanel({
     saveConfig: (teacherId: string, settings: AttendanceSettings) => Promise<void>;
     loadLog: (teacherId: string, limitCount?: number) => Promise<AttendanceLogEntry[]>;
 }) {
-    const { schoolId, addClass } = useAppContext();
+    const { schoolId, addClass, updateClass } = useAppContext();
     const { toast } = useToast();
     const [config, setConfig] = useState<AttendanceSettings | null>(null);
     const [log, setLog] = useState<AttendanceLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [logLoading, setLogLoading] = useState(false);
+    const [claimingClassId, setClaimingClassId] = useState<string | null>(null);
 
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [newClassName, setNewClassName] = useState('');
@@ -565,6 +566,7 @@ function TeacherAttendancePanel({
 
     const firestore = useFirestore();
     const myClasses = (classes || []).filter((c) => c.primaryTeacherId === teacherId);
+    const claimableClasses = (classes || []).filter((c) => !c.primaryTeacherId);
     const punctualityCategory = categories.find(c => c.name?.toLowerCase() === 'punctuality');
 
     const rewardsQuery = useMemoFirebase(
@@ -600,6 +602,23 @@ function TeacherAttendancePanel({
 
     const assignments = config.classPeriodAssignments || {};
     const selectedCategory = categories.find((c) => c.id === config.categoryId);
+
+    const applyToClass = async (classId: string) => {
+        if (!schoolId || !teacherId || !updateClass) return;
+        const target = (classes || []).find((c) => c.id === classId);
+        if (!target) return;
+        if (target.primaryTeacherId === teacherId) return;
+
+        setClaimingClassId(classId);
+        try {
+            await updateClass({ ...target, primaryTeacherId: teacherId });
+            toast({ title: 'Class claimed' });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Failed to claim class', description: e?.message || String(e) });
+        } finally {
+            setClaimingClassId(null);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -671,6 +690,37 @@ function TeacherAttendancePanel({
                     </div>
                 )}
             </div>
+
+            {claimableClasses.length > 0 && (
+                <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest ml-1">Apply to a class</Label>
+                    <p className="text-sm text-muted-foreground">
+                        Claim an unassigned class so attendance rewards will apply to it.
+                    </p>
+                    <div className="space-y-2">
+                        {claimableClasses.map((c) => (
+                            <div
+                                key={c.id}
+                                className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30"
+                            >
+                                <div className="min-w-[180px]">
+                                    <p className="font-bold">{c.name}</p>
+                                    <p className="text-xs text-muted-foreground">Unassigned</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={claimingClassId === c.id}
+                                    onClick={() => applyToClass(c.id)}
+                                    className="rounded-xl h-10 font-bold"
+                                >
+                                    {claimingClassId === c.id ? 'Applying...' : 'Apply'}
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {myClasses.length > 0 && (
                 <div className="space-y-3">
