@@ -153,6 +153,12 @@ function AdminDashboardInner() {
   const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
   const { data: coupons, isLoading: couponsLoading, error: couponsError } = useCollection<Coupon>(couponsQuery);
 
+  const attendancePeriodsQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null),
+    [firestore, schoolId]
+  );
+  const { data: attendancePeriods, isLoading: attendancePeriodsLoading } = useCollection<AttendanceScheduleSlot>(attendancePeriodsQuery);
+
   const backupsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null, [firestore, schoolId]);
   const { data: backups, isLoading: backupsLoading, error: backupsError } = useCollection<BackupInfo>(backupsQuery);
 
@@ -1008,38 +1014,56 @@ function AdminDashboardInner() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Periods (times)</Label>
+                        <Label>Class → Universal period assignments</Label>
                         <div className="space-y-2">
-                          {(teacherAttendanceConfig.schedule || []).map((slot, index) => (
-                            <div key={slot.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
-                              <Input className="w-28" value={slot.label} onChange={(e) => {
-                                const next = [...(teacherAttendanceConfig.schedule || [])];
-                                next[index] = { ...next[index], label: e.target.value };
-                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
-                              }} />
-                              <Input className="w-20" value={slot.startTime} onChange={(e) => {
-                                const next = [...(teacherAttendanceConfig.schedule || [])];
-                                next[index] = { ...next[index], startTime: e.target.value };
-                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
-                              }} />
-                              <span className="text-muted-foreground">–</span>
-                              <Input className="w-20" value={slot.endTime} onChange={(e) => {
-                                const next = [...(teacherAttendanceConfig.schedule || [])];
-                                next[index] = { ...next[index], endTime: e.target.value };
-                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
-                              }} />
-                              <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => {
-                                const next = [...(teacherAttendanceConfig.schedule || [])];
-                                next.splice(index, 1);
-                                setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
-                              }}><Trash2 className="w-4 h-4" /></Button>
-                            </div>
-                          ))}
-                          <Button type="button" variant="outline" size="sm" onClick={() => {
-                            const next = [...(teacherAttendanceConfig.schedule || [])];
-                            next.push({ id: `slot_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, label: `Period ${next.length + 1}`, startTime: '08:00', endTime: '08:45' });
-                            setTeacherAttendanceConfigState({ ...teacherAttendanceConfig, schedule: next });
-                          }}>Add period</Button>
+                          {((classes || []).filter((c) => c.primaryTeacherId === selectedAttendanceTeacherId)).length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              This teacher has no classes yet. Assign classes in the `Classes` tab.
+                            </p>
+                          ) : (
+                            (classes || [])
+                              .filter((c) => c.primaryTeacherId === selectedAttendanceTeacherId)
+                              .map((c) => {
+                                const assignedPeriodId = teacherAttendanceConfig.classPeriodAssignments?.[c.id];
+                                return (
+                                  <div key={c.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                    <div className="min-w-[200px]">
+                                      <p className="font-bold">{c.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {assignedPeriodId
+                                          ? (attendancePeriods || []).find((p) => p.id === assignedPeriodId)?.label || 'Unknown period'
+                                          : 'No period assigned'}
+                                      </p>
+                                    </div>
+                                    <Select
+                                      value={assignedPeriodId || '__none__'}
+                                      onValueChange={(v) => {
+                                        const next = { ...(teacherAttendanceConfig.classPeriodAssignments || {}) };
+                                        if (!v || v === '__none__') delete next[c.id];
+                                        else next[c.id] = v;
+                                        setTeacherAttendanceConfigState({
+                                          ...teacherAttendanceConfig,
+                                          classPeriodAssignments: Object.keys(next).length ? next : undefined,
+                                        });
+                                      }}
+                                      disabled={attendancePeriodsLoading || (attendancePeriods || []).length === 0}
+                                    >
+                                      <SelectTrigger className="h-10 w-[260px] rounded-xl">
+                                        <SelectValue placeholder="Select a period..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="__none__">No period</SelectItem>
+                                        {(attendancePeriods || []).map((p) => (
+                                          <SelectItem key={p.id} value={p.id}>
+                                            {p.label} ({p.startTime}–{p.endTime})
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                );
+                              })
+                          )}
                         </div>
                       </div>
 
@@ -2241,6 +2265,111 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
   const [label, setLabel] = useState('Period 1');
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('08:45');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiImporting, setAiImporting] = useState(false);
+
+  const normalizeTime = (raw: string): string | null => {
+    const s = (raw || '').trim();
+    if (!s) return null;
+
+    const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (m24) {
+      const h = Number(m24[1]);
+      const m = Number(m24[2]);
+      if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if (m12) {
+      let h = Number(m12[1]);
+      const m = Number(m12[2]);
+      const ap = String(m12[3]).toLowerCase();
+      if (Number.isNaN(h) || Number.isNaN(m)) return null;
+      if (ap === 'pm' && h !== 12) h += 12;
+      if (ap === 'am' && h === 12) h = 0;
+      if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    return null;
+  };
+
+  const importPeriodsFromAI = async () => {
+    if (!schoolId) return;
+    if (!aiPrompt.trim()) {
+      toast({ variant: 'destructive', title: 'Paste schedule text first' });
+      return;
+    }
+
+    const replaceExisting = (periods || []).length > 0;
+    if (replaceExisting && !confirm('Replace ALL existing periods with the AI result?')) return;
+
+    setAiImporting(true);
+    try {
+      // Delete old periods (optional).
+      if (replaceExisting) {
+        for (const p of periods || []) {
+          await deleteDoc(doc(firestore, 'schools', schoolId, 'periods', p.id));
+        }
+      }
+
+      const model = localStorage.getItem('arcade_ai_model') || 'gemini-2.5-flash';
+      const res = await fetch('/api/parse-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt, model }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`AI import failed (${res.status}).`);
+      }
+
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : [];
+      if (!items.length) {
+        toast({ variant: 'destructive', title: 'No periods found from AI', description: 'Try pasting the schedule with clearer time ranges.' });
+        return;
+      }
+
+      // Map returned { className, startTime, endTime } -> our period schema { label, startTime, endTime }.
+      const mapped = items
+        .map((it: any, i: number) => {
+          const start = normalizeTime(String(it?.startTime || ''));
+          const end = normalizeTime(String(it?.endTime || ''));
+          if (!start || !end) return null;
+          const nextLabel = String(it?.className || '').trim() || `Period ${i + 1}`;
+          return {
+            id: `p_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            label: nextLabel,
+            startTime: start,
+            endTime: end,
+          } as AttendanceScheduleSlot;
+        })
+        .filter(Boolean) as AttendanceScheduleSlot[];
+
+      if (!mapped.length) {
+        toast({ variant: 'destructive', title: 'AI response had no valid time ranges' });
+        return;
+      }
+
+      for (const p of mapped) {
+        await setDoc(doc(firestore, 'schools', schoolId, 'periods', p.id), {
+          id: p.id,
+          label: p.label,
+          startTime: p.startTime,
+          endTime: p.endTime,
+        });
+      }
+
+      toast({ title: 'Periods imported', description: `Added ${mapped.length} period(s).` });
+      setAiPrompt('');
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed to import periods', description: e?.message || String(e) });
+    } finally {
+      setAiImporting(false);
+    }
+  };
 
   const addPeriod = async () => {
     try {
@@ -2272,6 +2401,24 @@ function UniversalPeriodsAdmin({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">AI import period times</Label>
+        <textarea
+          className="w-full rounded-xl border border-input bg-background p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+          placeholder="Paste something like: Period 1 08:00-08:45, Period 2 08:50-09:35 ..."
+          value={aiPrompt}
+          onChange={(e) => setAiPrompt(e.target.value)}
+          rows={4}
+        />
+        <div className="flex items-center gap-3">
+          <Button onClick={importPeriodsFromAI} disabled={aiImporting || !aiPrompt.trim()} className="rounded-xl font-bold uppercase tracking-widest">
+            {aiImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wand2 className="w-4 h-4 mr-2" />}
+            Import
+          </Button>
+          <p className="text-xs text-muted-foreground">Creates universal periods in Admin → Attendance.</p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label>Label</Label>
