@@ -196,8 +196,8 @@ export default function Header() {
                 </span>
               )}
               <span
-                className="text-5xl font-school font-black tracking-tight text-white whitespace-nowrap"
-                style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.7), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000' }}
+                className="text-5xl font-school font-black tracking-[0.08em] text-white whitespace-nowrap"
+                style={{ textShadow: '0 0 2px hsl(var(--primary)), 0 0 4px hsl(var(--primary)), 0 0 8px hsl(var(--primary))' }}
               >
                 {centerLabel}
               </span>

@@ -10,7 +10,7 @@ export function SchoolGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isInitialized && (!schoolId || loginState === 'loggedOut')) {
-      router.push('/portal');
+      router.push('/');
     }
   }, [isInitialized, schoolId, loginState, router]);
 

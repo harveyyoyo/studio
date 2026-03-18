@@ -105,7 +105,7 @@ const defaultSettings: Settings = {
     enableStudentPortal: false,
     enableClassSignIn: false,
     enableHelperMode: true,
-    showIntroWizard: true,
+    showIntroWizard: false,
     enableTeacherBudgets: false,
     legacyMode: false,
     logoDisplayMode: 'contain',
@@ -142,8 +142,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 setSettings(defaultSettings);
             }
         } else {
-            // No settings for this school, use defaults.
-            const initialSettings = { ...defaultSettings };
+            // No settings for this school, use defaults and show the intro wizard once.
+            const initialSettings: Settings = {
+                ...defaultSettings,
+                showIntroWizard: true,
+            };
             if (isMobile) {
                 initialSettings.displayMode = 'app';
             }

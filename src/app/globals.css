@@ -65,6 +65,15 @@
     @apply bg-background text-foreground transition-colors duration-500 min-h-screen;
   }
   
+  /* Make all bold text use the primary scheme color by default */
+  strong,
+  b,
+  .font-bold,
+  .font-black,
+  .font-extrabold {
+    color: hsl(var(--primary));
+  }
+  
   .coupon-preview-container {
     container-type: inline-size;
     width: 100%;

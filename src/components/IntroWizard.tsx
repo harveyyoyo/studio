@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useSettings } from './providers/SettingsProvider';
 import { ArrowRight, X } from 'lucide-react';
-import { usePathname } from 'next/navigation';
-import { useAppContext } from './AppProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const steps = [
@@ -72,9 +70,8 @@ const steps = [
   },
   {
     title: 'Step 11: Fulfill the Prize',
-    description: "After the student 'buys' a prize, the teacher needs to give it to them. Log out and return to the 'Teacher Portal'. You'll see the redeemed prize in the 'Prize Redemptions' list. Check the box to mark it as delivered.",
+    description: "After the student 'buys' a prize, the teacher needs to actually hand it out. Log out and return to the 'Teacher Portal'. Find the redeemed prize in the 'Prize Redemptions' list, give the prize to the student in real life, and then check the box to mark it as delivered so it disappears from the pending list.",
     target: '/prize',
-    hideNext: true,
   },
   {
     title: 'Step 12: Hall of Fame',
@@ -93,38 +90,48 @@ const steps = [
 export function IntroWizard() {
   const { settings, updateSettings } = useSettings();
   const [stepIndex, setStepIndex] = useState(0);
-  const pathname = usePathname();
-  const { schoolId } = useAppContext();
 
-  const isWizardEnabled = settings.showIntroWizard ?? true;
+  const isWizardEnabled = settings.showIntroWizard === true;
 
+  // Remember progress so restarting the wizard continues where you left off.
   useEffect(() => {
     if (!isWizardEnabled) return;
-
-    const currentStep = steps[stepIndex];
-    if (currentStep && currentStep.target !== pathname) {
-      const nextPageIndex = steps.findIndex((step, index) => index > stepIndex && step.target === pathname);
-      if (nextPageIndex !== -1) {
-        setStepIndex(nextPageIndex);
+    const key = 'arcade_intro_wizard_step';
+    const stored = window.localStorage.getItem(key);
+    if (stored !== null) {
+      const parsed = parseInt(stored, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed < steps.length) {
+        setStepIndex(parsed);
       }
     }
-  }, [pathname, stepIndex, isWizardEnabled]);
+  }, [isWizardEnabled]);
 
   const handleNext = () => {
     if (stepIndex < steps.length - 1) {
-      setStepIndex(stepIndex + 1);
+      const next = stepIndex + 1;
+      setStepIndex(next);
+      window.localStorage.setItem('arcade_intro_wizard_step', String(next));
     } else {
       handleTurnOff();
     }
   };
 
+  const handleBack = () => {
+    setStepIndex((prev) => {
+      const next = prev > 0 ? prev - 1 : 0;
+      window.localStorage.setItem('arcade_intro_wizard_step', String(next));
+      return next;
+    });
+  };
+
   const handleTurnOff = () => {
     updateSettings({ showIntroWizard: false });
+    window.localStorage.removeItem('arcade_intro_wizard_step');
   };
   
   const currentStep = steps[stepIndex];
 
-  if (!isWizardEnabled || !currentStep || pathname !== currentStep.target || schoolId !== 'schoolabc') {
+  if (!isWizardEnabled || !currentStep) {
     return null;
   }
 
@@ -149,13 +156,21 @@ export function IntroWizard() {
             <CardDescription>{currentStep.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-end w-full">
-              {!(currentStep as any).hideNext && (
+            <div className="flex justify-between items-center w-full">
+              <div className="text-[11px] text-muted-foreground">
+                Step {stepIndex + 1} of {steps.length}
+              </div>
+              <div className="flex gap-2">
+                {stepIndex > 0 && (
+                  <Button variant="outline" onClick={handleBack} className="rounded-full">
+                    Back
+                  </Button>
+                )}
                 <Button onClick={handleNext} className="rounded-full shadow-lg">
-                    {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                  {stepIndex < steps.length - 1 ? 'Next' : 'Finish'}
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-              )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -17,14 +17,8 @@ export default function PortalPage() {
     const { settings, updateSettings } = useSettings();
     const playSound = useArcadeSound();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (isInitialized && !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
-            router.replace('/');
-        }
-    }, [isInitialized, loginState, router]);
-
-    if (!isInitialized || !['student', 'teacher', 'admin', 'school'].includes(loginState)) {
+  
+  if (!isInitialized) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
@@ -103,13 +97,16 @@ export default function PortalPage() {
                     className="mb-8 mt-4 text-center"
                 >
                     <h2
-                        className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md border border-primary/50 rounded-lg px-6 py-3 inline-block"
-                        style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)' }}
+                        className="text-5xl font-black tracking-tighter text-primary font-headline drop-shadow-md px-6 py-3 inline-block"
+                        style={{
+                            textShadow: '0 0 12px hsl(var(--primary) / 0.35), 0 0 24px hsl(var(--primary) / 0.2)',
+                            WebkitTextStroke: '0.5px rgba(255,255,255,0.9)',
+                        }}
                     >
                         Where to?
                     </h2>
                     {schoolId === 'schoolabc' && !settings.showIntroWizard && (
-                        <div className="mt-4">
+                        <div className="mt-1">
                             <Button variant="link" onClick={() => {
                                 playSound('click');
                                 updateSettings({ showIntroWizard: true });
