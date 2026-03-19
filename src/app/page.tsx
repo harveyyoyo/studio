@@ -42,6 +42,11 @@ export default function LoginPage() {
   // Safe access to settings
   const isGraphic = settings?.graphicMode === 'graphics';
   const displayMode = settings?.displayMode || 'web';
+  const allowDeveloperLogin = process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true';
+
+  useEffect(() => {
+    if (!allowDeveloperLogin && isDeveloper) setIsDeveloper(false);
+  }, [allowDeveloperLogin, isDeveloper]);
 
   const handleSchoolLogin = async () => {
     if (!schoolId || !schoolPasscode) {
@@ -259,13 +264,15 @@ export default function LoginPage() {
               >
                 {isDeveloper ? 'Dev Login' : 'School Login'}
               </button>
-              <button
-                type="button"
-                onClick={() => setIsDeveloper(!isDeveloper)}
-                className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground hover:text-foreground' : 'text-slate-500 hover:text-slate-700')}
-              >
-                {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
-              </button>
+              {allowDeveloperLogin && (
+                <button
+                  type="button"
+                  onClick={() => setIsDeveloper(!isDeveloper)}
+                  className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground hover:text-foreground' : 'text-slate-500 hover:text-slate-700')}
+                >
+                  {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
+                </button>
+              )}
             </div>
           </div>
         </div>

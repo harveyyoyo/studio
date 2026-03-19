@@ -43,6 +43,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { GoogleFontLoader } from '@/components/GoogleFontLoader';
+import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 
 
 function ConfirmRedemptionDialog({
@@ -474,13 +475,8 @@ export default function PrizePage() {
     const { settings } = useSettings();
     const firestore = useFirestore();
 
-    const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+    const { activeStudentId, setActiveStudentId, handleDone } = useActiveStudentSession();
     // Kiosk lock removed.
-
-
-    const handleDone = useCallback(() => {
-        setActiveStudentId(null);
-    }, []);
 
     if (!isInitialized || !['student', 'teacher', 'admin', 'school', 'developer'].includes(loginState)) {
         return (

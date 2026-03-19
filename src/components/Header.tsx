@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import Logo from './Logo';
+import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 
 
 export default function Header() {
@@ -87,22 +88,8 @@ export default function Header() {
       return order.indexOf(a.id) - order.indexOf(b.id);
     });
 
-    const colorClasses: Record<string, string> = {
-      'destructive': 'text-destructive',
-      'chart-1': 'text-chart-1',
-      'chart-2': 'text-chart-2',
-      'chart-3': 'text-chart-3',
-      'chart-4': 'text-chart-4',
-      'chart-5': 'text-chart-5',
-    };
-
-    const hoverColorClasses: Record<string, string> = {
-      destructive: 'hover:text-destructive',
-      'chart-1': 'hover:text-chart-1',
-      'chart-2': 'hover:text-chart-2',
-      'chart-3': 'hover:text-chart-3',
-      'chart-5': 'hover:text-chart-5',
-    };
+    const colorClasses = portalTextClass;
+    const hoverColorClasses = portalHoverTextClass;
 
     return (
       <>
@@ -140,9 +127,10 @@ export default function Header() {
             <div className="max-w-lg mx-auto flex justify-around items-center">
               {navItems.map(({ href, icon: Icon, label, color }) => {
                 const isActive = pathname === href || (href !== '/portal' && pathname.startsWith(href));
+                const colorKey = color as PortalColorKey;
                 const activeClass = isActive
-                  ? `scale-110 ${colorClasses[color] || 'text-primary'}`
-                  : `text-slate-400 ${hoverColorClasses[color] || 'hover:text-primary'}`;
+                  ? `scale-110 ${colorClasses[colorKey] || 'text-primary'}`
+                  : `text-slate-400 ${hoverColorClasses[colorKey] || 'hover:text-primary'}`;
                 return (
                   <Link key={href} href={href} className={cn('flex flex-col items-center transition-all px-3 py-1', activeClass)}>
                     <Icon className="w-6 h-6" />

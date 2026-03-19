@@ -59,23 +59,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         setIsMounted(true);
-        console.log("AuthProvider: Mounted");
     }, []);
 
     useEffect(() => {
-        console.log("AuthProvider: Hydration Check", { isMounted, isUserLoading });
         if (!isMounted || isUserLoading || !firestore || !auth) {
             return;
         }
 
         const restore = async () => {
-            console.log("AuthProvider: Restoring session...");
             const savedState = localStorage.getItem('loginState') as LoginState | null;
             const savedSchoolId = localStorage.getItem('schoolId');
             const savedName = localStorage.getItem('userName');
             const savedTeacherDocId = localStorage.getItem('teacherDocId');
-
-            console.log("AuthProvider: LocalStorage State", { savedState, savedSchoolId, savedName });
 
             if (savedState && savedSchoolId) {
                 setSchoolId(savedSchoolId);
@@ -83,7 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (savedTeacherDocId) setTeacherDocId(savedTeacherDocId);
                 if (auth.currentUser) {
                     setUserId(auth.currentUser.uid);
-                    console.log("AuthProvider: User ID set from current user", auth.currentUser.uid);
                 }
 
                 // Legacy "school" state means admin under the new system
@@ -152,7 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 else setIsAdmin(false);
             }
 
-            console.log("AuthProvider: Initialization Complete");
             setIsInitialized(true);
         };
 

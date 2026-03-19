@@ -10,6 +10,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from '@/components/ui/button';
+import { portalGraphicBgClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 
 export default function PortalPage() {
     const { loginState, isInitialized, schoolId, isAdmin } = useAppContext();
@@ -38,31 +39,8 @@ export default function PortalPage() {
         { id: 'fame', href: '/halloffame', title: 'Hall of Fame', description: 'View top student point earners.', icon: Trophy, color: 'chart-5' },
     ];
 
-    const graphicColorMap: Record<string, string> = {
-        'destructive': 'bg-destructive',
-        'chart-1': 'bg-chart-1',
-        'chart-2': 'bg-chart-2',
-        'chart-3': 'bg-chart-3',
-        'chart-4': 'bg-chart-4',
-        'chart-5': 'bg-chart-5',
-    };
-
-    const textColorClasses: Record<string, string> = {
-        'destructive': 'text-destructive',
-        'chart-1': 'text-chart-1',
-        'chart-2': 'text-chart-2',
-        'chart-3': 'text-chart-3',
-        'chart-4': 'text-chart-4',
-        'chart-5': 'text-chart-5',
-    };
-
-    const hoverColorClasses: Record<string, string> = {
-        destructive: 'hover:text-destructive',
-        'chart-1': 'hover:text-chart-1',
-        'chart-2': 'hover:text-chart-2',
-        'chart-3': 'hover:text-chart-3',
-        'chart-5': 'hover:text-chart-5',
-    };
+    const graphicColorMap = portalGraphicBgClass;
+    const textColorClasses = portalTextClass;
 
     return (
         <div className={cn("min-h-[calc(100vh-5rem)] bg-background text-foreground relative font-sans flex flex-col items-center pt-8 sm:pt-12", settings.displayMode === 'app' && 'pb-24')}>
@@ -120,6 +98,7 @@ export default function PortalPage() {
                 <div className="flex flex-col gap-4">
                     {portals.map((area, index) => {
                         const Icon = area.icon;
+                        const colorKey = area.color as PortalColorKey;
                         return (
                             <Link key={area.id} href={area.href} onClick={() => playSound('click')} className="block group no-underline">
                                 <motion.div
@@ -133,7 +112,7 @@ export default function PortalPage() {
                                     {/* Fixed Vertical Color Bar - Increased visibility when inactive */}
                                     <div className={cn(
                                         "absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl transition-all duration-500",
-                                        graphicColorMap[area.color],
+                                        graphicColorMap[colorKey],
                                         hoveredIndex === area.id ? "opacity-100" : "opacity-30"
                                     )} />
 
@@ -143,7 +122,7 @@ export default function PortalPage() {
                                             "w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 bg-card/70 border-2 border-border/50 shadow-md",
                                             "group-hover:scale-105 group-hover:border-primary/20 group-hover:shadow-lg"
                                         )}>
-                                            <Icon className={cn("w-6 h-6 md:w-7 md:h-7", textColorClasses[area.color])} />
+                                            <Icon className={cn("w-6 h-6 md:w-7 md:h-7", textColorClasses[colorKey])} />
                                         </div>
                                         <div>
                                             <h3 className="text-lg md:text-xl font-black tracking-tight leading-tight text-primary">{area.title}</h3>
@@ -159,7 +138,7 @@ export default function PortalPage() {
                                     {/* Background Glow - Increased opacity on hover */}
                                     <AnimatePresence>
                                         {hoveredIndex === area.id && (
-                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.08 }} exit={{ opacity: 0 }} className={cn("absolute inset-0 rounded-2xl pointer-events-none", graphicColorMap[area.color])} />
+                                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.08 }} exit={{ opacity: 0 }} className={cn("absolute inset-0 rounded-2xl pointer-events-none", graphicColorMap[colorKey])} />
                                         )}
                                     </AnimatePresence>
                                 </motion.div>

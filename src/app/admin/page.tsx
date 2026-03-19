@@ -67,6 +67,18 @@ import { AchievementModal } from '@/components/AchievementModal';
 import { BadgeModal } from '@/components/BadgeModal';
 import { addAchievement, updateAchievement, deleteAchievement, addBadge, updateBadge, deleteBadge } from '@/lib/db';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sample-badges';
+import { AdminStatsTab } from './sections/AdminStatsTab';
+import { AdminBrandingTab } from './sections/AdminBrandingTab';
+import { AdminClassesTab } from './sections/AdminClassesTab';
+import { AdminTeachersTab } from './sections/AdminTeachersTab';
+import { AdminCategoriesTab } from './sections/AdminCategoriesTab';
+import { AdminPrizesTab } from './sections/AdminPrizesTab';
+import { AdminCouponsTab } from './sections/AdminCouponsTab';
+import { AdminBackupsTab } from './sections/AdminBackupsTab';
+import { AdminStudentsTab } from './sections/AdminStudentsTab';
+import { AdminAttendanceTab } from './sections/AdminAttendanceTab';
+import { AdminBonusPointsTab } from './sections/AdminBonusPointsTab';
+import { AdminBadgesTab } from './sections/AdminBadgesTab';
 
 function AdminDashboardSkeleton() {
   return (
@@ -832,1262 +844,211 @@ function AdminDashboardInner() {
 
           {settings.enableAdminAnalytics && (
             <TabsContent value="stats" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <Card className="border-t-4 border-destructive shadow-md">
-                <CardHeader className="py-6">
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Activity className="text-destructive w-6 h-6" /> School Analytics
-                  </CardTitle>
-                  <CardDescription>Overview of points and engagement across the school.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="bg-secondary/30 border-0 shadow-none">
-                      <CardContent className="p-6">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Points Issued</h3>
-                        <p className="text-4xl font-black text-foreground">{students?.reduce((sum, s) => sum + (s.lifetimePoints || s.points || 0), 0).toLocaleString() || 0}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-secondary/30 border-0 shadow-none">
-                      <CardContent className="p-6">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Coupons Redeemed</h3>
-                        <p className="text-4xl font-black text-foreground">{usedCouponsCount.toLocaleString()}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-secondary/30 border-0 shadow-none">
-                      <CardContent className="p-6">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Active Students</h3>
-                        <p className="text-4xl font-black text-foreground">{students?.length || 0}</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-secondary/30 border-0 shadow-none">
-                      <CardContent className="p-6">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Value Redeemed</h3>
-                        <p className="text-4xl font-black text-foreground">{totalPointsAwarded.toLocaleString()} pts</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-t-4 border-destructive shadow-md">
-                <CardHeader>
-                  <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
-                    <CardTitle className="flex items-center gap-2"><LayoutDashboard className="w-5 h-5 text-destructive" /> System Stats</CardTitle>
-                  </Helper>
-                  <CardDescription>Overview of your school data at a glance.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
-                  {[
-                    { label: 'Students', val: students?.length || 0 },
-                    { label: 'Classes', val: classes?.length || 0 },
-                    { label: 'Teachers', val: teachers?.length || 0 },
-                    { label: 'Coupons', val: coupons?.length || 0 },
-                    { label: 'Used', val: usedCouponsCount },
-                    { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-secondary/30 border p-6 rounded-2xl">
-                      <p className="text-3xl font-bold font-code">{stat.val}</p>
-                      <p className="text-xs text-muted-foreground uppercase font-bold tracking-tighter mt-1">{stat.label}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <AdminStatsTab
+                students={students}
+                classes={classes}
+                teachers={teachers}
+                coupons={coupons}
+                usedCouponsCount={usedCouponsCount}
+                totalPointsAwarded={totalPointsAwarded}
+              />
             </TabsContent>
           )}
 
           <TabsContent value="branding" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="py-6">
-                <Helper content="Upload your school logo to show it next to the school name across the app.">
-                  <CardTitle className="flex items-center gap-2">
-                    <UploadCloud className="w-5 h-5 text-primary" /> School Logo
-                  </CardTitle>
-                </Helper>
-                <CardDescription>Logo appears beside the school name in the header. PNG, JPG, or WebP under 5MB.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row items-center gap-6">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="relative group">
-                    <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border/60 flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-lg shadow-primary/30">
-                      {(logoPreviewUrl ?? schoolData?.logoUrl) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logoPreviewUrl ?? schoolData?.logoUrl ?? ''} alt="Current school logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                      ) : (
-                        <span>No logo</span>
-                      )}
-                    </div>
-                    {(logoPreviewUrl ?? schoolData?.logoUrl) && (
-                      <button
-                        onClick={handleRemoveLogo}
-                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove logo"
-                        disabled={isLogoUploading}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Current</span>
-                  <div className="mt-2 flex flex-col items-center gap-1">
-                    {previousSchoolLogos.length >= 1 ? (
-                      <>
-                        <Button variant="link" size="sm" className="text-[11px] h-auto p-0 text-muted-foreground" onClick={() => setIsPreviousLogosOpen(true)}>
-                          View previous logos
-                        </Button>
-                        <Dialog open={isPreviousLogosOpen} onOpenChange={setIsPreviousLogosOpen}>
-                          <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>Previous School Logos</DialogTitle>
-                              <DialogDescription>Select a previous logo to restore it.</DialogDescription>
-                            </DialogHeader>
-                            <div className="flex flex-wrap justify-center gap-4 py-4 max-h-[400px] overflow-y-auto">
-                              {previousSchoolLogos.map((url, idx) => (
-                                <button
-                                  key={`${url}-${idx}`}
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!schoolDocRef) return;
-                                    try {
-                                      await updateDoc(schoolDocRef, { logoUrl: url });
-                                      setLogoPreviewUrl(url ?? null);
-                                      playSound('success');
-                                      toast({ title: 'Logo restored', description: 'Using selected previous logo.' });
-                                      setIsPreviousLogosOpen(false);
-                                    } catch (e) {
-                                      toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
-                                    }
-                                  }}
-                                  className="h-24 w-24 rounded-2xl overflow-hidden border-2 border-border hover:border-primary transition-all bg-muted/60 flex-shrink-0"
-                                >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={url} alt="Previous logo" className={settings.logoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                                </button>
-                              ))}
-                            </div>
-                            <DialogFooter>
-                              <Button variant="secondary" onClick={() => setIsPreviousLogosOpen(false)}>Close</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground text-center max-w-[200px]">Previous logos will appear here after you upload new ones.</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2 flex-1 max-w-sm">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Display</Label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateSettings({ logoDisplayMode: 'contain' })}
-                      className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'contain' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                    >
-                      Fit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateSettings({ logoDisplayMode: 'cover' })}
-                      className={`flex-1 py-1.5 px-3 rounded-md text-sm font-bold ${settings.logoDisplayMode === 'cover' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                    >
-                      Fill (crop)
-                    </button>
-                  </div>
-                  <Label htmlFor="school-logo">Upload new logo</Label>
-                  <Input
-                    id="school-logo"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={handleLogoUpload}
-                    disabled={!schoolId || isLogoUploading}
-                  />
-                  {isLogoUploading && (
-                    <p className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Uploading…
-                    </p>
-                  )}
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Square image recommended, at least 128×128px.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminBrandingTab
+              schoolId={schoolId}
+              schoolDocRef={schoolDocRef}
+              schoolData={schoolData ?? undefined}
+              logoPreviewUrl={logoPreviewUrl}
+              setLogoPreviewUrl={setLogoPreviewUrl}
+              previousSchoolLogos={previousSchoolLogos}
+              isPreviousLogosOpen={isPreviousLogosOpen}
+              setIsPreviousLogosOpen={setIsPreviousLogosOpen}
+              logoDisplayMode={settings.logoDisplayMode}
+              setLogoDisplayMode={(v) => updateSettings({ logoDisplayMode: v })}
+              handleLogoUpload={handleLogoUpload}
+              handleRemoveLogo={handleRemoveLogo}
+              isLogoUploading={isLogoUploading}
+              toast={toast}
+              playSound={(s: any) => playSound(s)}
+            />
           </TabsContent>
 
           {settings.enableClassSignIn && (
             <TabsContent value="attendance" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-              <Card className="border-t-4 border-chart-4/60 shadow-md">
-                <CardHeader className="py-6">
-                  <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-chart-4" /> Universal Periods</CardTitle>
-                  <CardDescription>Create and manage period time slots used by all teachers for on-time attendance.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <UniversalPeriodsAdmin schoolId={schoolId!} />
-                </CardContent>
-              </Card>
-              <Card className="border-t-4 border-chart-2/60 shadow-md">
-                <CardHeader className="py-6">
-                  <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-chart-2" /> Teacher Attendance (per-teacher)</CardTitle>
-                  <CardDescription>View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div className="space-y-2">
-                      <Label>Teacher</Label>
-                      <Select value={selectedAttendanceTeacherId || '__none__'} onValueChange={setSelectedAttendanceTeacherId}>
-                        <SelectTrigger className="w-[260px]"><SelectValue placeholder="Select teacher" /></SelectTrigger>
-                        <SelectContent>
-                          {teachers?.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={loadTeacherAttendanceLog} disabled={teacherAttendanceLogLoading || !selectedAttendanceTeacherId}>
-                      {teacherAttendanceLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                      Refresh teacher log
-                    </Button>
-                  </div>
-
-                  {teacherAttendanceConfig && (
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <Label>Attendance reward rules created by this teacher</Label>
-                        {teacherAttendanceRewardsLoading ? (
-                          <p className="text-sm text-muted-foreground flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Loading reward rules…
-                          </p>
-                        ) : (teacherAttendanceRewards || []).length === 0 ? (
-                          <p className="text-sm text-muted-foreground">
-                            No reward rules found for this teacher yet.
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {(teacherAttendanceRewards || []).map((rule) => {
-                              const draft = ruleDrafts[rule.id] ?? {};
-                              const effective: AttendanceRewardRule = { ...rule, ...draft };
-                              const hasUnsaved = !!ruleDrafts[rule.id];
-
-                              const className = (classes || []).find((c) => c.id === effective.classId)?.name ?? 'Unknown class';
-                              const periodLabel =
-                                effective.periodId
-                                  ? (attendancePeriods || []).find((p) => p.id === effective.periodId)?.label ?? 'Unknown period'
-                                  : effective.customPeriod?.label
-                                    ? effective.customPeriod.label
-                                    : 'From class assignment';
-
-                              return (
-                                <div key={rule.id} className="rounded-2xl border bg-muted/30 p-3 space-y-3">
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="min-w-[260px]">
-                                      <p className="font-bold">{className}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        Period: {periodLabel}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className="flex items-center gap-2">
-                                        <Label className="text-xs">Enabled</Label>
-                                        <Switch
-                                          checked={!!effective.enabled}
-                                          onCheckedChange={(checked) => {
-                                            setRuleDrafts((prev) => ({
-                                              ...prev,
-                                              [rule.id]: { ...(prev[rule.id] ?? {}), enabled: checked },
-                                            }));
-                                          }}
-                                        />
-                                      </div>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => saveTeacherRewardRule(rule.id)}
-                                        disabled={!hasUnsaved || savingRuleId === rule.id}
-                                      >
-                                        {savingRuleId === rule.id ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                        Save
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-red-600 hover:bg-red-50"
-                                        onClick={() => deleteTeacherRewardRule(rule.id)}
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
-                                      </Button>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-                                    <div className="lg:col-span-2 space-y-1">
-                                      <Label className="text-xs">Class</Label>
-                                      <Select
-                                        value={effective.classId}
-                                        onValueChange={(v) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: { ...(prev[rule.id] ?? {}), classId: v },
-                                        }))}
-                                      >
-                                        <SelectTrigger className="h-10 rounded-xl">
-                                          <SelectValue placeholder="Select class" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {(classes || []).map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Sign-in points</Label>
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        value={effective.pointsForSignIn}
-                                        onChange={(e) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: { ...(prev[rule.id] ?? {}), pointsForSignIn: parseInt(e.target.value, 10) || 0 },
-                                        }))}
-                                      />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">On-time bonus</Label>
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        value={effective.pointsForOnTime}
-                                        onChange={(e) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: { ...(prev[rule.id] ?? {}), pointsForOnTime: parseInt(e.target.value, 10) || 0 },
-                                        }))}
-                                      />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Window (min)</Label>
-                                      <Input
-                                        type="number"
-                                        min={1}
-                                        max={120}
-                                        value={effective.onTimeWindowMinutes}
-                                        onChange={(e) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: { ...(prev[rule.id] ?? {}), onTimeWindowMinutes: parseInt(e.target.value, 10) || 3 },
-                                        }))}
-                                      />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Category</Label>
-                                      <Select
-                                        value={effective.categoryId || '__none__'}
-                                        onValueChange={(v) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: { ...(prev[rule.id] ?? {}), categoryId: v === '__none__' ? undefined : v },
-                                        }))}
-                                      >
-                                        <SelectTrigger className="h-10 rounded-xl">
-                                          <SelectValue placeholder="None" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="__none__">None</SelectItem>
-                                          {(categories || []).map((c) => (
-                                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Universal period override (optional)</Label>
-                                      <Select
-                                        value={effective.periodId || '__none__'}
-                                        onValueChange={(v) => setRuleDrafts((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? {}),
-                                            periodId: v === '__none__' ? undefined : v,
-                                            customPeriod: undefined,
-                                          }
-                                        }))}
-                                        disabled={attendancePeriodsLoading || (attendancePeriods || []).length === 0}
-                                      >
-                                        <SelectTrigger className="h-10 rounded-xl">
-                                          <SelectValue placeholder="From class assignment" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="__none__">From class assignment</SelectItem>
-                                          {(attendancePeriods || []).map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                              {p.label} ({p.startTime}–{p.endTime})
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Custom period (optional)</Label>
-                                      <div className="grid grid-cols-3 gap-2">
-                                        <Input
-                                          value={effective.customPeriod?.label ?? ''}
-                                          placeholder="Label"
-                                          onChange={(e) => {
-                                            const nextLabel = e.target.value;
-                                            setRuleDrafts((prev) => ({
-                                              ...prev,
-                                              [rule.id]: {
-                                                ...(prev[rule.id] ?? {}),
-                                                customPeriod: nextLabel
-                                                  ? {
-                                                    label: nextLabel,
-                                                    startTime: effective.customPeriod?.startTime ?? '08:00',
-                                                    endTime: effective.customPeriod?.endTime ?? '08:45',
-                                                  }
-                                                  : undefined,
-                                                periodId: undefined,
-                                              },
-                                            }));
-                                          }}
-                                        />
-                                        <Input
-                                          value={effective.customPeriod?.startTime ?? ''}
-                                          placeholder="Start"
-                                          onChange={(e) => {
-                                            const v = e.target.value;
-                                            setRuleDrafts((prev) => ({
-                                              ...prev,
-                                              [rule.id]: {
-                                                ...(prev[rule.id] ?? {}),
-                                                customPeriod: effective.customPeriod
-                                                  ? { ...effective.customPeriod, startTime: v }
-                                                  : (v ? { label: 'Custom', startTime: v, endTime: '08:45' } : undefined),
-                                                periodId: undefined,
-                                              },
-                                            }));
-                                          }}
-                                        />
-                                        <Input
-                                          value={effective.customPeriod?.endTime ?? ''}
-                                          placeholder="End"
-                                          onChange={(e) => {
-                                            const v = e.target.value;
-                                            setRuleDrafts((prev) => ({
-                                              ...prev,
-                                              [rule.id]: {
-                                                ...(prev[rule.id] ?? {}),
-                                                customPeriod: effective.customPeriod
-                                                  ? { ...effective.customPeriod, endTime: v }
-                                                  : (v ? { label: 'Custom', startTime: '08:00', endTime: v } : undefined),
-                                                periodId: undefined,
-                                              },
-                                            }));
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Class → Universal period assignments</Label>
-                        <div className="space-y-2">
-                          {((classes || []).filter((c) => c.primaryTeacherId === selectedAttendanceTeacherId)).length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                              This teacher has no classes yet. Assign classes in the `Classes` tab.
-                            </p>
-                          ) : (
-                            (classes || [])
-                              .filter((c) => c.primaryTeacherId === selectedAttendanceTeacherId)
-                              .map((c) => {
-                                const assignedPeriodId = teacherAttendanceConfig.classPeriodAssignments?.[c.id];
-                                return (
-                                  <div key={c.id} className="flex flex-wrap items-center gap-2 p-2 rounded-lg bg-muted/50">
-                                    <div className="min-w-[200px]">
-                                      <p className="font-bold">{c.name}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {assignedPeriodId
-                                          ? (attendancePeriods || []).find((p) => p.id === assignedPeriodId)?.label || 'Unknown period'
-                                          : 'No period assigned'}
-                                      </p>
-                                    </div>
-                                    <Select
-                                      value={assignedPeriodId || '__none__'}
-                                      onValueChange={(v) => {
-                                        const next = { ...(teacherAttendanceConfig.classPeriodAssignments || {}) };
-                                        if (!v || v === '__none__') delete next[c.id];
-                                        else next[c.id] = v;
-                                        setTeacherAttendanceConfigState({
-                                          ...teacherAttendanceConfig,
-                                          classPeriodAssignments: Object.keys(next).length ? next : undefined,
-                                        });
-                                      }}
-                                      disabled={attendancePeriodsLoading || (attendancePeriods || []).length === 0}
-                                    >
-                                      <SelectTrigger className="h-10 w-[260px] rounded-xl">
-                                        <SelectValue placeholder="Select a period..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="__none__">No period</SelectItem>
-                                        {(attendancePeriods || []).map((p) => (
-                                          <SelectItem key={p.id} value={p.id}>
-                                            {p.label} ({p.startTime}–{p.endTime})
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                );
-                              })
-                          )}
-                        </div>
-                      </div>
-
-                      <Button onClick={handleSaveTeacherAttendanceConfig} disabled={teacherAttendanceSaving}>
-                        {teacherAttendanceSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Save class period assignments
-                      </Button>
-
-                      {teacherAttendanceLog.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>Recent sign-ins (teacher)</Label>
-                          <ScrollArea className="h-[240px] w-full pr-4">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b text-left">
-                                  <th className="py-2 font-bold">Student</th>
-                                  <th className="py-2 font-bold">Time</th>
-                                  <th className="py-2 font-bold">Points</th>
-                                  <th className="py-2 font-bold">Period</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {teacherAttendanceLog.map((entry) => (
-                                  <tr key={entry.id ?? entry.signedInAt} className="border-b border-border/50">
-                                    <td className="py-2">{entry.studentName || entry.studentId}</td>
-                                    <td className="py-2 text-muted-foreground">{new Date(entry.signedInAt).toLocaleString()}</td>
-                                    <td className="py-2">+{entry.pointsAwarded}</td>
-                                    <td className="py-2 text-muted-foreground">{entry.periodLabel ?? '–'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </ScrollArea>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Legacy per-school attendance settings removed in favor of Universal Periods + per-teacher Attendance Rewards. */}
+              <AdminAttendanceTab
+                schoolId={schoolId}
+                teachers={teachers}
+                selectedAttendanceTeacherId={selectedAttendanceTeacherId}
+                setSelectedAttendanceTeacherId={setSelectedAttendanceTeacherId}
+                loadTeacherAttendanceLog={loadTeacherAttendanceLog}
+                teacherAttendanceLogLoading={teacherAttendanceLogLoading}
+                teacherAttendanceConfig={teacherAttendanceConfig}
+                teacherAttendanceRewardsLoading={teacherAttendanceRewardsLoading}
+                teacherAttendanceRewards={teacherAttendanceRewards}
+                ruleDrafts={ruleDrafts}
+                setRuleDrafts={setRuleDrafts}
+                savingRuleId={savingRuleId}
+                saveTeacherRewardRule={saveTeacherRewardRule}
+                deleteTeacherRewardRule={deleteTeacherRewardRule}
+                classes={classes}
+                attendancePeriodsLoading={attendancePeriodsLoading}
+                attendancePeriods={attendancePeriods}
+                categories={categories}
+                handleSaveTeacherAttendanceConfig={handleSaveTeacherAttendanceConfig}
+                teacherAttendanceSaving={teacherAttendanceSaving}
+                teacherAttendanceLog={teacherAttendanceLog}
+                setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
+                UniversalPeriodsAdmin={UniversalPeriodsAdmin}
+              />
             </TabsContent>
           )}
 
           <TabsContent value="classes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Manage class groups for your school.">
-                    <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-destructive" /> Classes</CardTitle>
-                  </Helper>
-                  <CardDescription>Manage class groups for your school.</CardDescription>
-                </div>
-                <Button onClick={() => setIsClassModalOpen(true)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Class</Button>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {classes?.map((c) => (
-                    <li key={c.id} className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 bg-secondary/20 p-4 rounded-2xl border hover:border-primary/20 transition-colors">
-                      <div className="space-y-1">
-                        <span className="font-bold block">{c.name}</span>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-semibold uppercase tracking-widest">Primary Teacher:</span>
-                          <Select
-                            value={c.primaryTeacherId || '__none__'}
-                            onValueChange={(value) => {
-                              const next = value === '__none__' ? { ...c, primaryTeacherId: undefined } : { ...c, primaryTeacherId: value };
-                              updateClass(next);
-                            }}
-                          >
-                            <SelectTrigger className="h-8 w-[180px] text-xs">
-                              <SelectValue placeholder="Unassigned" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Unassigned</SelectItem>
-                              {teachers?.map((t) => (
-                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 self-end md:self-auto" onClick={() => deleteClass(c.id, students || [])}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </li>
-                  ))}
-                  {(!classes || classes.length === 0) && (
-                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No classes yet.</p>
-                  )}
-                </ul>
-              </CardContent>
-            </Card>
+            <AdminClassesTab
+              classes={classes}
+              teachers={teachers}
+              students={students}
+              onAddClass={() => setIsClassModalOpen(true)}
+              onDeleteClass={deleteClass}
+              onUpdateClass={updateClass}
+            />
           </TabsContent>
 
           <TabsContent value="teachers" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Add and manage teachers who can issue coupons.">
-                    <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-destructive" /> Teachers</CardTitle>
-                  </Helper>
-                  <CardDescription>Add and manage teachers who can issue coupons.</CardDescription>
-                </div>
-                <Button onClick={() => setIsTeacherModalOpen(true)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Teacher</Button>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {teachers?.map((t) => (
-                    <li key={t.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-purple-200 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-700">
-                          {t.name[0]}
-                        </div>
-                        <div>
-                          <p className="font-bold">{t.name}</p>
-                          <p className="text-xs text-muted-foreground">User: <span className="font-code">{t.username}</span> | Pass: <span className="font-code">{t.passcode}</span></p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                          setEditingTeacher(t);
-                          setNewTeacherName(t.name);
-                          setNewTeacherUsername(t.username || '');
-                          setNewTeacherPasscode(t.passcode || '');
-                          setNewTeacherBudget(t.monthlyBudget?.toString() || '');
-                          setIsTeacherModalOpen(true);
-                        }}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteTeacher(t.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                  {(!teachers || teachers.length === 0) && (
-                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No teachers yet.</p>
-                  )}
-                </ul>
-              </CardContent>
-            </Card>
+            <AdminTeachersTab
+              teachers={teachers}
+              onAddTeacher={() => setIsTeacherModalOpen(true)}
+              onEditTeacher={(t) => {
+                setEditingTeacher(t);
+                setNewTeacherName(t.name);
+                setNewTeacherUsername(t.username || '');
+                setNewTeacherPasscode(t.passcode || '');
+                setNewTeacherBudget(t.monthlyBudget?.toString() || '');
+                setIsTeacherModalOpen(true);
+              }}
+              onDeleteTeacher={deleteTeacher}
+            />
           </TabsContent>
 
           <TabsContent value="categories" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Define categories and default point values for coupons.">
-                    <CardTitle className="flex items-center gap-2"><Tag className="w-5 h-5 text-destructive" /> Reward Categories</CardTitle>
-                  </Helper>
-                  <CardDescription>Define categories and point values for coupons.</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" className="rounded-xl" onClick={async () => {
-                    if (!confirm("This will assign a random color to all existing categories. Continue?")) return;
-                    try {
-                      let count = 0;
-                      for (const c of categories || []) {
-                        await updateCategory({ ...c, color: getRandomColor() });
-                        count++;
-                      }
-                      toast({ title: "Colors Randomized", description: `Updated ${count} categories.` });
-                    } catch(e) {
-                      toast({ variant: "destructive", title: "Failed to randomize colors" });
-                    }
-                  }}>
-                    <Palette className="mr-2 h-4 w-4" /> Randomize Colors
-                  </Button>
-                  <Button onClick={() => handleOpenCategoryModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Category</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {categories?.map((c) => (
-                    <li key={c.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-chart-2/20 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: c.color || '#cccccc' }} />
-                        <div>
-                          <p className="font-bold">{c.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                              {c.points} pts
-                              <span className="ml-2 font-medium">
-                                  • Added by {c.teacherId ? (teachers?.find(t => t.id === c.teacherId)?.name || 'Unknown Teacher') : 'Admin'}
-                              </span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenCategoryModal(c)}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => deleteCategory(c.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                  {(!categories || categories.length === 0) && (
-                    <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No categories yet.</p>
-                  )}
-                </ul>
-              </CardContent>
-            </Card>
+            <AdminCategoriesTab
+              categories={categories}
+              teachers={teachers}
+              onRandomizeColors={async () => {
+                if (!confirm("This will assign a random color to all existing categories. Continue?")) return;
+                try {
+                  let count = 0;
+                  for (const c of categories || []) {
+                    await updateCategory({ ...c, color: getRandomColor() });
+                    count++;
+                  }
+                  toast({ title: "Colors Randomized", description: `Updated ${count} categories.` });
+                } catch (e) {
+                  toast({ variant: "destructive", title: "Failed to randomize colors" });
+                }
+              }}
+              onAddCategory={() => handleOpenCategoryModal(null)}
+              onEditCategory={(c) => handleOpenCategoryModal(c)}
+              onDeleteCategory={deleteCategory}
+            />
           </TabsContent>
 
           <TabsContent value="students" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md overflow-hidden">
-              <CardHeader className="bg-primary/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-8">
-                <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Users className="text-destructive w-6 h-6" /> Students
-                  </CardTitle>
-                </Helper>
-                <CardDescription>Manage your enrollments and view student activity.</CardDescription>
-                <div className='flex flex-wrap gap-2 w-full pb-1 sm:pb-0'>
-                  <Button onClick={handleStudentCsvUpload} variant="outline" className="rounded-xl px-4"><UploadCloud className="mr-2 h-4 w-4" /> Import CSV</Button>
-                  {selectionMode && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={toggleSelectAllFiltered}
-                      className={cn(
-                        "rounded-xl px-3 h-11 whitespace-nowrap",
-                        isAllFilteredSelected ? "bg-secondary/40" : "bg-orange-50 text-orange-800 border-orange-200"
-                      )}
-                    >
-                      {isAllFilteredSelected ? 'Deselect All' : 'Select All'}
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => {
-                      const filtered = filteredStudents;
-
-                      if (selectionMode && selectedStudentIds.size > 0) {
-                        const selected = students?.filter(s => selectedStudentIds.has(s.id)) || [];
-                        setStudentsToPrint({ students: selected, classes: classes || [] });
-                      } else {
-                        setStudentsToPrint({ students: filtered, classes: classes || [] });
-                      }
-                    }}
-                    variant={(selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all' ? "default" : "outline"}
-                    className={cn(
-                      "rounded-xl px-4",
-                      ((selectionMode && selectedStudentIds.size >= 1) || studentFilterClass !== 'all') && "bg-orange-500 hover:bg-orange-600 font-bold"
-                    )}
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    {selectionMode && selectedStudentIds.size >= 1
-                      ? `Print Selected (${selectedStudentIds.size})`
-                      : studentFilterClass !== 'all'
-                        ? `Print Class (${students?.filter(s => s.classId === studentFilterClass).length || 0})`
-                        : "Bulk ID Print"
-                    }
-                  </Button>
-                  <Button
-                    onClick={handleDtcPrintClick}
-                    disabled={selectionMode && selectedStudentIds.size > 1}
-                    variant={(selectionMode && selectedStudentIds.size === 1) ? "default" : "outline"}
-                    className={cn(
-                      "rounded-xl px-4",
-                      (selectionMode && selectedStudentIds.size === 1) ? "bg-amber-500 hover:bg-amber-600 font-bold" : "bg-orange-50 hover:bg-orange-100 text-orange-800 border-orange-200"
-                    )}
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    {selectionMode && selectedStudentIds.size === 1
-                      ? `Print Selected (DTC)`
-                      : "DTC Card Print"
-                    }
-                  </Button>
-                  <Button onClick={() => handleOpenStudentModal(null)} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
-                  <input type="file" ref={studentCsvInputRef} onChange={onStudentCsvFileChange} className="hidden" accept=".csv" />
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <div className="relative flex-grow">
-                    <Input placeholder="Search by name, nickname, or ID..." value={studentSearchTerm} onChange={(e) => setStudentSearchTerm(e.target.value)} className="rounded-full pl-10 h-11" />
-                    <LayoutDashboard className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-                  </div>
-                    <div className="flex gap-2 items-center flex-wrap">
-                    <Select value={studentSortOption} onValueChange={setStudentSortOption}>
-                      <SelectTrigger className="w-[180px] rounded-xl h-11">
-                        <SelectValue placeholder="Sort By" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lastNameAsc">Last Name (A-Z)</SelectItem>
-                        <SelectItem value="lastNameDesc">Last Name (Z-A)</SelectItem>
-                        <SelectItem value="firstNameAsc">First Name (A-Z)</SelectItem>
-                        <SelectItem value="firstNameDesc">First Name (Z-A)</SelectItem>
-                        <SelectItem value="pointsDesc">Points (High - Low)</SelectItem>
-                        <SelectItem value="pointsAsc">Points (Low - High)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={studentFilterClass} onValueChange={setStudentFilterClass}>
-                      <SelectTrigger className="w-[180px] rounded-xl h-11">
-                        <SelectValue placeholder="All Classes" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Classes</SelectItem>
-                        {classes?.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2 bg-secondary/30 px-4 h-11 rounded-xl border">
-                      <Label htmlFor="selection-mode" className="text-sm font-bold opacity-70">Select</Label>
-                      <Switch
-                        id="selection-mode"
-                        checked={selectionMode}
-                        onCheckedChange={(checked) => {
-                          setSelectionMode(checked);
-                          if (!checked) setSelectedStudentIds(new Set());
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <ScrollArea className="h-[500px]">
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-4">
-                    {filteredStudents.map(s => (
-                      <li key={s.id} className={cn(
-                        "flex flex-col sm:flex-row justify-between sm:items-center gap-4 p-4 rounded-2xl border transition-all hover:bg-background shadow-sm",
-                        selectionMode && "cursor-pointer",
-                        selectedStudentIds.has(s.id) ? "bg-primary/5 border-primary/40 ring-1 ring-primary/20" : "bg-secondary/20 border-transparent"
-                      )}
-                      onClick={() => {
-                        if (!selectionMode) return;
-                        setSelectedStudentIds(prev => {
-                          const next = new Set(prev);
-                          if (next.has(s.id)) next.delete(s.id);
-                          else next.add(s.id);
-                          return next;
-                        });
-                      }}
-                      >
-                        <div className="flex items-center gap-3">
-                          {selectionMode && (
-                            <Checkbox
-                              checked={selectedStudentIds.has(s.id)}
-                              onCheckedChange={(checked) => {
-                                const next = new Set(selectedStudentIds);
-                                if (checked) next.add(s.id);
-                                else next.delete(s.id);
-                                setSelectedStudentIds(next);
-                              }}
-                              className="mr-2"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10 border border-border/40 flex items-center justify-center font-bold text-primary flex-shrink-0">
-                            {s.photoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={s.photoUrl} alt={`${s.firstName} ${s.lastName}`} className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />
-                            ) : (
-                              <span>{(s.firstName[0] || '')}{(s.lastName[0] || '')}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-lg">{s.lastName}, {s.firstName}</p>
-                            <p className="text-xs text-muted-foreground font-medium mt-0.5">{getClassName(s.classId || '')} | ID: <span className="font-code">{s.nfcId || '---'}</span></p>
-                            <p className="text-primary font-bold text-xs mt-1">{s.points} pts accumulated</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5 self-end sm:self-center" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setThemeStudent(s)} title="Generate AI Theme"><Wand2 className="w-4 h-4 text-purple-500" /></Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenActivityModal(s)}><History className="w-4 h-4" /></Button>
-                          {settings.enableBadges && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className={cn("h-9 w-9 rounded-full", (!s.earnedBadges || s.earnedBadges.length === 0) && "opacity-40")}
-                              disabled={!s.earnedBadges || s.earnedBadges.length === 0}
-                              onClick={() => setBadgesStudent(s)}
-                              title="View badges for this student"
-                            >
-                              <Award className={cn("w-4 h-4", (!s.earnedBadges || s.earnedBadges.length === 0) ? "text-muted-foreground" : "text-amber-500")} />
-                            </Button>
-                          )}
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => handleOpenStudentModal(s)}><Edit className="w-4 h-4 text-blue-500" /></Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 rounded-full text-amber-600 hover:bg-amber-50"
-                            title="Purge points & badges"
-                            onClick={() => setStudentToPurge(s)}
-                          >
-                            <Zap className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-red-500 hover:bg-red-50" onClick={() => deleteStudent(s.id)}><Trash2 className="w-4 h-4" /></Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+            <AdminStudentsTab
+              settings={settings}
+              classes={classes}
+              students={students}
+              filteredStudents={filteredStudents}
+              studentCsvInputRef={studentCsvInputRef}
+              onStudentCsvFileChange={onStudentCsvFileChange}
+              handleStudentCsvUpload={handleStudentCsvUpload}
+              selectionMode={selectionMode}
+              setSelectionMode={setSelectionMode}
+              selectedStudentIds={selectedStudentIds}
+              setSelectedStudentIds={setSelectedStudentIds}
+              isAllFilteredSelected={isAllFilteredSelected}
+              toggleSelectAllFiltered={toggleSelectAllFiltered}
+              studentSearchTerm={studentSearchTerm}
+              setStudentSearchTerm={setStudentSearchTerm}
+              studentSortOption={studentSortOption}
+              setStudentSortOption={setStudentSortOption}
+              studentFilterClass={studentFilterClass}
+              setStudentFilterClass={setStudentFilterClass}
+              setStudentsToPrint={(args) => setStudentsToPrint(args as any)}
+              handleDtcPrintClick={handleDtcPrintClick}
+              getClassName={getClassName}
+              handleOpenStudentModal={handleOpenStudentModal}
+              handleOpenActivityModal={handleOpenActivityModal}
+              setThemeStudent={(s) => setThemeStudent(s)}
+              setBadgesStudent={(s) => setBadgesStudent(s)}
+              deleteStudent={deleteStudent}
+              setStudentToPurge={(s) => setStudentToPurge(s)}
+            />
           </TabsContent>
 
           <TabsContent value="prizes" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Manage items available for student redemption in the Prize Shop.">
-                    <CardTitle className="flex items-center gap-2">
-                      <Gift className="text-destructive w-5 h-5" /> Prize Shop
-                    </CardTitle>
-                  </Helper>
-                  <CardDescription>Items available for student redemption.</CardDescription>
-                </div>
-                <Button onClick={() => handleOpenPrizeModal(null)} className="rounded-xl">
-                  <Plus className="mr-2 h-4 w-4" /> Add Prize
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
-                  {prizes?.sort((a, b) => a.points - b.points).map(p => (
-                    <li key={p.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-secondary/30 p-4 rounded-2xl border group transition-all hover:bg-background">
-                      <div className="flex items-center gap-4 flex-grow">
-                        <div className="flex flex-col items-center">
-                          <Switch checked={p.inStock} onCheckedChange={(checked) => updatePrize({ ...p, inStock: checked })} className="data-[state=checked]:bg-green-500 scale-75" />
-                          <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-50">{p.inStock ? 'On' : 'Off'}</p>
-                        </div>
-                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-background border flex-shrink-0", !p.inStock && "opacity-40 grayscale")}>
-                          <DynamicIcon name={p.icon} className="w-6 h-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className={cn("font-bold text-base leading-none mb-1", !p.inStock && "line-through opacity-40")}>{p.name}</p>
-                          <p className="text-xs font-bold text-primary">{p.points} points</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1 self-end sm:self-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenPrizeModal(p)}><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-red-500" onClick={() => deletePrize(p.id)}><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            <AdminPrizesTab
+              prizes={prizes}
+              onAddPrize={() => handleOpenPrizeModal(null)}
+              onEditPrize={(p) => handleOpenPrizeModal(p)}
+              onDeletePrize={deletePrize}
+              onToggleInStock={(p, inStock) => updatePrize({ ...p, inStock })}
+            />
           </TabsContent>
 
 
           <TabsContent value="coupons" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader>
-                <Helper content="This section shows all coupons that have been generated in the system, separated into those that are still available and those that have already been redeemed by a student.">
-                  <CardTitle className="flex items-center gap-2"><Ticket className="w-5 h-5 text-destructive" /> Coupon Management</CardTitle>
-                </Helper>
-                <CardDescription>View all available and redeemed coupons in the system.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Available Coupons ({availableCoupons.length})</h3>
-                  <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
-                    {availableCoupons.length >= 1 ? (
-                      <ul className="p-3 space-y-2">
-                        {availableCoupons.map(coupon => (
-                          <li key={coupon.id} className="p-3 bg-card rounded-lg border">
-                            <div className="flex justify-between items-center font-bold">
-                              <span className="font-code text-primary">{coupon.code}</span>
-                              <span>{coupon.value} pts</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              <p>{coupon.category} / by {coupon.teacher}</p>
-                              <p>Created on {new Date(coupon.createdAt).toLocaleDateString()}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-center text-sm text-muted-foreground p-8">No available coupons.</p>
-                    )}
-                  </ScrollArea>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Redeemed Coupons ({redeemedCoupons.length})</h3>
-                  <ScrollArea className="h-[500px] border rounded-lg bg-background/50">
-                    {redeemedCoupons.length >= 1 ? (
-                      <ul className="p-3 space-y-2">
-                        {redeemedCoupons.map(coupon => (
-                          <li key={coupon.id} className="p-3 bg-card rounded-lg border opacity-70">
-                            <div className="flex justify-between items-center font-bold">
-                              <span className="font-code">{coupon.code}</span>
-                              <span>{coupon.value} pts</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              <p>{coupon.category} / by {coupon.teacher}</p>
-                              <p>Used by {getStudentName(coupon.usedBy)} on {coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString() : 'N/A'}</p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-center text-sm text-muted-foreground p-8">No redeemed coupons.</p>
-                    )}
-                  </ScrollArea>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminCouponsTab availableCoupons={availableCoupons} redeemedCoupons={redeemedCoupons} getStudentName={getStudentName} />
           </TabsContent>
 
           {settings.enableAchievements && (
           <TabsContent value="bonuspoints" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable in Settings → Features → Recognition.">
-                    <CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5 text-destructive" /> Bonus Points</CardTitle>
-                  </Helper>
-                  <CardDescription>Create milestones that award extra points when students reach point thresholds.</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
-                    {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
-                    Add sample milestones
-                  </Button>
-                  <Button onClick={() => { setEditingAchievement(null); setIsBadgeModalOpen(true); }} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add milestone</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {achievementsLoading ? (
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {[1, 2, 3].map(i => (
-                      <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
-                        <Skeleton className="h-10 w-48" />
-                        <Skeleton className="h-8 w-20" />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {(achievements || []).map((ach) => (
-                      <li key={ach.id} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border hover:border-amber-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
-                            style={{ borderColor: ach.accentColor || undefined, backgroundColor: ach.accentColor ? `${ach.accentColor}20` : undefined }}
-                          >
-                            <DynamicIcon name={ach.icon} className="w-5 h-5" style={ach.accentColor ? { color: ach.accentColor } : undefined} />
-                          </div>
-                          <div>
-                            <p className="font-bold">{ach.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {ach.criteria.type === 'points' && `Current points ≥ ${ach.criteria.threshold}`}
-                              {ach.criteria.type === 'lifetimePoints' && `Lifetime points ≥ ${ach.criteria.threshold}`}
-                              {ach.criteria.type === 'coupons' && `Category threshold ${ach.criteria.threshold}`}
-                              {ach.criteria.type === 'manual' && 'Manual award only'}
-                              {ach.tier && ` · ${ach.tier}`}
-                              {(ach.bonusPoints ?? 0) >= 1 && ` · +${ach.bonusPoints} bonus pts`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:bg-red-50"
-                            onClick={() => setAchievementToDelete(ach)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                    {(!achievements || achievements.length === 0) && (
-                      <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No milestones yet. Add one to get started.</p>
-                    )}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+            <AdminBonusPointsTab
+              achievementsLoading={achievementsLoading}
+              achievements={achievements}
+              isAddingSamples={isAddingSamples}
+              setIsAddSampleBadgesOpen={setIsAddSampleBadgesOpen}
+              setEditingAchievement={setEditingAchievement}
+              setIsBadgeModalOpen={setIsBadgeModalOpen}
+              setAchievementToDelete={setAchievementToDelete}
+            />
           </TabsContent>
           )}
 
           {settings.enableBadges && (
           <TabsContent value="category-badges" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
-                    <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-destructive" /> Badges</CardTitle>
-                  </Helper>
-                  <CardDescription>Category-based badges. Enable in Settings → Features → Recognition → Badges.</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button onClick={() => { setEditingCategoryBadge(null); setIsCategoryBadgeModalOpen(true); }} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Add badge</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsAddSampleCategoryBadgesOpen(true)}
-                    className="rounded-xl"
-                    disabled={isAddingSampleCategoryBadges || !categories?.length}
-                  >
-                    {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Award className="mr-2 h-4 w-4" />}
-                    Add sample badges
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {badgesLoading ? (
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {[1, 2, 3].map(i => (
-                      <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
-                        <Skeleton className="h-10 w-48" />
-                        <Skeleton className="h-8 w-20" />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {(badges || []).map((b) => {
-                      const cat = categories?.find(c => c.id === b.categoryId);
-                      const periodLabel = b.period === 'month' ? 'This month' : b.period === 'semester' ? 'This semester' : b.period === 'year' ? 'This year' : 'All time';
-                      const isToggling = badgeTogglingId === b.id;
-                      const earnersCount = (students || []).filter(s => s.earnedBadges?.some(e => e.badgeId === b.id)).length;
-                      return (
-                        <li key={b.id} className={cn("flex justify-between items-center p-4 rounded-2xl border transition-colors", b.enabled === false ? "bg-muted/30 opacity-75" : "bg-secondary/20 hover:border-amber-200")}>
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
-                              style={{ borderColor: b.accentColor || undefined, backgroundColor: b.accentColor ? `${b.accentColor}20` : undefined }}
-                            >
-                              <DynamicIcon name={b.icon} className="w-5 h-5" style={b.accentColor ? { color: b.accentColor } : undefined} />
-                            </div>
-                            <div>
-                              <p className="font-bold">{b.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {cat?.name ?? 'Unknown'} · {b.pointsRequired} pts · {periodLabel}
-                                {b.tier && ` · ${b.tier}`}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">Enabled</span>
-                              {isToggling ? (
-                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                              ) : (
-                                <Switch
-                                  checked={b.enabled !== false}
-                                  onCheckedChange={async (checked) => {
-                                    if (!firestore || !schoolId) return;
-                                    setBadgeTogglingId(b.id);
-                                    try {
-                                      await updateBadge(firestore, schoolId, { ...b, enabled: checked });
-                                      toast({ title: checked ? 'Badge enabled' : 'Badge disabled' });
-                                    } catch (e: any) {
-                                      toast({ variant: 'destructive', title: 'Update failed', description: e?.message });
-                                    } finally {
-                                      setBadgeTogglingId(null);
-                                    }
-                                  }}
-                                  className="scale-90"
-                                />
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 gap-1 text-muted-foreground"
-                              onClick={() => setBadgeEarnersFor(b)}
-                              title="Who earned this badge"
-                            >
-                              <Users className="h-4 w-4" />
-                              {earnersCount}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCategoryBadge(b); setIsCategoryBadgeModalOpen(true); }}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => setCategoryBadgeToDelete(b)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                    {(!badges || badges.length === 0) && (
-                      <p className="text-center text-sm text-muted-foreground py-8 opacity-50">No badges yet. Add one (e.g. Good Behavior badge for 50 points this month).</p>
-                    )}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+            <AdminBadgesTab
+              categories={categories}
+              badgesLoading={badgesLoading}
+              badges={badges}
+              students={students}
+              badgeTogglingId={badgeTogglingId}
+              setBadgeTogglingId={setBadgeTogglingId}
+              onToggleBadge={async (b: any, checked: boolean) => {
+                if (!firestore || !schoolId) return;
+                await updateBadge(firestore, schoolId, { ...b, enabled: checked });
+                toast({ title: checked ? 'Badge enabled' : 'Badge disabled' });
+              }}
+              setBadgeEarnersFor={setBadgeEarnersFor}
+              setEditingCategoryBadge={setEditingCategoryBadge}
+              setIsCategoryBadgeModalOpen={setIsCategoryBadgeModalOpen}
+              setCategoryBadgeToDelete={setCategoryBadgeToDelete}
+              setEditingCategoryBadgeNull={() => setEditingCategoryBadge(null)}
+              setIsAddSampleCategoryBadgesOpen={setIsAddSampleCategoryBadgesOpen}
+              isAddingSampleCategoryBadges={isAddingSampleCategoryBadges}
+            />
           </TabsContent>
           )}
 
           <TabsContent value="backups" className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="border-t-4 border-destructive shadow-md">
-              <CardHeader className="flex flex-row justify-between items-center py-6">
-                <div>
-                  <Helper content="Create and restore full data snapshots of your school. This is a critical tool for data safety and recovery.">
-                    <CardTitle className="flex items-center gap-2">
-                      <Database className="text-destructive w-5 h-5" /> System Backups
-                    </CardTitle>
-                  </Helper>
-                  <CardDescription>Create and restore data snapshots.</CardDescription>
-                </div>
-                <Button onClick={handleCreateBackup} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> Create Snapshot</Button>
-              </CardHeader>
-              <CardContent className="p-6">
-                <ScrollArea className="h-[400px]">
-                  <ul className="space-y-2.5 pr-4">
-                    {(backups || []).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(b => (
-                      <li key={b.id} className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-secondary/20 p-4 rounded-2xl border group transition-all hover:bg-background">
-                        <div className="flex items-center gap-4 flex-grow">
-                          <div className="w-10 h-10 rounded-full bg-chart-4/10 flex items-center justify-center flex-shrink-0">
-                            <Database className="w-5 h-5 text-chart-4" />
-                          </div>
-                          <div>
-                            <p className="font-code text-sm font-bold">{b.createdAt ? new Date(b.createdAt).toLocaleString() : 'Unknown date'}</p>
-                            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">{b.totalDocs} documents • <span className={b.type === 'scheduled' ? 'text-green-600' : 'text-blue-600'}>{b.type || 'manual'}</span></p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 self-end sm:self-center">
-                          <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm" onClick={() => handleDownloadBackup(b.id)}><Download className="h-4 w-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="outline" className="rounded-full h-10 w-10 shadow-sm hover:border-red-200 hover:bg-red-50"><Upload className="h-4 w-4 text-orange-600" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-3xl border-2">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-2xl font-bold">Restore snapshot?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-base text-balance mt-2">
-                                  This will <span className="font-bold text-red-600">OVERWRITE all current school data</span> with the state from {b.createdAt ? new Date(b.createdAt).toLocaleString() : 'unknown date'}. This cannot be easily undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter className="mt-6">
-                                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRestoreFromBackup(b.id)} className="rounded-full bg-orange-600 hover:bg-orange-700">Restore Data</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+            <AdminBackupsTab
+              backups={backups}
+              onCreateBackup={handleCreateBackup}
+              onDownloadBackup={handleDownloadBackup}
+              onRestoreFromBackup={handleRestoreFromBackup}
+            />
           </TabsContent>
 
         </Tabs>

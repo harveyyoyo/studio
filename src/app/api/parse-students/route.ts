@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
-
 export async function POST(req: NextRequest) {
     try {
         const { prompt, model = 'gemini-2.5-flash', classNames = [] } = await req.json();
@@ -38,10 +35,11 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
         if (model.startsWith('gpt')) {
             const effectiveKey = process.env.OPENAI_API_KEY;
             if (!effectiveKey) {
-                return NextResponse.json({ error: 'OpenAI API key configuration error (Server)' }, { status: 500 });
+                return NextResponse.json({ error: 'OpenAI API key is not configured on the server' }, { status: 503 });
             }
 
-            const response = await defaultOpenAI.chat.completions.create({
+            const openai = new OpenAI({ apiKey: effectiveKey });
+            const response = await openai.chat.completions.create({
                 model: model as any,
                 response_format: { type: 'json_object' },
                 messages: [
@@ -54,10 +52,10 @@ You MUST reply with ONLY a JSON array containing objects matching this schema:
             const effectiveKey = process.env.GEMINI_API_KEY;
 
             if (!effectiveKey) {
-                console.error('GEMINI_API_KEY is missing from environment variables (Server)');
-                return NextResponse.json({ error: 'API key configuration error' }, { status: 500 });
+                return NextResponse.json({ error: 'Gemini API key is not configured on the server' }, { status: 503 });
             }
 
+            const genAI = new GoogleGenerativeAI(effectiveKey);
             const activeModel = genAI.getGenerativeModel({
                 model: model,
                 generationConfig: {

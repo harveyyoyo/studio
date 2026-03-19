@@ -68,6 +68,7 @@ import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeShowcase } from '@/components/BadgeShowcase';
 import { EarnedBadgesShowcase } from '@/components/EarnedBadgesShowcase';
+import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 
 function StudentActivityList({ schoolId, studentId }: { schoolId: string; studentId: string }) {
   const firestore = useFirestore();
@@ -733,13 +734,9 @@ export default function StudentLoginPage() {
   const isGraphic = settings.graphicMode === 'graphics';
   const functions = useFunctions();
 
-  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+  const { activeStudentId, setActiveStudentId, handleDone } = useActiveStudentSession();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [logoutPasscode, setLogoutPasscode] = useState('');
-
-  const handleDone = useCallback(() => {
-    setActiveStudentId(null);
-  }, []);
 
   const handleConfirmLogout = useCallback(async () => {
     if (!schoolId) return;
